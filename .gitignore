@@ -1,6 +1,10 @@
 # Project-local workflow state
 .session/
 
+# Collector's local lock and atomic-write staging files
+*.jsonl.lock
+*.jsonl.tmp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

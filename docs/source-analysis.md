@@ -98,14 +98,35 @@ Serializing the captured current values into the snapshot schema produced an ill
 At the observed six servers and five zones per server, hourly records of that size would total roughly 23 MB per year before compression.
 This excludes the source's chart windows entirely and is an extrapolation, not a measured future dataset or WASM size.
 
-## Remaining verification
+## Collector verification
 
-The collector still needs a reliable per-server completion check, including legitimate zero counts and servers with no historical points.
-The browser investigation used a three-second wait, and the direct prototype checked for richer chart arrays to observe the completed response.
-Neither is a production readiness algorithm.
-Initial placeholder data must remain distinguishable from a completed response without requiring positive counts or a fixed number of historical points.
-This must be verified before claiming the collector works.
+On 2026-10-02 at 17:24:53 UTC, the Rust collector completed one live HTTP/WebSocket collection into ignored temporary history.
+It recorded 19,107 active subscriptions and 5,461 online across six dynamically discovered servers, retaining only current-state fields.
+Repository history was not changed by this verification.
+
+A separate connected browser observation at 17:27:52 UTC reported 19,114 subscriptions and 5,486 online.
+Replaying that browser session's received LiveView messages through the Rust collector produced an exact match with every current-state field independently extracted from its rendered DOM, including server and zone names.
+The two observations occurred at different times; their changing counts were not treated as discrepancies.
+One preceding browser extraction attempt failed because CSS uppercased the displayed Online label; the comparison used the underlying label text after correcting the inspection helper.
+These were operational checks outside the automated test suite.
+
+### Readiness evidence
+
+The captured join rendering contains zero activity placeholders and initial chart payloads for every server.
+Each subsequent asynchronous result sends a complete server-row batch containing both activity fields and chart data; in the observed sequence, one more server's chart payload changes from its initial value with each update.
+No explicit completion flag is exposed by these messages.
+The collector therefore recognizes completion from a complete batch and replacement of every server's initial chart payload, while validating the completed current fields.
+This is an inference from the observed source protocol, not a documented upstream guarantee.
+
+The test suite replays the captured sequence and synthetic variants with zero activity, empty completed chart payloads, delayed results, and repeated partial updates.
+A chart-point count, nonzero activity, or a fixed wait does not establish readiness.
+When a completed server result is indistinguishable from its initial payload, the collector cannot establish readiness and times out without changing history.
+Changes to this rendering protocol may require a reviewed collector update.
+
+## Remaining verification
 
 The counting semantics of DAILY ACTIVE and MONTHLY ACTIVE remain unverified.
 The source's UTC treatment of historical timestamps is supported by its browser code; whether historical buckets represent instantaneous samples or aggregates remains undocumented.
 Their position at the end of a chart alone does not establish last-known-state semantics.
+The collector reads the dedicated current Online fields and never substitutes a historical chart value for a missing current field.
+An upstream semantic change that preserves every observable label and structure cannot be detected reliably.
