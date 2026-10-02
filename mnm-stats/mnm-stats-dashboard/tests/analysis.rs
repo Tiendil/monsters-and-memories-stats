@@ -367,8 +367,84 @@ fn svg_plots_zero_and_singleton_observations_without_inventing_lines() {
         &Comparison::None,
     )
     .unwrap();
-    let svg = mnm_stats_dashboard::charts::svg(&plot, &Metric::Daily).unwrap();
+    let svg = mnm_stats_dashboard::charts::render(&plot, &Metric::Daily)
+        .unwrap()
+        .svg;
     assert!(svg.contains("<svg"));
     assert!(svg.contains("<circle"));
     assert!(!svg.contains("NaN"));
+}
+
+#[test]
+fn hovering_uses_displayed_distance_and_keeps_coincident_series() {
+    use mnm_stats_dashboard::charts::{PlotPoint, RenderedPlot};
+    let points = vec![
+        PlotPoint {
+            series: 0,
+            point: 2,
+            position: (100, 50),
+        },
+        PlotPoint {
+            series: 1,
+            point: 3,
+            position: (100, 50),
+        },
+        PlotPoint {
+            series: 2,
+            point: 4,
+            position: (104, 50),
+        },
+    ];
+    let chart = RenderedPlot {
+        svg: String::new(),
+        points: points.clone(),
+    };
+    // Two-times scaling: the third point is near the pointer, but not nearest.
+    assert_eq!(chart.nearby(201.0, 100.0, 1280.0, 560.0), points[..2]);
+    assert_eq!(chart.nearby(208.0, 100.0, 1280.0, 560.0), points[2..]);
+    // Half-size scaling still uses an eight CSS-pixel target.
+    assert_eq!(chart.nearby(50.0, 32.0, 320.0, 140.0), points[..2]);
+    assert!(chart.nearby(50.0, 34.0, 320.0, 140.0).is_empty());
+    assert!(chart.nearby(300.0, 100.0, 640.0, 280.0).is_empty());
+    assert!(chart.nearby(0.0, 0.0, 0.0, 0.0).is_empty());
+}
+
+#[test]
+fn dense_plots_keep_hover_targets_without_fabricating_unavailable_values() {
+    let start = time("2024-01-01T00:00:00Z");
+    let plot = Plot {
+        series: vec![Series {
+            label: "Dense series".into(),
+            points: (0..201)
+                .map(|i| Point {
+                    at: start + Duration::hours(i),
+                    x: (i * 3600) as f64,
+                    value: (i != 100).then_some(MetricValue::Count(i as u128)),
+                })
+                .collect(),
+        }],
+        alignment: Alignment::Elapsed,
+        x_bounds: (0.0, 201.0 * 3600.0),
+        note: String::new(),
+    };
+    let chart = mnm_stats_dashboard::charts::render(&plot, &Metric::Daily).unwrap();
+    assert!(
+        !chart.svg.contains("<circle"),
+        "dense lines omit visible markers"
+    );
+    assert_eq!(chart.points.len(), 200);
+    assert!(chart.points.iter().all(|p| p.point != 100));
+    for index in [0, 99, 101, 200] {
+        let point = chart.points.iter().find(|p| p.point == index).unwrap();
+        assert!(
+            chart
+                .nearby(
+                    f64::from(point.position.0),
+                    f64::from(point.position.1),
+                    640.0,
+                    280.0
+                )
+                .contains(point)
+        );
+    }
 }

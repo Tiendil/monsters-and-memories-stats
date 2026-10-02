@@ -106,6 +106,67 @@ fn PeriodPicker(periods: RwSignal<Vec<Period>>, yearly: bool, initial: String) -
 }
 
 #[component]
+fn InteractivePlot(plot: Arc<Plot>, metric: Metric) -> impl IntoView {
+    let rendered = match charts::render(&plot, &metric) {
+        Ok(rendered) => rendered,
+        Err(error) => return view! { <p role="alert">"Chart unavailable: "{error}</p> }.into_any(),
+    };
+    let svg = rendered.svg.clone();
+    let rendered = StoredValue::new(rendered);
+    let hovered = RwSignal::new(Vec::<charts::PlotPoint>::new());
+    let surface = NodeRef::<leptos::html::Div>::new();
+    let tooltip_id = format!("tooltip-{}", metric.key());
+    let description_id = tooltip_id.clone();
+    let on_move = move |event: web_sys::MouseEvent| {
+        let Some(svg) = surface
+            .get()
+            .and_then(|node| node.query_selector("svg").ok().flatten())
+        else {
+            return;
+        };
+        let bounds = svg.get_bounding_client_rect();
+        let hits = rendered.with_value(|rendered| {
+            rendered.nearby(
+                f64::from(event.client_x()) - bounds.left(),
+                f64::from(event.client_y()) - bounds.top(),
+                bounds.width(),
+                bounds.height(),
+            )
+        });
+        hovered.set(hits);
+    };
+    view! {
+        <div class="interactive-plot" on:mouseleave=move |_| hovered.set(Vec::new())>
+            <div class="plot" role="img" aria-label=format!("{}; {}. Hover a point or inspect exact values below.", metric.title(), metric.unit())
+                aria-describedby=move || (!hovered.get().is_empty()).then(|| description_id.clone())
+                on:scroll=move |_| hovered.set(Vec::new())>
+                <div class="plot-surface" node_ref=surface on:mousemove=on_move>
+                    <div inner_html=svg></div>
+                    {move || hovered.get().into_iter().map(|point| view! {
+                        <span class="hover-marker" aria-hidden="true" style=format!("left:{}%;top:{}%;border-color:{}", f64::from(point.position.0) / f64::from(charts::WIDTH) * 100.0, f64::from(point.position.1) / f64::from(charts::HEIGHT) * 100.0, charts::css_color(point.series))></span>
+                    }).collect_view()}
+                </div>
+            </div>
+            <Show when=move || !hovered.get().is_empty()>
+                <div class="plot-tooltip" id=tooltip_id.clone() role="tooltip">
+                    <ul>{let plot = plot.clone(); move || hovered.get().into_iter().map(|hit| {
+                        let series = &plot.series[hit.series];
+                        let point = &series.points[hit.point];
+                        view! {
+                            <li data-series=hit.series data-at=utc(point.at)>
+                                <span class="hover-series" style:color=charts::css_color(hit.series)>{format!("{}. {}", hit.series + 1, series.label)}</span>
+                                <time class="hover-time" datetime=utc(point.at)>{utc(point.at)}" UTC"</time>
+                                <strong class="hover-value">{point.value.map(MetricValue::display)}</strong>
+                            </li>
+                        }
+                    }).collect_view()}</ul>
+                </div>
+            </Show>
+        </div>
+    }.into_any()
+}
+
+#[component]
 fn ChartCard(
     history: Arc<History>,
     metric: Metric,
@@ -132,11 +193,6 @@ fn ChartCard(
             .map(Arc::new)
         })
     });
-    let image = Memo::new(move |_| {
-        plotted
-            .get()
-            .and_then(|plot| charts::svg(&plot, &chart_metric))
-    });
     let open = RwSignal::new(false);
     let page = RwSignal::new(0_usize);
     Effect::new(move |_| {
@@ -159,12 +215,7 @@ fn ChartCard(
                         }).collect_view()}</ul>
                         <p class="sample-count">{format!("{count} plotted observations")}</p>
                         {if has_values {
-                            view! { <div class="plot" role="img" aria-label=format!("{}; {}. Exact values are available below.", title, unit)>
-                                {move || match image.get() {
-                                    Ok(svg) => view! { <div inner_html=svg></div> }.into_any(),
-                                    Err(error) => view! { <p role="alert">"Chart unavailable: "{error}</p> }.into_any(),
-                                }}
-                            </div> }.into_any()
+                            view! { <InteractivePlot plot=plot.clone() metric=chart_metric.clone()/> }.into_any()
                         } else {
                             view! { <p class="empty-chart">"No available observations for this selection."</p> }.into_any()
                         }}

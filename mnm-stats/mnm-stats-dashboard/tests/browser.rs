@@ -206,6 +206,43 @@ impl Browser {
         );
     }
 
+    fn move_pointer(&self, selector: &str, x: i32, y: i32) {
+        let element = self.element(selector);
+        self.request(
+            Method::POST,
+            "/actions",
+            json!({"actions":[{
+                "type":"pointer", "id":"mouse", "parameters":{"pointerType":"mouse"},
+                "actions":[{"type":"pointerMove", "duration":0,
+                    "origin":{"element-6066-11e4-a52e-4f735466cecf":element}, "x":x,"y":y}]
+            }]}),
+        );
+    }
+
+    fn hover(&self, selector: &str) {
+        self.element(selector);
+        // Scroll without clicking: overlapping series can cover a marker, but
+        // moving the mouse to that coordinate must still show all observations.
+        let document = self.request(
+            Method::POST,
+            "/goog/cdp/execute",
+            json!({
+                "cmd":"DOM.getDocument", "params":{}
+            }),
+        );
+        let node = self.request(Method::POST, "/goog/cdp/execute", json!({
+            "cmd":"DOM.querySelector", "params":{"nodeId":document["root"]["nodeId"],"selector":selector}
+        }));
+        self.request(
+            Method::POST,
+            "/goog/cdp/execute",
+            json!({
+                "cmd":"DOM.scrollIntoViewIfNeeded", "params":{"nodeId":node["nodeId"]}
+            }),
+        );
+        self.move_pointer(selector, 0, 0);
+    }
+
     fn expect_count(&self, selector: &str, expected: usize) {
         wait_until(
             || self.count(selector) == expected,
@@ -415,6 +452,24 @@ impl Browser {
                 ),
             ),
         ] {
+            self.hover(&format!("[data-metric='{metric}'] svg circle"));
+            let tooltip = format!(
+                "[data-metric='{metric}'] [role='tooltip'] li[data-at='2026-05-25T12:00:00Z']"
+            );
+            self.expect_text(&format!("{tooltip} .hover-value"), &value);
+            self.expect_text(
+                &format!("{tooltip} .hover-time"),
+                "2026-05-25T12:00:00Z UTC",
+            );
+            assert!(self.text(&format!("{tooltip} .hover-series")).contains(
+                if metric == "subscriptions" {
+                    "Global subscriptions"
+                } else {
+                    "Alpha <island> & West"
+                }
+            ));
+            self.hover(&format!("[data-metric='{metric}'] .unit"));
+            self.expect_count("[role='tooltip']", 0);
             self.click(&format!("[data-metric='{metric}'] summary"));
             self.expect_text(
                 &format!(
@@ -432,7 +487,9 @@ impl Browser {
             }
             self.click(&format!("[data-metric='{metric}'] summary"));
         }
+        self.hover("[data-metric='daily'] svg circle");
         self.select("#server-scope", "retired");
+        self.expect_count("[role='tooltip']", 0);
         for metric in metrics.into_iter().filter(|m| *m != "subscriptions") {
             self.expect_text(
                 &format!("[data-metric='{metric}'] .empty-chart"),
@@ -451,6 +508,12 @@ impl Browser {
                 if metric == "subscriptions" { 1 } else { 3 }
             );
         }
+        self.hover("[data-metric='online'] svg circle:last-of-type");
+        self.expect_text("[data-metric='online'] .hover-value", "5");
+        assert!(
+            self.text("[data-metric='online'] .hover-series")
+                .contains("Beta")
+        );
         // Three individual servers, then all servers alongside the three individuals.
         self.click("#entity-choices input[value='all']");
         self.click("#entity-choices input[value='server:c']");
@@ -484,6 +547,29 @@ impl Browser {
                     "{mode} / {metric}"
                 );
             }
+            // Constant zone counts coincide across all three periods. Every
+            // series must retain its actual observation date, not its aligned x.
+            self.hover("[data-metric='zone-w'] svg circle");
+            let dates = if mode == "months" {
+                [
+                    "2024-02-01T00:00:00Z",
+                    "2024-03-01T00:00:00Z",
+                    "2024-04-01T00:00:00Z",
+                ]
+            } else {
+                [
+                    "2023-02-01T00:00:00Z",
+                    "2024-02-01T00:00:00Z",
+                    "2025-02-01T00:00:00Z",
+                ]
+            };
+            for (index, at) in dates.into_iter().enumerate() {
+                let row = format!(
+                    "[data-metric='zone-w'] [role='tooltip'] li[data-series='{index}'][data-at='{at}']"
+                );
+                self.expect_text(&format!("{row} .hover-value"), "3");
+                self.expect_text(&format!("{row} .hover-time"), &format!("{at} UTC"));
+            }
             self.click("[data-metric='daily'] summary");
             assert!(
                 self.text("[data-metric='daily'] table")
@@ -510,6 +596,13 @@ impl Browser {
             );
             assert_eq!(self.count(&format!("[data-metric='{metric}'] svg")), 1);
         }
+        self.hover("[data-metric='zone-w'] svg circle");
+        assert!(
+            self.text("[data-metric='zone-w'] [role='tooltip']")
+                .contains("2024-02-01T00:00:00Z UTC")
+        );
+        self.move_pointer("[data-metric='zone-w'] svg", 0, 0);
+        self.expect_count("[role='tooltip']", 0);
         self.input("#interval-hours", "0");
         self.expect_text(
             "[data-metric='daily'] .error",
@@ -541,6 +634,22 @@ impl Browser {
             Value::Null,
         );
         assert!(rect["width"].as_f64().unwrap() <= 375.0);
+        self.select("#time-range", "7");
+        self.select("#server-scope", "a");
+        // The rightmost marker requires scrolling the narrow plot horizontally.
+        self.hover("[data-metric='daily'] svg circle:last-of-type");
+        let last = records.last().unwrap();
+        self.expect_text(
+            "[data-metric='daily'] .hover-value",
+            &last["servers"][0]["daily_active"]
+                .as_u64()
+                .unwrap()
+                .to_string(),
+        );
+        self.expect_text(
+            "[data-metric='daily'] .hover-time",
+            &format!("{} UTC", last["observed_at"].as_str().unwrap()),
+        );
         fs::write(
             scratch.join("dashboard-mobile.png.b64"),
             self.request(Method::GET, "/screenshot", Value::Null)

@@ -2,6 +2,7 @@
 use crate::analysis::{Alignment, Metric, Plot};
 use chrono::{Datelike, NaiveDate};
 use plotters::coord::{
+    CoordTranslate,
     combinators::WithKeyPoints,
     ranged1d::{DefaultFormatting, KeyPointHint},
     types::RangedCoordf64,
@@ -78,10 +79,53 @@ fn time_ticks(plot: &Plot) -> Vec<f64> {
     }
 }
 
-pub fn svg(plot: &Plot, metric: &Metric) -> Result<String, String> {
+pub const WIDTH: u32 = 640;
+pub const HEIGHT: u32 = 280;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PlotPoint {
+    pub series: usize,
+    pub point: usize,
+    pub position: (i32, i32),
+}
+
+pub struct RenderedPlot {
+    pub svg: String,
+    pub points: Vec<PlotPoint>,
+}
+
+impl RenderedPlot {
+    /// Hit-test in displayed CSS pixels, using the same mapping as the SVG.
+    /// Coincident observations remain inspectable across comparison series.
+    pub fn nearby(&self, x: f64, y: f64, width: f64, height: f64) -> Vec<PlotPoint> {
+        if width <= 0.0 || height <= 0.0 {
+            return Vec::new();
+        }
+        let distance = |p: &&PlotPoint| {
+            let dx = f64::from(p.position.0) * width / f64::from(WIDTH) - x;
+            let dy = f64::from(p.position.1) * height / f64::from(HEIGHT) - y;
+            dx * dx + dy * dy
+        };
+        let nearest = self
+            .points
+            .iter()
+            .filter(|p| distance(p) <= 64.0)
+            .min_by(|a, b| distance(a).total_cmp(&distance(b)));
+        nearest.map_or_else(Vec::new, |nearest| {
+            self.points
+                .iter()
+                .filter(|p| p.position == nearest.position)
+                .copied()
+                .collect()
+        })
+    }
+}
+
+pub fn render(plot: &Plot, metric: &Metric) -> Result<RenderedPlot, String> {
     let mut output = String::new();
+    let mut points = Vec::new();
     {
-        let root = SVGBackend::with_string(&mut output, (640, 280)).into_drawing_area();
+        let root = SVGBackend::with_string(&mut output, (WIDTH, HEIGHT)).into_drawing_area();
         let maximum = plot
             .series
             .iter()
@@ -137,6 +181,17 @@ pub fn svg(plot: &Plot, metric: &Metric) -> Result<String, String> {
             .map_err(|e| e.to_string())?;
         for (index, series) in plot.series.iter().enumerate() {
             let color = color(index);
+            // Keep every observation available for hovering, even when dense
+            // series omit visible circles. Exact values stay in the Plot.
+            for (point_index, point) in series.points.iter().enumerate() {
+                if let Some(value) = point.value {
+                    points.push(PlotPoint {
+                        series: index,
+                        point: point_index,
+                        position: chart.as_coord_spec().translate(&(point.x, value.number())),
+                    });
+                }
+            }
             for segment in series.segments() {
                 chart
                     .draw_series(LineSeries::new(
@@ -154,5 +209,8 @@ pub fn svg(plot: &Plot, metric: &Metric) -> Result<String, String> {
         }
         root.present().map_err(|e| e.to_string())?;
     }
-    Ok(output)
+    Ok(RenderedPlot {
+        svg: output,
+        points,
+    })
 }
