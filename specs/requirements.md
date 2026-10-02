@@ -2,19 +2,12 @@
 
 ## Goal of the document
 
-This document records the requested collector and dashboard behavior and acceptance evidence.
+This document defines collector and dashboard behavior and acceptance evidence.
 
 ## Scope
 
 This specification covers the externally observable behavior of historical reporting for public Monsters & Memories statistics.
 It does not cover private account data or statistics that the public source does not expose.
-
-## Status
-
-The user requirements below come from the user's task instructions.
-Sections explicitly marked as proposals describe recommended interpretations awaiting user approval.
-Implementation has not started.
-Source investigation evidence is recorded in the [source analysis](../docs/source-analysis.md).
 
 ## User requirements
 
@@ -130,13 +123,13 @@ The download MUST use the JSON export schema and preserve all observations, inde
 ### R20: Offline tests
 
 The project MUST include automated tests for the collector, shared data contract, and dashboard as those components are implemented.
-Tests MUST NOT make internet requests, including requests to the original statistics page.
+Tests MUST NOT make internet requests, including requests to the public statistics page.
 Tests MUST use local fixtures or synthetic data, with coverage and execution rules defined in [tests.md](tests.md).
 
 ## Metric interpretation
 
-This section is a proposal for R6–R8.
 Shared metric and collection terms are defined in the [project dictionary](dictionary.md).
+Source investigation evidence is recorded in the [source analysis](../docs/source-analysis.md).
 
 The UI MUST distinguish source-reported counts from derived values and explain that DAU/MAU are the source's daily/monthly active fields with unverified counting semantics.
 It MUST label subscriptions as subscriptions, without equating them with unique people.
@@ -157,15 +150,20 @@ Historical values MUST retain server and zone identities even if those entities 
 
 ## History and collection
 
-This section proposes the collection contract for R2, R3, and R10.
+This section records the collection contract for R2, R3, and R10.
 
-Before accepting an HTTP-only collector, implementation verification MUST compare the public browser view with a contemporaneous HTTP response, particularly the activity counts and chart history.
+Implementation verification MUST compare collected current-state values with the connected public browser view.
 This comparison is a separate source investigation and MUST NOT run as part of the test suite.
-If LiveView exposes material additional data, the acquisition proposal MUST be revised and approved rather than silently dropping that data or introducing an unapproved browser/protocol client.
+If the acquisition mechanism cannot obtain required current-state metrics, its design MUST be revised and approved rather than silently dropping those metrics or introducing an unapproved client.
 
-History MUST begin with verified observations collected by this project.
-The project MUST NOT claim to recover historical values no longer exposed by the source.
+History MUST consist only of snapshots of the source's current reported state obtained during successful collections.
+The collector MUST NOT copy source-provided historical windows into snapshots or import their points as additional observations.
 Hourly sampling MUST be described as observations, not an exhaustive record of every change within the hour.
+The final point of a source historical series MAY supply a metric value only when the reviewed source contract establishes that it represents the last known state of that metric.
+Being the point with the latest timestamp MUST NOT by itself establish that meaning; a historical bucket or aggregate MUST NOT be substituted for a current-state value.
+Selecting such a point MUST NOT backdate the snapshot or revise earlier snapshots.
+Required current fields MUST NOT be silently replaced with historical values when validation fails.
+Unfinished activity fields MUST NOT be accepted as published zero values.
 Existing history MUST NOT be discarded because collection fails at any stage.
 
 Each successful observation MUST carry its actual collection timestamp in UTC.
@@ -175,9 +173,14 @@ Repeating a run within an already recorded UTC hour MUST be a successful no-op w
 It MUST validate the existing history before changing it and reject corrupt or unsupported data.
 Writes MUST be atomic, and overlapping collection runs MUST NOT lose or overwrite existing observations.
 Missing intervals MUST remain missing; collection MUST NOT create synthetic catch-up samples.
+Later source responses MUST NOT backfill missed collection intervals.
 
 **Example:** After an observation is saved at 10:17 UTC, a run at 10:45 UTC leaves that observation unchanged.
 If collection fails during the next hour, history contains no invented observation for that hour.
+
+**Example:** A completed source response contains current online population 100 and 50 chart points.
+The snapshot stores online population 100 once; it does not store the chart points.
+If an approved source field instead exposes its last known state as a final chart point, that one value can supply the snapshot's metric without importing the rest of the series.
 
 The parser MUST check:
 
@@ -205,7 +208,7 @@ The last valid dashboard data MUST remain usable after collection failure.
 
 ## Dashboard behavior
 
-This section proposes the presentation contract for the dashboard requirements.
+This section records the presentation contract for the collected current-state snapshots.
 
 The dashboard MUST have an all-servers view and derive its server selector from collected history, including entities present only in historical data.
 It MUST plot the following over time:
@@ -242,6 +245,8 @@ The following states MUST be understandable:
 - initialization.
 - empty data.
 - invalid data.
+
+### Ratios and correlation
 
 Ratios MUST include daily/monthly activity and activity/global-subscriptions for the available daily and monthly counts.
 In per-server views, the subscription denominator MUST be explicitly labeled global.
@@ -303,6 +308,7 @@ The existing latest-collection-time and stale-data rules MUST apply to that hist
 The UI MUST provide a clearly labeled control for downloading the complete history as `history.json`.
 The download MUST be produced from the complete embedded history and MUST NOT request metrics data from a separate endpoint.
 A valid empty history MUST remain downloadable as a valid history document with no snapshots.
+The complete history means all project-collected snapshots, not the rolling historical series exposed by the source.
 
 **Example:** Selecting one server and the last seven days changes the charts but leaves the download containing all servers and all recorded times in the loaded dashboard build.
 
@@ -311,7 +317,7 @@ A valid empty history MUST remain downloadable as a valid history document with 
 Collection and deployment are not complete merely because local tests pass.
 The dashboard and README MUST explain the unavailability of:
 
-- pre-collection history that the source no longer exposes.
+- pre-collection history and missed collection intervals.
 - WAU while the source lacks a defensible weekly metric.
 - deduplicated global activity.
 - per-server subscriptions.
@@ -335,6 +341,7 @@ Live source and deployment evidence MUST be gathered through separate operationa
 
 - Source/browser comparison.
 - Parser fixture tests.
+- Completed current-state extraction without importing source-provided history.
 - Calculation tests.
 - Inspection of every supported metric, scope, and unavailable-data case in the dashboard.
 
@@ -361,7 +368,7 @@ Actual user approvals and review/commit checkpoints before subsequent implementa
 
 ### Simplicity (R15)
 
-Review of dependencies and a subtraction pass over each proposed component; no unnecessary service or abstraction.
+Review of dependencies and a subtraction pass over each component; no unnecessary service or abstraction.
 
 ### Server discovery (R16)
 

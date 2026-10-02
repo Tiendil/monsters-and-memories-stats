@@ -50,3 +50,14 @@ output = { type = "list", artifacts = ["@/specs/tests.md"] }
 relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/tests.md"] }
 output = { type = "files", pattern = "@/workflows/*.donna.md" }
+
+# Captured source fixtures follow the collection contract and offline test rules.
+[[rules]]
+relation = "governed_by"
+input = { type = "glob", pattern = "@/crates/mnm-stats-collector/tests/fixtures/**" }
+output = { type = "list", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md", "@/specs/tests.md", "@/specs/development.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md", "@/specs/tests.md", "@/specs/development.md"] }
+output = { type = "files", pattern = "@/crates/mnm-stats-collector/tests/fixtures/**" }

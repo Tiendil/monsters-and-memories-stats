@@ -1,73 +1,79 @@
-# Collector and dashboard architecture proposal
+# Collector and dashboard architecture
 
 ## Goal of the document
 
-This document describes the proposed technical design for the historical metrics application.
+This document describes the technical design for the historical metrics application.
 
 ## Scope
 
-The proposal covers component boundaries and the flow from the public metrics source to the GitHub-hosted dashboard.
+The architecture covers component boundaries and the flow from the public metrics source to the GitHub-hosted dashboard.
 Detailed UI styling and private implementation structure are outside its scope.
 
-## Approval status
+## Design
 
-All decisions D1–D7 below are **pending user approval**.
-The documentation and Donna/Depmesh foundation implement the requested planning process only.
-Application implementation and deployment have not started.
-The behavior proposed in [requirements.md](requirements.md) is part of this review, especially metric interpretation and source-change detection.
+### Components and layout
 
-### D1: Components and layout
-
-The proposal uses one Cargo workspace with `mnm-stats-model`, `mnm-stats-collector`, and `mnm-stats-dashboard` packages.
+The project uses one Cargo workspace with `mnm-stats-model`, `mnm-stats-collector`, and `mnm-stats-dashboard` packages.
 Project package names MUST use the `mnm-stats-` prefix to distinguish them from external dependencies and reduce naming ambiguity.
 Each package MUST reside in `crates/<package-name>/` so directory names match their Cargo package names.
 Both applications depend on the model library for the history data contracts and domain validation.
-Separate application packages keep collector-specific HTTP and HTML parsing dependencies out of the WASM build.
+Separate application packages keep collector-specific HTTP, WebSocket, and HTML parsing dependencies out of the WASM build.
 
-### D2: Acquisition
+### Acquisition
 
-The proposal uses a synchronous Rust HTTP request and DOM parser for the public metrics page, conditional on browser/HTTP equivalence verification.
-An HTTP collector avoids a browser runtime; its suitability depends on the unresolved [source verification](../docs/source-analysis.md#browser-verification).
-Additional usable LiveView data would require revising this decision.
+The collector uses a Rust HTTP client to initialize the public page session, then a Rust WebSocket client to receive its LiveView metrics updates.
+The WebSocket connection provides the completed metric values required by the collection contract.
+The [source analysis](../docs/source-analysis.md#direct-access-verification) describes the upstream protocol.
+The initialization response supplies the anonymous session cookie, CSRF token, and LiveView session information needed to join the page's WebSocket channel.
+These session values MUST be obtained from the source rather than hardcoded or committed.
+The collector MUST parse the completed metric values from the LiveView rendering updates using the reviewed source contract.
+It MUST NOT require a browser runtime for collection.
 
-### D3: History
+Collection MUST wait for completion of the asynchronous metrics load for every discovered server before accepting its values.
+A successful WebSocket join, a fixed delay, or nonzero activity counts alone MUST NOT establish readiness.
+HTTP initialization, WebSocket connection, and readiness waits MUST have finite timeouts and fail collection without changing history when readiness cannot be established.
+The collector MUST close the source connection after success or failure.
+Session initialization, protocol handling, and parsing MUST remain Rust application logic.
 
-The proposal retains one append-only logical history in `data/history.jsonl` on the default branch, with at most one snapshot per UTC hour.
+### History
+
+The collector retains one append-only logical history in `data/history.jsonl` on the default branch, with at most one snapshot per UTC hour.
 Each snapshot occupies one JSONL line with its own schema version, so a new observation adds one record to the Git diff.
+Each snapshot MUST contain only the current reported state selected under the [collection contract](requirements.md#history-and-collection).
+Source-provided rolling history MUST NOT be stored in snapshots or imported as additional observations.
 The frontend build validates and embeds the complete JSONL history, and the dashboard provides a JSON export of that embedded history.
-The file and Git history will grow, with partitioning deferred until needed and separately approved.
 
-### D4: Frontend
+### Frontend
 
-The proposal uses Leptos client-side rendering, built by Trunk, with Plotters generating SVG charts in Rust.
+The dashboard uses Leptos client-side rendering, built by Trunk, with Plotters generating SVG charts in Rust.
 This supports static GitHub Pages deployment with no backend or handwritten JavaScript chart logic; range controls and exact-value inspection are supplied by the Rust UI.
 The UI MUST support the time-frame and entity comparisons defined by [R17](requirements.md#r17-plot-comparisons), including more than two series per comparison.
 The complete history MUST be embedded in the compiled frontend and used for both visualization and JSON download, as required by [R18](requirements.md#r18-embedded-history) and [R19](requirements.md#r19-history-download).
 This keeps the displayed data and downloaded history tied to the same frontend build.
 
-### D5: Automation and notifications
+### Automation and notifications
 
-The proposal uses GitHub Actions for hourly collection and Pages deployment, with native Actions failure notifications configured and verified by the maintainer.
+The project uses GitHub Actions for hourly collection and Pages deployment, with native Actions failure notifications configured and verified by the maintainer.
 This uses the existing GitHub infrastructure for alerts; delivery depends on the maintainer's notification settings and schedule ownership.
 
-### D6: Source changes and metric semantics
+### Source changes and metric semantics
 
-The proposal follows the metric interpretation and collection contracts in [requirements.md](requirements.md).
+The collector and dashboard follow the metric interpretation and collection contracts in [requirements.md](requirements.md).
 These detect source-contract changes while accepting harmless styling changes and changes to the dynamically discovered server set.
 Changes to required metric labels or the approved zone roster require a reviewed parser/fixture update.
 
-### D7: Development
+### Development
 
-The proposal uses native Rust tooling locally and on GitHub-hosted Linux runners, with minimal Donna/Depmesh configuration.
-This avoids container and external journal infrastructure; Docker remains an alternative the user can choose before scaffolding.
+Development uses native Rust tooling locally and on GitHub-hosted Linux runners, with minimal Donna/Depmesh configuration.
+This requires no container infrastructure or external journal.
 
 ## Components
 
-The proposed data flow is:
+The data flow is:
 
 ```text
-Public metrics page
-    -> Rust collector in hourly GitHub Actions
+Public metrics page and its connected LiveView updates
+    -> Rust HTTP and WebSocket collector in hourly GitHub Actions
     -> data/history.jsonl committed to the default branch
     -> frontend build validates JSONL and embeds the complete history in WASM
     -> GitHub Actions publishes the Pages artifact
@@ -111,12 +117,12 @@ To keep the runtime limited to the requested GitHub capabilities, the architectu
 
 ## Dependencies
 
-These library choices require approval as part of D1, D2, and D4.
-Exact compatible versions MUST be selected and locked during the scaffold step; this proposal does not authorize arbitrary dependency additions later.
+The application uses the following libraries and build tools:
 
 - `serde`, `serde_json` — shared typed JSONL records and JSON export serialization.
 - `chrono` — UTC timestamps and date/range calculations.
-- `reqwest` with blocking support and Rustls — collector HTTPS request, explicit timeout, and status handling.
+- `reqwest` with blocking support and Rustls — HTTP initialization, session cookies, explicit timeout, and status handling.
+- `tungstenite` with Rustls — synchronous WebSocket connection and message transport for the LiveView session.
 - `scraper` — HTML parsing and scoped DOM selectors; no regex-only HTML extraction.
 - `leptos` with CSR — Rust browser UI and reactive controls.
 - `plotters` with SVG support — existing Rust chart axes, labels, and series rendering.
@@ -131,12 +137,13 @@ The following supporting formats are needed for packaging and orchestration:
 - shell commands.
 
 Leptos documents [static CSR deployment, including GitHub Pages](https://book.leptos.dev/deployment/csr.html).
-Plotters provides [SVG drawing support](https://docs.rs/plotters/latest/plotters/), and Reqwest provides a [blocking client](https://docs.rs/reqwest/latest/reqwest/blocking/index.html).
-These primary references were checked on 2026-10-02; the scaffold MUST prove the selected versions build together for the intended targets.
+Plotters provides [SVG drawing support](https://docs.rs/plotters/latest/plotters/).
+Reqwest provides a [blocking HTTP client](https://docs.rs/reqwest/latest/reqwest/blocking/index.html), and Tungstenite provides [WebSocket transport with TLS support](https://docs.rs/tungstenite/latest/tungstenite/).
+Selected dependency versions MUST build together for the native collector and WebAssembly dashboard targets.
 
 ## Repository layout
 
-This is the proposed ownership layout, not a claim that these implementation files already exist.
+Repository paths and component ownership are:
 
 ```text
 AGENTS.md
@@ -202,6 +209,10 @@ Each server record has:
 - `online` — published online population.
 - `starting_zones` — the zone records described above.
 
+Each metric field MUST contain one current-state value, not a historical series.
+When the collection contract permits selecting the final source-history point as the last known state, only its metric value MUST enter the snapshot.
+`observed_at` MUST remain the actual collection timestamp, not that point's source timestamp.
+
 ### Dashboard history
 
 The frontend build MUST embed all validated observations for use through the shared Rust snapshot types.
@@ -252,16 +263,14 @@ New source metrics such as WAU MUST require an explicitly reviewed schema change
 
 ### Collection updates
 
-The current proposal retains hourly observations.
-The browser/source verification gate MUST resolve whether genuine historical points are available before this storage choice is implemented.
-The project MUST NOT ship a collector that ignores verified, materially richer public data merely to preserve this proposal.
+The design retains hourly current-state observations without source-history backfill, overlap resolution, or source-revision records.
 
 After validation, the collector MUST update history atomically so an interrupted write cannot leave partially written history.
 Existing observations MUST remain unchanged.
 Adding an observation MUST preserve existing JSONL record lines and add exactly one new record.
 A fetch or parse failure MUST leave the original file byte-for-byte intact.
 The collector MUST support a fixture input or equivalent offline test entry point so parser failures can be verified without depending on the live page.
-Collector HTTP behavior MUST be testable using local responses or simulated failures, with no fallback to the public source during tests.
+Collector HTTP, WebSocket, and readiness behavior MUST be testable using local responses or simulated failures, with no fallback to the public source during tests.
 The source contract MUST be covered by sanitized representative fixtures, including valid changes in the discovered server set.
 Server membership MUST NOT be fixed by parser configuration or the storage schema.
 Changing required metric labels or the approved zone roster requires review and regression tests.
@@ -273,8 +282,6 @@ Tests MUST be implemented alongside the corresponding features and run through t
 Test runs MUST use local data and MUST NOT invoke the production collector against the public statistics page.
 
 ## GitHub automation
-
-The following is the proposed D5 design.
 
 GitHub Actions workflows MUST own GitHub event handling and job orchestration, invoking the shared project commands defined in [development.md](development.md#project-commands).
 Tool invocations and their options MUST remain in those commands or the underlying tool configuration so local and automated runs share the same implementation.
@@ -325,9 +332,7 @@ The maintainer MUST configure and verify native Actions failure notifications be
 GitHub's [workflow notification rules](https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs) tie scheduled notifications to the schedule editor or the person who re-enables the schedule; a failing check alone does not prove delivery to every repository watcher.
 The README MUST document who receives these alerts and how to recover a failed or disabled collector.
 Repeated source failures MUST keep runs failing until a reviewed fix is in place, and the dashboard MUST expose stale data as specified in [requirements.md](requirements.md).
-An issue-based alert can be proposed later if native notifications prove insufficient; it is not silently included in this design.
 
 GitHub documents [schedule delays and automatic disabling after repository inactivity](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 The README MUST describe these operational limits and manual recovery.
 The Pages setup MUST follow the [custom workflow requirements](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
-These references were checked on 2026-10-02.
