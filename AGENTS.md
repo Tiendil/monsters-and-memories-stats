@@ -52,7 +52,7 @@ Run `donna -p llm run @/workflows/polish.donna.md` for deterministic checks befo
 Follow its action requests and use the exact completion commands Donna returns.
 Review changed artifacts against their governing specifications and the user's requirements using Depmesh guidance above.
 Polish gives each check a focused repair action and restarts the sequence after repairs.
-The current checks cover workflows, governance configuration, Compose and shell syntax, Rust formatting and linting, native tests, browser/build integration, and the release WASM build.
+The current checks cover Donna and GitHub workflows, governance configuration, Compose and shell syntax, Rust formatting and linting, native tests, browser/build integration, and the release WASM build.
 Extend the checks alongside approved implementation and report only coverage that exists.
 
 Use `rg` for file/text discovery and `difft --display=inline --color=never` for reviewing edits when available.

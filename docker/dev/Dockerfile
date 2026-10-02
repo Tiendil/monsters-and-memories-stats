@@ -31,4 +31,10 @@ RUN tar -xzf /tmp/trunk.tar.gz -C /usr/local/bin trunk \
     && google-chrome --version && chromedriver --version
 
 WORKDIR /workspace
+
+ADD --checksum=sha256:8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 \
+    https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz /tmp/actionlint.tar.gz
+RUN tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint \
+    && rm /tmp/actionlint.tar.gz
+
 CMD ["bash"]

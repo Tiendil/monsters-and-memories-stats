@@ -1,0 +1,45 @@
+name: Code checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Check environment
+        run: ./bin/check-environment.sh
+      - name: Check GitHub workflows
+        run: ./bin/check-actions.sh
+      - name: Check formatting
+        run: ./bin/check-format.sh
+      - name: Check lints
+        run: ./bin/check-lints.sh
+      - name: Test native behavior
+        run: ./bin/test.sh
+      - name: Test browser and build integration
+        run: ./bin/test-browser.sh
+      - name: Build release dashboard
+        run: ./bin/build-dashboard.sh
+      - name: Retain failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: check-diagnostics
+          path: .session/tests/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: ignore
