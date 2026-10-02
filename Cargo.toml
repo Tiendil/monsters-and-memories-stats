@@ -1,0 +1,27 @@
+[workspace]
+members = ["mnm-stats/mnm-stats-model", "mnm-stats/mnm-stats-collector", "mnm-stats/mnm-stats-dashboard"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license = "BSD-3-Clause"
+publish = false
+
+[workspace.dependencies]
+mnm-stats-model = { path = "mnm-stats/mnm-stats-model" }
+chrono = { version = "0.4.45", default-features = false, features = ["std", "serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+leptos = { version = "=0.8.21", features = ["csr"] }
+web-sys = { version = "0.3", features = ["Blob", "BlobPropertyBag", "HtmlAnchorElement", "Url"] }
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+reqwest = { version = "0.13.5", default-features = false, features = ["blocking", "json"] }
+
+[profile.release]
+lto = true
+opt-level = "s"
+codegen-units = 1
+

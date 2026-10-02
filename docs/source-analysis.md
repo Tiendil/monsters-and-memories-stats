@@ -61,7 +61,7 @@ Each connected chart contained 49 half-hour points from 2026-10-01 14:00 through
 The historical timestamp strings omitted offsets, while the endpoint used `Z`.
 The `MetricsCcuChart` implementation in the public browser script appends `Z` when an offset is absent, establishing the source UI's UTC interpretation.
 
-[Sanitized HTML fixtures](../crates/mnm-stats-collector/tests/fixtures/README.md) preserve the two stages without session credentials or executable scripts.
+[Sanitized HTML fixtures](../mnm-stats/mnm-stats-collector/tests/fixtures/README.md) preserve the two stages without session credentials or executable scripts.
 The initial response is not equivalent to the connected view and is unsuitable as the collector's sole input.
 The [acquisition design](../specs/architecture.md#acquisition) accounts for this under the [collection contract](../specs/requirements.md#history-and-collection).
 

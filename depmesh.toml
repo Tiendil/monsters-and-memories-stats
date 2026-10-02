@@ -51,13 +51,49 @@ relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/tests.md"] }
 output = { type = "files", pattern = "@/workflows/*.donna.md" }
 
-# Captured source fixtures follow the collection contract and offline test rules.
+# Runtime contracts apply to all component files and build inputs.
 [[rules]]
 relation = "governed_by"
-input = { type = "glob", pattern = "@/crates/mnm-stats-collector/tests/fixtures/**" }
-output = { type = "list", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md", "@/specs/tests.md", "@/specs/development.md"] }
+input = { type = "any", items = [
+  { type = "one_of", artifacts = ["@/Cargo.toml", "@/Cargo.lock", "@/rust-toolchain.toml"] },
+  { type = "glob", pattern = "@/mnm-stats/**" },
+  { type = "glob", pattern = "@/data/**" },
+] }
+output = { type = "list", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md", "@/specs/development.md"] }
 
 [[rules]]
 relation = "governs"
-input = { type = "one_of", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md", "@/specs/tests.md", "@/specs/development.md"] }
-output = { type = "files", pattern = "@/crates/mnm-stats-collector/tests/fixtures/**" }
+input = { type = "one_of", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md", "@/specs/development.md"] }
+output = { type = "union", items = [
+  { type = "list", artifacts = ["@/Cargo.toml", "@/Cargo.lock", "@/rust-toolchain.toml"] },
+  { type = "files", pattern = "@/mnm-stats/**" },
+  { type = "files", pattern = "@/data/**" },
+] }
+
+# Test code, fixtures, and the commands that run tests follow the offline contract.
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+  { type = "glob", pattern = "@/mnm-stats/*/tests/**" },
+  { type = "glob", pattern = "@/bin/test*.sh" },
+] }
+output = { type = "list", artifacts = ["@/specs/tests.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/tests.md"] }
+output = { type = "union", items = [
+  { type = "files", pattern = "@/mnm-stats/*/tests/**" },
+  { type = "files", pattern = "@/bin/test*.sh" },
+] }
+
+# Commands that package or validate history also implement application contracts.
+[[rules]]
+relation = "governed_by"
+input = { type = "one_of", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-dashboard.sh", "@/bin/validate-history.sh"] }
+output = { type = "list", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md"] }
+output = { type = "list", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-dashboard.sh", "@/bin/validate-history.sh"] }
