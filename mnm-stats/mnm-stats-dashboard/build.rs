@@ -2,6 +2,11 @@ use mnm_stats_model::History;
 use std::{env, fmt::Write, fs, path::PathBuf};
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=MNM_STATS_DEMO");
+    println!(
+        "cargo:rustc-env=MNM_STATS_DEMO={}",
+        env::var("MNM_STATS_DEMO").unwrap_or_default()
+    );
     println!("cargo:rerun-if-env-changed=MNM_STATS_HISTORY");
     let input = env::var_os("MNM_STATS_HISTORY").map_or_else(
         || {

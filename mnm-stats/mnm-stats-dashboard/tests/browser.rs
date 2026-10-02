@@ -50,6 +50,7 @@ impl Browser {
         let log = fs::File::create(scratch.join("chromedriver.log")).unwrap();
         let driver = Process(
             Command::new(env::var_os("CHROMEDRIVER").unwrap_or_else(|| "chromedriver".into()))
+                .arg("--verbose")
                 .arg(format!("--port={driver_port}"))
                 .stdout(log.try_clone().unwrap())
                 .stderr(log)
@@ -67,9 +68,15 @@ impl Browser {
             "ChromeDriver startup",
         );
         let mut options = json!({
-            "args": ["--headless=new", "--disable-background-networking", "--disable-component-update", "--no-first-run", "--no-default-browser-check", "--window-size=1200,900", format!("--user-data-dir={}", scratch.join("chrome-profile").display())],
+            "args": ["--headless=new", "--disable-background-networking", "--disable-component-update", "--disable-sync", "--disable-notifications", "--disable-features=GCM,OptimizationHints,MediaRouter", "--no-first-run", "--no-default-browser-check", "--window-size=1200,900", format!("--user-data-dir={}", scratch.join("chrome-profile").display())],
             "prefs": {"download.default_directory": scratch.join("downloads"), "download.prompt_for_download": false}
         });
+        if env::var_os("MNM_STATS_CONTAINER").is_some() {
+            options["args"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!("--no-sandbox"));
+        }
         if let Some(binary) = env::var_os("CHROME") {
             options["binary"] = json!(binary);
         }
@@ -87,12 +94,24 @@ impl Browser {
             .as_str()
             .unwrap_or_else(|| panic!("create browser session: {response}"))
             .to_owned();
-        Self {
+        let browser = Self {
             client,
             endpoint,
             session,
             _driver: driver,
-        }
+        };
+        // A clock stub is the only browser-side test helper; fixtures and
+        // assertions stay in Rust. Pausing all Chrome timers stalls navigation.
+        let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
+        browser.request(
+            Method::POST,
+            "/goog/cdp/execute",
+            json!({
+            "cmd":"Page.addScriptToEvaluateOnNewDocument",
+            "params":{"source":format!("Date.now = () => {};", now.timestamp_millis())}
+            }),
+        );
+        browser
     }
 
     fn request(&self, method: Method, path: &str, body: Value) -> Value {
@@ -141,6 +160,66 @@ impl Browser {
         .to_owned()
     }
 
+    fn count(&self, selector: &str) -> usize {
+        self.request(
+            Method::POST,
+            "/elements",
+            json!({"using":"css selector","value":selector}),
+        )
+        .as_array()
+        .unwrap()
+        .len()
+    }
+
+    fn click(&self, selector: &str) {
+        self.request(
+            Method::POST,
+            &format!("/element/{}/click", self.element(selector)),
+            json!({}),
+        );
+    }
+
+    fn expect_count(&self, selector: &str, expected: usize) {
+        wait_until(
+            || self.count(selector) == expected,
+            &format!("{selector} should contain {expected} elements"),
+        );
+    }
+
+    fn select(&self, selector: &str, value: &str) {
+        self.click(&format!("{selector} option[value='{value}']"));
+    }
+
+    fn input(&self, selector: &str, value: &str) {
+        let element = self.element(selector);
+        self.request(
+            Method::POST,
+            &format!("/element/{element}/clear"),
+            json!({}),
+        );
+        self.request(
+            Method::POST,
+            &format!("/element/{element}/value"),
+            json!({"text":value}),
+        );
+    }
+
+    fn expect_text(&self, selector: &str, expected: &str) {
+        wait_until(
+            || self.text(selector) == expected,
+            &format!("{selector} should contain {expected:?}"),
+        );
+    }
+
+    fn verify_download(&self, expected: &Value, scratch: &Path) {
+        let download = scratch.join("downloads/history.json");
+        self.click("#download-history");
+        wait_until(|| download.exists(), "history.json download");
+        let actual: Value = serde_json::from_str(&fs::read_to_string(&download).unwrap()).unwrap();
+        assert_eq!(actual, *expected);
+        fs::remove_file(download).unwrap();
+    }
+
     fn verify(&self, url: &str, expected: &Value, scratch: &Path) {
         // Scope network evidence to this dashboard navigation; a fresh Chrome
         // profile can otherwise include its internal new-tab startup assets.
@@ -167,17 +246,281 @@ impl Browser {
             Value::Null,
         );
         assert!(rect["width"].as_f64().unwrap() <= 375.0);
-        let download = scratch.join("downloads/history.json");
+        self.verify_download(expected, scratch);
+        self.verify_requests(url, true);
+    }
+
+    fn verify_features(&self, url: &str, expected: &Value, scratch: &Path) {
+        let metrics = [
+            "daily",
+            "monthly",
+            "subscriptions",
+            "online",
+            "starting-zones",
+            "zone-z",
+            "zone-w",
+            "daily-monthly",
+            "daily-subscriptions",
+            "monthly-subscriptions",
+        ];
+        let records = expected["snapshots"].as_array().unwrap();
+        let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
         self.request(
             Method::POST,
-            &format!("/element/{}/click", self.element("#download-history")),
-            json!({}),
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
         );
-        wait_until(|| download.exists(), "history.json download");
-        let actual: Value = serde_json::from_str(&fs::read_to_string(&download).unwrap()).unwrap();
-        assert_eq!(actual, *expected);
-        fs::remove_file(download).unwrap();
+        assert!(
+            self.text("#selected-interval")
+                .contains("2026-06-01T12:00:00Z")
+        );
+        assert!(self.text("#freshness").contains("Stale data"));
+        assert!(self.text("#weekly-unavailable").contains("not available"));
+        assert_eq!(self.count(".chart-card"), metrics.len());
+        assert!(self.text("#server-scope").contains("Retired server"));
+        for (key, days) in [
+            ("7", Some(7)),
+            ("30", Some(30)),
+            ("90", Some(90)),
+            ("180", Some(180)),
+            ("365", Some(365)),
+            ("all", None),
+        ] {
+            self.select("#time-range", key);
+            let selected: Vec<_> = records
+                .iter()
+                .filter(|record| {
+                    let at: chrono::DateTime<chrono::Utc> =
+                        record["observed_at"].as_str().unwrap().parse().unwrap();
+                    at <= now && days.is_none_or(|d| at >= now - chrono::Duration::days(d))
+                })
+                .collect();
+            for metric in metrics {
+                let count = selected
+                    .iter()
+                    .filter(|r| {
+                        !(metric.ends_with("-subscriptions") && r["active_subscriptions"] == 0)
+                    })
+                    .count();
+                self.expect_text(
+                    &format!("[data-metric='{metric}'] .sample-count"),
+                    &format!("{count} plotted observations"),
+                );
+                assert_eq!(
+                    self.count(&format!("[data-metric='{metric}'] svg")),
+                    1,
+                    "{metric} / {key}"
+                );
+            }
+        }
+        // Exact values and pagination use original observations, not source chart history.
+        self.click("[data-metric='daily'] summary");
+        self.expect_count("[data-metric='daily'] tbody tr", 50);
+        self.click("[data-metric='daily'] .next");
+        self.expect_count("[data-metric='daily'] tbody tr", records.len() - 50);
+        self.click("[data-metric='daily'] .previous");
+        self.click("[data-metric='daily'] summary");
+        self.select("#time-range", "7");
+        self.select("#server-scope", "a");
+        let first = records
+            .iter()
+            .find(|r| r["observed_at"] == "2026-05-25T12:00:00Z")
+            .unwrap();
+        let a = &first["servers"][0];
+        let n = |field: &str| a[field].as_u64().unwrap();
+        let subscriptions = first["active_subscriptions"].as_u64().unwrap();
+        for (metric, value) in [
+            ("daily", n("daily_active").to_string()),
+            ("monthly", n("monthly_active").to_string()),
+            ("subscriptions", subscriptions.to_string()),
+            ("online", n("online").to_string()),
+            (
+                "starting-zones",
+                (a["starting_zones"][0]["online"].as_u64().unwrap()
+                    + a["starting_zones"][1]["online"].as_u64().unwrap())
+                .to_string(),
+            ),
+            (
+                "zone-z",
+                a["starting_zones"][0]["online"]
+                    .as_u64()
+                    .unwrap()
+                    .to_string(),
+            ),
+            (
+                "zone-w",
+                a["starting_zones"][1]["online"]
+                    .as_u64()
+                    .unwrap()
+                    .to_string(),
+            ),
+            (
+                "daily-monthly",
+                format!(
+                    "{:.2}% ({} / {})",
+                    n("daily_active") as f64 / n("monthly_active") as f64 * 100.0,
+                    n("daily_active"),
+                    n("monthly_active")
+                ),
+            ),
+            (
+                "daily-subscriptions",
+                format!(
+                    "{:.2}% ({} / {})",
+                    n("daily_active") as f64 / subscriptions as f64 * 100.0,
+                    n("daily_active"),
+                    subscriptions
+                ),
+            ),
+            (
+                "monthly-subscriptions",
+                format!(
+                    "{:.2}% ({} / {})",
+                    n("monthly_active") as f64 / subscriptions as f64 * 100.0,
+                    n("monthly_active"),
+                    subscriptions
+                ),
+            ),
+        ] {
+            self.click(&format!("[data-metric='{metric}'] summary"));
+            self.expect_text(
+                &format!(
+                    "[data-metric='{metric}'] tr[data-at='2026-05-25T12:00:00Z'] .exact-value"
+                ),
+                &value,
+            );
+            if metric.ends_with("-subscriptions") {
+                self.expect_text(
+                    &format!(
+                        "[data-metric='{metric}'] tr[data-at='2026-05-30T13:00:00Z'] .exact-value"
+                    ),
+                    "not available",
+                );
+            }
+            self.click(&format!("[data-metric='{metric}'] summary"));
+        }
+        self.select("#server-scope", "retired");
+        for metric in metrics.into_iter().filter(|m| *m != "subscriptions") {
+            self.expect_text(
+                &format!("[data-metric='{metric}'] .empty-chart"),
+                "No available observations for this selection.",
+            );
+        }
+        assert_eq!(self.count("[data-metric='subscriptions'] svg"), 1);
+        self.select("#server-scope", "a");
+        assert!(self.text("#correlation-scope").contains("Alpha"));
+        assert_eq!(self.count(".correlation-value"), 3);
+        assert!(self.text(".correlations").contains("r ="));
+        self.select("#comparison-mode", "entities");
+        for metric in metrics {
+            assert_eq!(
+                self.count(&format!("[data-metric='{metric}'] .legend li")),
+                if metric == "subscriptions" { 1 } else { 3 }
+            );
+        }
+        // Three individual servers, then all servers alongside the three individuals.
+        self.click("#entity-choices input[value='all']");
+        self.click("#entity-choices input[value='server:c']");
+        assert_eq!(self.count("[data-metric='daily'] .legend li"), 3);
+        self.click("#entity-choices input[value='all']");
+        assert_eq!(self.count("[data-metric='daily'] .legend li"), 4);
+        self.verify_download(expected, scratch);
+        self.click("#entity-choices input[value='server:b']");
+        assert_eq!(self.count("[data-metric='daily'] .legend li"), 3);
+        for (mode, periods) in [
+            ("months", ["2024-02", "2024-03", "2024-04"]),
+            ("years", ["2023", "2024", "2025"]),
+        ] {
+            self.select("#comparison-mode", mode);
+            while self.count(".remove-period") > 0 {
+                self.click(".remove-period");
+            }
+            for period in periods {
+                self.input("#period-input", period);
+                self.click("#add-period");
+            }
+            for metric in metrics {
+                assert_eq!(
+                    self.count(&format!("[data-metric='{metric}'] .legend li")),
+                    3,
+                    "{mode} / {metric}"
+                );
+                assert_eq!(
+                    self.count(&format!("[data-metric='{metric}'] svg")),
+                    1,
+                    "{mode} / {metric}"
+                );
+            }
+            self.click("[data-metric='daily'] summary");
+            assert!(
+                self.text("[data-metric='daily'] table")
+                    .contains("2024-02-29T23:00:00Z")
+            );
+            self.click("[data-metric='daily'] summary");
+            self.verify_download(expected, scratch);
+            self.click(".remove-period");
+            assert_eq!(self.count("[data-metric='daily'] .legend li"), 2);
+            self.input("#period-input", "invalid");
+            self.click("#add-period");
+            assert!(!self.text(".period-picker [role='alert']").is_empty());
+        }
+        self.select("#comparison-mode", "intervals");
+        self.input("#interval-hours", "24");
+        for start in ["2024-02-01T00:00", "2024-03-01T00:00", "2024-04-01T00:00"] {
+            self.input("#interval-start", start);
+            self.click("#add-interval");
+        }
+        for metric in metrics {
+            assert_eq!(
+                self.count(&format!("[data-metric='{metric}'] .legend li")),
+                3
+            );
+            assert_eq!(self.count(&format!("[data-metric='{metric}'] svg")), 1);
+        }
+        self.input("#interval-hours", "0");
+        self.expect_text(
+            "[data-metric='daily'] .error",
+            "Choose a positive duration in hours.",
+        );
+        self.input("#interval-hours", "24");
+        self.verify_download(expected, scratch);
+        self.verify_requests(url, false);
+        self.select("#comparison-mode", "overview");
+        // Capture the real browser for visual review; decoding is a separate local activity.
+        self.select("#server-scope", "");
+        self.request(Method::POST, "/url", json!({"url":url}));
+        self.element("#history-count");
+        fs::write(
+            scratch.join("dashboard-desktop.png.b64"),
+            self.request(Method::GET, "/screenshot", Value::Null)
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap();
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":375,"height":900}),
+        );
+        let rect = self.request(
+            Method::GET,
+            &format!("/element/{}/rect", self.element("main")),
+            Value::Null,
+        );
+        assert!(rect["width"].as_f64().unwrap() <= 375.0);
+        fs::write(
+            scratch.join("dashboard-mobile.png.b64"),
+            self.request(Method::GET, "/screenshot", Value::Null)
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap();
+        println!(
+            "All metric families, six ranges, exact values, historical entities, three-period/entity comparisons, missing data, and filter-independent downloads verified."
+        );
+    }
 
+    fn verify_requests(&self, url: &str, require_wasm: bool) {
         let log = self.request(Method::POST, "/log", json!({"type":"performance"}));
         let mut wasm_requested = false;
         for entry in log.as_array().unwrap() {
@@ -204,7 +547,10 @@ impl Browser {
             );
             wasm_requested |= request.ends_with(".wasm");
         }
-        assert!(wasm_requested, "browser must run the actual compiled WASM");
+        assert!(
+            !require_wasm || wasm_requested,
+            "browser must run the actual compiled WASM"
+        );
         let log = self.request(Method::POST, "/log", json!({"type":"browser"}));
         assert!(
             !log.as_array()
@@ -249,6 +595,46 @@ fn build(root: &Path, history: &Path, dist: &Path, public_url: &str, success: bo
         );
         assert!(diagnostic.contains("invalid history"), "{diagnostic}");
     }
+}
+
+fn comparison_history() -> Vec<Value> {
+    use chrono::{Datelike, Duration, NaiveDate};
+    let mut times = std::collections::BTreeSet::new();
+    for year in [2023, 2024, 2025] {
+        for month in [2, 3, 4] {
+            let first = NaiveDate::from_ymd_opt(year, month, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+                .and_utc();
+            times.insert(first);
+            times.insert(first + Duration::hours(1));
+            let next = first.checked_add_months(chrono::Months::new(1)).unwrap();
+            times.insert(next - Duration::hours(1));
+        }
+    }
+    let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
+    for days in [7, 30, 90, 180, 365] {
+        let boundary = now - Duration::days(days);
+        for hours in [-1, 0, 1] {
+            times.insert(boundary + Duration::hours(hours));
+        }
+    }
+    for days in 1..=4 {
+        for hours in [0, 1, 2] {
+            times.insert(now - Duration::days(days) + Duration::hours(hours));
+        }
+    }
+    times.into_iter().enumerate().map(|(i, at)| {
+        let server = |id, name, daily, monthly, online, z, w| json!({"id":id,"name":name,"daily_active":daily,"monthly_active":monthly,"online":online,"starting_zones":[{"id":"z","name":"Harbor & Hills","online":z},{"id":"w","name":"Lower Docks","online":w}]});
+        let mut servers = vec![
+            server("a", "Alpha <island> & West", 20 + i * 3, 10 + i, 100 + i, 7 + i, 3),
+            server("b", "Beta", 5, 10, 5, 2, 1), server("c", "Gamma", 8, 16, 8, 3, 2),
+        ];
+        if at.year() == 2023 { servers.push(server("retired", "Retired server", 17, 25, 3, 1, 1)); }
+        let subscriptions = if at.to_rfc3339() == "2026-05-30T13:00:00+00:00" { 0 } else { 10 + i };
+        json!({"observed_at":at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),"active_subscriptions":subscriptions,"servers":servers})
+    }).collect()
 }
 
 #[test]
@@ -308,14 +694,13 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     second["observed_at"] = json!("2026-03-01T01:10:00Z");
     second["active_subscriptions"] = json!(42);
     second["servers"][0]["id"] = json!("another-server");
-    let mut snapshots = Vec::new();
     for records in [vec![first.clone()], vec![first, second]] {
         fs::write(
             &history,
             records.iter().map(|v| format!("{v}\n")).collect::<String>(),
         )
         .unwrap();
-        snapshots = records
+        let snapshots = records
             .into_iter()
             .map(|mut record| {
                 record.as_object_mut().unwrap().remove("schema_version");
@@ -333,6 +718,23 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
         "History-only changes rebuild cached output; all fields survive download under /mnm/."
     );
 
+    let snapshots = comparison_history();
+    let input = snapshots
+        .iter()
+        .map(|s| {
+            let mut record = s.clone();
+            record["schema_version"] = json!(1);
+            format!("{record}\n")
+        })
+        .collect::<String>();
+    fs::write(scratch.join("comparison-history.jsonl"), &input).unwrap();
+    fs::write(&history, input).unwrap();
+    build(&root, &history, &scratch.join("site/mnm"), "/mnm/", true);
+    let expected = json!({"schema_version":1,"snapshots":snapshots});
+    let url = format!("{origin}mnm/");
+    browser.verify(&url, &expected, &scratch);
+    browser.verify_features(&url, &expected, &scratch);
+
     let previous = fs::read(scratch.join("site/mnm/index.html")).unwrap();
     fs::write(&history, "{\"schema_version\":1").unwrap();
     build(&root, &history, &scratch.join("site/mnm"), "/mnm/", false);
@@ -346,4 +748,166 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
         &scratch,
     );
     println!("Invalid history fails the build and leaves the last valid site usable.");
+    verify_preview(&root, &scratch, &browser);
+}
+
+fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
+    let history = scratch.join("preview history.jsonl");
+    let at = "2026-06-01T12:00:00Z";
+    let generate = || {
+        let output = Command::new("cargo")
+            .args([
+                "run",
+                "--locked",
+                "--quiet",
+                "-p",
+                "mnm-stats-dashboard",
+                "--example",
+                "demo-history",
+                "--",
+                at,
+            ])
+            .current_dir(root)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        output.stdout
+    };
+    let demo = generate();
+    assert_eq!(generate(), demo, "a fixed time reproduces demo history");
+    let parsed = mnm_stats_model::History::from_jsonl(std::str::from_utf8(&demo).unwrap()).unwrap();
+    assert_eq!(parsed.snapshots().len(), 480);
+    assert_eq!(
+        parsed.snapshots().last().unwrap().observed_at.to_rfc3339(),
+        "2026-06-01T12:00:00+00:00"
+    );
+    fs::write(&history, &demo).unwrap();
+    let preview_port = port();
+    let origin = format!("http://127.0.0.1:{preview_port}/");
+    // Exercise --demo first, then explicit input with the same Cargo cache.
+    let demo_preview = start_preview(root, scratch, None, "demo", preview_port);
+    let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
+    browser.verify(&origin, &expected, scratch);
+    assert!(browser.text("#demo-notice").contains("synthetic"));
+    assert_eq!(browser.count("svg"), 10);
+    drop(demo_preview);
+    let preview = start_preview(root, scratch, Some(&history), "explicit", preview_port);
+    let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
+    browser.verify(&origin, &expected, scratch);
+    assert_eq!(
+        browser.count("svg"),
+        10,
+        "recent demo values appear in the default range"
+    );
+    assert_eq!(
+        browser.count("#demo-notice"),
+        0,
+        "explicit history is not labeled demo"
+    );
+
+    // Replace the file atomically, as a collector/editor can do. Its parent is outside the crate.
+    let retained = parsed.snapshots().last().unwrap();
+    let index = scratch.join("preview-explicit-dist/index.html");
+    let original = fs::read(&index).unwrap();
+    let updated = scratch.join("preview-next.jsonl");
+    fs::write(&updated, retained.to_jsonl_record().unwrap()).unwrap();
+    fs::rename(&updated, &history).unwrap();
+    wait_for_preview_rebuild(&index, &original);
+    let expected = json!({"schema_version":1,"snapshots":[retained]});
+    browser.verify(&origin, &expected, scratch);
+    browser.select("#time-range", "all");
+    assert_eq!(browser.count("svg"), 10);
+    browser.verify_download(&expected, scratch);
+    // A second replacement verifies that watching survives atomic file replacement.
+    let original = fs::read(&index).unwrap();
+    fs::write(&updated, "").unwrap();
+    fs::rename(&updated, &history).unwrap();
+    wait_for_preview_rebuild(&index, &original);
+    browser.verify(
+        &origin,
+        &json!({"schema_version":1,"snapshots":[]}),
+        scratch,
+    );
+    drop(preview);
+    fs::write(&history, "broken JSON").unwrap();
+    let failed = Command::new(root.join("bin/serve-dashboard.sh"))
+        .arg("--history")
+        .arg(&history)
+        .output()
+        .unwrap();
+    assert!(!failed.status.success());
+    assert!(String::from_utf8_lossy(&failed.stderr).contains("line 1"));
+    println!(
+        "Development preview loads explicit history outside the crate and rebuilds after an atomic history-only change."
+    );
+}
+
+fn start_preview(
+    root: &Path,
+    scratch: &Path,
+    history: Option<&Path>,
+    label: &str,
+    preview_port: u16,
+) -> Process {
+    let origin = format!("http://127.0.0.1:{preview_port}/");
+    let log_path = scratch.join(format!("preview-{label}.log"));
+    let log = fs::File::create(&log_path).unwrap();
+    let mut command = Command::new(root.join("bin/serve-dashboard.sh"));
+    match history {
+        Some(path) => {
+            command.arg("--history").arg(path);
+        }
+        None => {
+            command
+                .arg("--demo")
+                .env("MNM_STATS_DEMO_AT", "2026-06-01T12:00:00Z");
+        }
+    }
+    let mut preview = Process(
+        command
+            .args(["--port", &preview_port.to_string(), "--dist"])
+            .arg(scratch.join(format!("preview-{label}-dist")))
+            .stdout(log.try_clone().unwrap())
+            .stderr(log)
+            .spawn()
+            .unwrap(),
+    );
+    let client = Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(2))
+        .build()
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(300);
+    while !client
+        .get(&origin)
+        .send()
+        .is_ok_and(|r| r.status().is_success())
+    {
+        assert!(
+            preview.0.try_wait().unwrap().is_none(),
+            "preview exited: {}",
+            fs::read_to_string(&log_path).unwrap()
+        );
+        assert!(
+            Instant::now() < deadline,
+            "preview build timed out; see preview.log"
+        );
+        thread::sleep(Duration::from_millis(200));
+    }
+    preview
+}
+
+fn wait_for_preview_rebuild(index: &Path, previous: &[u8]) {
+    let deadline = Instant::now() + Duration::from_secs(120);
+    while !fs::read(index).is_ok_and(|current| current != previous) {
+        assert!(
+            Instant::now() < deadline,
+            "history-only preview rebuild timed out"
+        );
+        thread::sleep(Duration::from_millis(200));
+    }
 }

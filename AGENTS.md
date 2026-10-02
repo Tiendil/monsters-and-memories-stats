@@ -13,6 +13,21 @@
 - Keep the design small. Prefer existing libraries, one source of truth, and direct code over frameworks or abstractions for hypothetical needs.
 - Collector and dashboard application logic must be Rust. Workflow YAML, minimal shell orchestration, HTML/CSS, and generated WebAssembly JavaScript bindings are supporting artifacts.
 
+## Development environment
+
+Run application builds, formatting, linting, tests, and previews through the Docker-backed `bin/` commands.
+Use `./bin/dev.sh setup` to build the development image and install dependencies; use `./bin/dev.sh -- COMMAND...` for additional development commands.
+Repository reading/editing and Donna/Depmesh run on the host.
+
+Use Playwright MCP for rendered frontend changes, including layout, responsive behavior, interactions, console errors, and network diagnostics.
+Start `./bin/serve-dashboard.sh --demo` for synthetic data or pass `--history PATH` for existing local data.
+The user opens `http://127.0.0.1:8080/`; the browser MCP opens `http://dashboard:8080/` on the Compose network.
+Use the port printed by the launcher when overridden.
+The project Codex configuration starts MCP through `bin/playwright-mcp.sh`; screenshots and downloads belong under `.session/playwright/`.
+If the tools are unavailable, report that limitation and verify the MCP configuration rather than claiming inspection succeeded.
+Stop services you start before handoff unless the user asks to keep them running.
+Do not stop other projects' services.
+
 ## Tools
 
 Use the installed Donna and Depmesh tools from the repository root.
@@ -37,7 +52,7 @@ Run `donna -p llm run @/workflows/polish.donna.md` for deterministic checks befo
 Follow its action requests and use the exact completion commands Donna returns.
 Review changed artifacts against their governing specifications and the user's requirements using Depmesh guidance above.
 Polish gives each check a focused repair action and restarts the sequence after repairs.
-The current checks cover workflows, governance configuration, Rust formatting and linting, native tests, browser/build integration, and the release WASM build.
+The current checks cover workflows, governance configuration, Compose and shell syntax, Rust formatting and linting, native tests, browser/build integration, and the release WASM build.
 Extend the checks alongside approved implementation and report only coverage that exists.
 
 Use `rg` for file/text discovery and `difft --display=inline --color=never` for reviewing edits when available.

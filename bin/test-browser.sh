@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "$0")/container.sh"
 cd "$(dirname "$0")/.."
 # Tool installation is a separate setup step, never part of a test run.
 for tool in trunk wasm-bindgen python3 "${CHROMEDRIVER:-chromedriver}" "${CHROME:-google-chrome}"; do

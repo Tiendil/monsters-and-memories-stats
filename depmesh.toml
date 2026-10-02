@@ -23,7 +23,8 @@ output = { type = "files", pattern = "@/specs/**/*.md" }
 [[rules]]
 relation = "governed_by"
 input = { type = "any", items = [
-  { type = "one_of", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/docs/source-analysis.md"] },
+  { type = "one_of", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/docs/source-analysis.md", "@/.codex/config.toml", "@/.dockerignore", "@/docker-compose.yml"] },
+  { type = "glob", pattern = "@/docker/**" },
   { type = "glob", pattern = "@/workflows/*.donna.md" },
   { type = "glob", pattern = "@/bin/*.sh" },
   { type = "glob", pattern = "@/.agents/skills/**/SKILL.md" },
@@ -34,7 +35,8 @@ output = { type = "list", artifacts = ["@/specs/development.md"] }
 relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/development.md"] }
 output = { type = "union", items = [
-  { type = "list", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/docs/source-analysis.md"] },
+  { type = "list", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/docs/source-analysis.md", "@/.codex/config.toml", "@/.dockerignore", "@/docker-compose.yml"] },
+  { type = "files", pattern = "@/docker/**" },
   { type = "files", pattern = "@/workflows/*.donna.md" },
   { type = "files", pattern = "@/bin/*.sh" },
   { type = "files", pattern = "@/.agents/skills/**/SKILL.md" },
@@ -97,3 +99,20 @@ output = { type = "list", artifacts = ["@/specs/requirements.md", "@/specs/archi
 relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md"] }
 output = { type = "list", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-dashboard.sh", "@/bin/validate-history.sh", "@/bin/collect.sh"] }
+
+# Development environment ownership.
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+  { type = "one_of", artifacts = ["@/docker-compose.yml", "@/.dockerignore", "@/.codex/config.toml", "@/bin/dev.sh", "@/bin/container.sh", "@/bin/playwright-mcp.sh"] },
+  { type = "glob", pattern = "@/docker/**" },
+] }
+output = { type = "list", artifacts = ["@/specs/architecture.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/architecture.md"] }
+output = { type = "union", items = [
+  { type = "list", artifacts = ["@/docker-compose.yml", "@/.dockerignore", "@/.codex/config.toml", "@/bin/dev.sh", "@/bin/container.sh", "@/bin/playwright-mcp.sh"] },
+  { type = "files", pattern = "@/docker/**" },
+] }
