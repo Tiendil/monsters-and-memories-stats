@@ -1,0 +1,13 @@
+trunk-version = "=0.21.14"
+
+[build]
+target = "index.html"
+dist = "../../dist"
+public_url = "/"
+locked = true
+
+[serve]
+addresses = ["127.0.0.1"]
+
+[tools]
+wasm_bindgen = "0.2.129"

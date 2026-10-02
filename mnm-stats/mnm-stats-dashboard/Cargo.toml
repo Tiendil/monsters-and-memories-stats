@@ -1,0 +1,31 @@
+[package]
+name = "mnm-stats-dashboard"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+mnm-stats-model.workspace = true
+chrono.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+leptos.workspace = true
+web-sys.workspace = true
+js-sys.workspace = true
+wasm-bindgen.workspace = true
+
+[build-dependencies]
+mnm-stats-model.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+reqwest.workspace = true
+serde_json.workspace = true
+
+[[test]]
+name = "browser"
+required-features = ["browser-tests"]
+
+[features]
+browser-tests = []
