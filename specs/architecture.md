@@ -15,7 +15,7 @@ Detailed UI styling and private implementation structure are outside its scope.
 
 The project uses one Cargo workspace with `mnm-stats-model`, `mnm-stats-collector`, and `mnm-stats-dashboard` packages.
 Project package names MUST use the `mnm-stats-` prefix to distinguish them from external dependencies and reduce naming ambiguity.
-Each package MUST reside in `crates/<package-name>/` so directory names match their Cargo package names.
+Each package MUST reside in `mnm-stats/<package-name>/` so directory names match their Cargo package names.
 Both applications depend on the model library for the history data contracts and domain validation.
 Separate application packages keep collector-specific HTTP, WebSocket, and HTML parsing dependencies out of the WASM build.
 
@@ -151,7 +151,7 @@ README.md
 Cargo.toml
 Cargo.lock
 rust-toolchain.toml
-crates/
+mnm-stats/
   mnm-stats-model/        # shared data contract and validation
   mnm-stats-collector/    # native CLI and parser fixture tests
     tests/fixtures/      # sanitized public source fixtures
