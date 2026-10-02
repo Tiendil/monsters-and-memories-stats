@@ -9,9 +9,18 @@
 - Follow [tests.md](specs/tests.md) when adding or running tests. Tests must make no internet requests and must use local fixtures or synthetic data; never request the public statistics page or refresh fixtures from a test run.
 - Discuss major decisions with the user and obtain approval before implementing them. Writing a specification does not grant implementation approval.
 - Work in bounded steps that leave the repository consistent. At the end of each step, report changes and checks, and ask the user to review and commit before proceeding.
-- Do not stage, commit, push, deploy, or change repository settings unless the user authorizes that action. Automated collector data commits follow the application's collection contract.
 - Keep the design small. Prefer existing libraries, one source of truth, and direct code over frameworks or abstractions for hypothetical needs.
 - Collector and dashboard application logic must be Rust. Workflow YAML, minimal shell orchestration, HTML/CSS, and generated WebAssembly JavaScript bindings are supporting artifacts.
+
+## GitHub and repository permissions
+
+- Without explicit permission from the developer for the specific action and target, agents are prohibited from accessing GitHub or other remote repository services or performing Git repository operations.
+- This includes read-only access through websites, APIs, CLI tools, and connectors, as well as local Git inspection and changes.
+- Restricted Git operations include staging, committing, cloning, fetching, pulling, pushing, merging, rebasing, resetting, and creating, switching, renaming, or deleting branches, tags, or worktrees.
+- Explicit permission is also required to trigger, rerun, cancel, enable, or disable workflows; deploy or publish artifacts; manage issues or pull requests; or change repository settings, permissions, secrets, or remotes.
+- These restrictions apply equally to direct actions and actions caused indirectly through scripts, workflows, bots, tools, or other agents. An automated commit, push, or deployment initiated by an agent requires the same permission as performing it directly.
+- Approval of a design or implementation, confirmation that the developer committed changes, or an instruction to continue a goal does not grant permission for these operations. Permission must explicitly cover the operation, its target, and any resulting commits, pushes, or deployments.
+- Permission to read or edit local project files does not grant permission to use Git or access remote repository services. Complete authorized local work without performing restricted operations.
 
 ## Development environment
 
