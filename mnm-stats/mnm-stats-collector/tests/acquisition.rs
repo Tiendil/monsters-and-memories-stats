@@ -163,7 +163,22 @@ fn initializes_http_session_then_receives_delayed_local_websocket_updates() {
     let source_in_server = source.clone();
     let server = thread::spawn(move || {
         let mut stream = accept(&listener);
-        assert!(http_request(&mut stream).starts_with("GET /metrics "));
+        let request = http_request(&mut stream);
+        assert!(request.starts_with("GET /metrics "));
+        let user_agent = request
+            .lines()
+            .filter_map(|line| line.split_once(':'))
+            .find(|(name, _)| name.eq_ignore_ascii_case("user-agent"))
+            .expect("HTTP initialization must identify the collector")
+            .1
+            .trim()
+            .to_owned();
+        assert!(user_agent.starts_with("mnm-stats-collector/"));
+        assert!(user_agent.ends_with("+https://github.com/Tiendil/monsters-and-memories-stats)"));
+        // The build-metadata checks supply an independent expected wire value.
+        if let Ok(expected) = std::env::var("MNM_STATS_EXPECT_USER_AGENT") {
+            assert_eq!(user_agent, expected);
+        }
         reply(&mut stream, "200 OK", INITIALIZATION, true);
         drop(stream);
         let stream = accept(&listener);
@@ -176,6 +191,7 @@ fn initializes_http_session_then_receives_delayed_local_websocket_updates() {
                 assert!(req.uri().to_string().starts_with("/live/websocket?"));
                 assert!(req.uri().to_string().contains("_csrf_token=fixture-csrf"));
                 assert_eq!(req.headers()["Cookie"], "fixture=anonymous");
+                assert_eq!(req.headers()["User-Agent"], user_agent);
                 Ok(response)
             },
         )

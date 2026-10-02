@@ -12,6 +12,8 @@ x-dev: &dev
   shm_size: 1gb
   environment:
     MNM_STATS_CONTAINER: "1"
+    MNM_STATS_BUILD_REVISION: "${MNM_STATS_BUILD_REVISION:-}"
+    MNM_STATS_BUILD_BRANCH: "${MNM_STATS_BUILD_BRANCH:-}"
     MNM_STATS_HISTORY: "${MNM_STATS_CONTAINER_HISTORY:-/workspace/data/history.jsonl}"
     CARGO_HOME: /workspace/.cache/docker/cargo
     CARGO_TARGET_DIR: /workspace/target/docker

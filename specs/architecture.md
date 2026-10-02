@@ -29,6 +29,13 @@ These session values MUST be obtained from the source rather than hardcoded or c
 The collector MUST parse the completed metric values from the LiveView rendering updates using the reviewed source contract.
 It MUST NOT require a browser runtime for collection.
 
+The collector MUST send the same identifying `User-Agent` on HTTP initialization requests and WebSocket upgrade requests.
+Its product identifier MUST be `mnm-stats-collector/<revision>`, where `<revision>` is the first 12 characters of the build's commit hash, or `dev` when revision metadata is unavailable.
+The header comment MUST include `+https://github.com/Tiendil/monsters-and-memories-stats` and MUST include `branch=<branch>` when branch metadata is available, with valid HTTP comment escaping.
+Revision and branch metadata MUST be supplied at build time; changing those inputs MUST update the header even when build caches are reused.
+CI MUST supply the revision of the checked-out source and its branch, rather than assume the workflow trigger's revision matches the checkout.
+Local builds without metadata MUST use `dev` and omit the branch.
+
 Collection MUST wait for completion of the asynchronous metrics load for every discovered server before accepting its values.
 A successful WebSocket join, a fixed delay, or nonzero activity counts alone MUST NOT establish readiness.
 HTTP initialization, WebSocket connection, and readiness waits MUST have finite timeouts and fail collection without changing history when readiness cannot be established.

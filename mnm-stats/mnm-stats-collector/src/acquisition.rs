@@ -5,6 +5,7 @@ use reqwest::{
     Url,
     blocking::Client,
     cookie::{CookieStore, Jar},
+    header::{HeaderValue, USER_AGENT},
 };
 use scraper::Html;
 use serde_json::{Value, json};
@@ -15,6 +16,27 @@ use std::{
     time::{Duration, Instant},
 };
 use tungstenite::{Message, client::IntoClientRequest, stream::MaybeTlsStream};
+
+fn user_agent(revision: Option<&str>, branch: Option<&str>) -> Result<HeaderValue> {
+    let version = revision
+        .filter(|value| !value.is_empty())
+        .map(|value| value.chars().take(12).collect::<String>())
+        .unwrap_or_else(|| "dev".into());
+    let branch = branch
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            let escaped = value
+                .replace('\\', "\\\\")
+                .replace('(', "\\(")
+                .replace(')', "\\)");
+            format!("branch={escaped}; ")
+        })
+        .unwrap_or_default();
+    Ok(format!(
+        "mnm-stats-collector/{version} ({branch}+https://github.com/Tiendil/monsters-and-memories-stats)"
+    )
+    .parse()?)
+}
 
 struct Session {
     topic: String,
@@ -112,12 +134,17 @@ pub fn replay(frames: &[Value], observed_at: DateTime<Utc>) -> Result<Snapshot> 
 /// One HTTP initialization and one WebSocket session, with finite waits and no
 /// retries or fallback source. The returned timestamp is taken after readiness.
 pub fn collect(source: &str, timeout: Duration) -> Result<Snapshot> {
+    let user_agent = user_agent(
+        option_env!("MNM_STATS_BUILD_REVISION"),
+        option_env!("MNM_STATS_BUILD_BRANCH"),
+    )?;
     let url = Url::parse(source)?;
     if !matches!(url.scheme(), "http" | "https") {
         return Err("source must use HTTP or HTTPS".into());
     }
     let cookies = Arc::new(Jar::default());
     let client = Client::builder()
+        .user_agent(user_agent.clone())
         .cookie_provider(cookies.clone())
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::none())
@@ -167,6 +194,7 @@ pub fn collect(source: &str, timeout: Duration) -> Result<Snapshot> {
         .append_pair("_mounts", "0")
         .append_pair("vsn", "2.0.0");
     let mut request = websocket_url.as_str().into_client_request()?;
+    request.headers_mut().insert(USER_AGENT, user_agent);
     request.headers_mut().insert("Cookie", cookie);
     request
         .headers_mut()
@@ -220,4 +248,39 @@ pub fn collect(source: &str, timeout: Duration) -> Result<Snapshot> {
     })();
     let _ = socket.close(None);
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::user_agent;
+
+    #[test]
+    fn user_agent_identifies_revision_branch_and_project() {
+        assert_eq!(
+            user_agent(
+                Some("abc123def4567890123456789012345678901234"),
+                Some("main")
+            )
+            .unwrap(),
+            "mnm-stats-collector/abc123def456 (branch=main; +https://github.com/Tiendil/monsters-and-memories-stats)"
+        );
+    }
+
+    #[test]
+    fn user_agent_marks_builds_without_metadata_as_dev() {
+        for metadata in [(None, None), (Some(""), Some(""))] {
+            assert_eq!(
+                user_agent(metadata.0, metadata.1).unwrap(),
+                "mnm-stats-collector/dev (+https://github.com/Tiendil/monsters-and-memories-stats)"
+            );
+        }
+    }
+
+    #[test]
+    fn user_agent_escapes_comment_delimiters_in_branch_names() {
+        assert_eq!(
+            user_agent(Some("abc123def456"), Some("feature/(trial)")).unwrap(),
+            "mnm-stats-collector/abc123def456 (branch=feature/\\(trial\\); +https://github.com/Tiendil/monsters-and-memories-stats)"
+        );
+    }
 }
