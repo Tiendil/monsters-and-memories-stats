@@ -69,6 +69,7 @@ Tests for `mnm-stats-collector` MUST cover:
 - Rejection of malformed counts and inconsistent published totals.
 - Acceptance of cosmetic HTML changes that preserve the source contract.
 - HTTP initialization and WebSocket session handling using local responses or simulated failures, including status errors, missing session information, malformed messages, disconnection, and timeouts.
+- Matching identifying User-Agent headers on HTTP and WebSocket requests, including revision/branch formatting, the local development fallback, and changed build metadata with reused caches.
 - Adding exactly one JSONL record for a new UTC-hour observation, preserving earlier lines and unchanged values in a new hour.
 - Same-hour no-op behavior and missing intervals without fabricated samples.
 - Preservation of existing history after failure at any collection stage, including writing.
