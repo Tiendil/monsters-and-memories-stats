@@ -21,7 +21,7 @@ Local loopback connections MAY be used for fixture servers and dashboard preview
 Installing toolchains, dependencies, and browser binaries MAY use the internet; this is separate from test execution and MUST NOT fetch source metrics or refresh fixtures.
 Missing local test inputs MUST produce an explicit failure instead of triggering a download.
 
-**Example:** A collector HTTP test receives a saved response from a loopback server even when the public statistics page is unavailable.
+**Example:** A collector acquisition test receives a saved response from a loopback server even when the public statistics page is unavailable.
 Deleting that saved response causes a local missing-fixture failure, without a request to the public page.
 
 ## Test data
@@ -59,12 +59,16 @@ Tests for `mnm-stats-model` MUST cover:
 Tests for `mnm-stats-collector` MUST cover:
 
 - Extraction of expected values from a representative source fixture, including published zeros.
+- Rejection of initial placeholder values before every discovered server's asynchronous metrics load completes.
+- Readiness with legitimately zero activity counts and delayed updates, without requiring a fixed number of chart points.
+- Extraction of current-state values without storing the source's historical series or backfilling earlier observations.
+- Selection of a final historical point only when the source contract establishes last-known-state semantics, and rejection of an unverified historical bucket as a current value.
 - Dynamic discovery of added, removed, and reordered server cards.
 - Preservation of source display names.
 - Rejection of missing or duplicate identities and incompatible required fields.
 - Rejection of malformed counts and inconsistent published totals.
 - Acceptance of cosmetic HTML changes that preserve the source contract.
-- HTTP failure handling using local responses or simulated failures, including status errors and timeouts.
+- HTTP initialization and WebSocket session handling using local responses or simulated failures, including status errors, missing session information, malformed messages, disconnection, and timeouts.
 - Adding exactly one JSONL record for a new UTC-hour observation, preserving earlier lines and unchanged values in a new hour.
 - Same-hour no-op behavior and missing intervals without fabricated samples.
 - Preservation of existing history after failure at any collection stage, including writing.
@@ -101,6 +105,7 @@ They MUST cover:
 - Complete-history JSON downloads independent of filters, including valid empty history.
 - Operation under a repository subpath.
 - Absence of separate runtime requests for metrics data.
+- Charts and downloads containing only the collected current-state snapshots, with gaps for missed collections.
 
 Build integration tests MUST verify that a history-only change updates the embedded dataset even when caches are reused.
 They MUST verify that empty and populated JSONL fixtures become equivalent embedded history available through the dashboard's shared Rust snapshot types.

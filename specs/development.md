@@ -17,9 +17,10 @@ The user MUST review and commit each completed step before the next begins.
 They MUST NOT make Git commits or publish changes on the user's behalf without authorization.
 The repository MUST remain usable for its current stage at every handoff.
 Each step MUST leave the capabilities it introduces working and verified; scaffolding MUST NOT be presented as a finished application.
-Draft design documents MUST NOT imply that application functionality already exists.
+Specifications MUST state the current contracts directly, without revision history, draft labels, or task-specific approval status.
+Specifications MUST NOT imply that the functionality they require has already been implemented.
 
-Task-specific implementation plans and progress notes MUST be kept under ignored `.session/`, separate from project specifications.
+Task-specific implementation plans, approval records, and progress notes MUST be kept under ignored `.session/`, separate from project specifications.
 Plans MUST follow the applicable specifications and approval checkpoints.
 If deployment setup needs an additional user action, the agent MUST first prepare the concrete workflow/configuration for review and explain the exact remaining action.
 
@@ -60,10 +61,10 @@ Agents MUST review the following before handing off a step:
 
 - changed and newly added files.
 - document links.
-- proposal status.
+- approval records for the implementation scope.
 - requirement coverage.
 
-The later Rust implementation MUST incorporate the following into polish:
+Rust implementation MUST incorporate the following into polish:
 
 - formatting.
 - linting.

@@ -13,9 +13,10 @@ It does not define the upstream counting semantics that the public source leaves
 
 - `source` — the public [Monsters & Memories metrics page](https://account.monstersandmemories.com/metrics) from which the project obtains metrics.
 - `source contract` — the reviewed expectations that determine whether source data can be interpreted as a valid project observation.
-- `observation` — metric values obtained during one successful collection, associated with the actual collection timestamp.
+- `observation` — the source's current reported metric values obtained during one successful collection, associated with the actual collection timestamp.
 - `snapshot` — the stored representation of one observation.
 - `history` — the retained chronological sequence of observations.
+- `last known state` — the latest state reported by the source for a metric, as established by its source contract; a final historical bucket does not qualify solely because it is the newest point.
 
 ## Metric terms
 
