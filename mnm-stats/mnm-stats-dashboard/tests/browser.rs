@@ -37,6 +37,33 @@ fn wait_until(mut ready: impl FnMut() -> bool, description: &str) {
     }
 }
 
+fn completed_download(path: &Path) -> Option<Value> {
+    // Chrome may create the destination before it finishes writing the JSON.
+    let bytes = fs::read(path).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+#[test]
+fn download_readiness_requires_complete_json() {
+    let scratch = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!(
+        "../../.session/tests/download-readiness-{}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&scratch).unwrap();
+    let path = scratch.join("history.json");
+    assert!(completed_download(&path).is_none());
+    for incomplete in ["", "{\"schema_version\":1,\"snapshots\":["] {
+        fs::write(&path, incomplete).unwrap();
+        assert!(completed_download(&path).is_none());
+    }
+    fs::write(&path, r#"{"schema_version":1,"snapshots":[]}"#).unwrap();
+    assert_eq!(
+        completed_download(&path),
+        Some(json!({"schema_version":1,"snapshots":[]}))
+    );
+    fs::remove_dir_all(scratch).unwrap();
+}
+
 struct Browser {
     client: Client,
     endpoint: String,
@@ -214,9 +241,15 @@ impl Browser {
     fn verify_download(&self, expected: &Value, scratch: &Path) {
         let download = scratch.join("downloads/history.json");
         self.click("#download-history");
-        wait_until(|| download.exists(), "history.json download");
-        let actual: Value = serde_json::from_str(&fs::read_to_string(&download).unwrap()).unwrap();
-        assert_eq!(actual, *expected);
+        let mut actual = None;
+        wait_until(
+            || {
+                actual = completed_download(&download);
+                actual.is_some()
+            },
+            "complete history.json download",
+        );
+        assert_eq!(actual.unwrap(), *expected);
         fs::remove_file(download).unwrap();
     }
 
