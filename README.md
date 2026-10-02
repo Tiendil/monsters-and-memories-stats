@@ -1,8 +1,8 @@
 # Monsters & Memories historical statistics
 
-A Rust collector and static dashboard for the public [Monsters & Memories metrics](https://account.monstersandmemories.com/metrics), using repository JSONL storage and, when deployment is implemented, GitHub Actions and GitHub Pages.
+A Rust collector and static dashboard for the public [Monsters & Memories metrics](https://account.monstersandmemories.com/metrics), using repository JSONL storage, GitHub Actions, and GitHub Pages.
 
-The workspace provides the Rust HTTP/WebSocket collector, shared history model, local history-validation CLI, and a Leptos dashboard. The dashboard embeds validated history in WASM and presents metric plots, comparisons, ratios, correlations, and complete-history JSON downloads. GitHub workflows are not implemented yet. The committed history starts empty.
+The workspace provides the Rust HTTP/WebSocket collector, shared history model, local history-validation CLI, and a Leptos dashboard. The dashboard embeds validated history in WASM and presents metric plots, comparisons, ratios, correlations, and complete-history JSON downloads. Workflows provide code checks, hourly collection, and Pages deployment; repository setup and live acceptance are described below. The committed history starts empty.
 
 - [Specification index](specs/intro.md)
 - [Requirements](specs/requirements.md)
@@ -21,11 +21,13 @@ Install Docker Engine and Docker Compose, then run:
 ./bin/dev.sh setup
 ```
 
-Setup builds the Linux x86_64 development image, fetches locked Cargo dependencies, and pulls the pinned Playwright MCP image. The image includes Rust 1.98.0, rustfmt, Clippy, the WASM target, Trunk 0.21.14, wasm-bindgen 0.2.129, Python, and matching Chrome/ChromeDriver 154.0.8037.92. Host Rust, Node, and browser installations are not required. Browser tooling is for tests and inspection; collection uses Rust HTTP/WebSocket clients.
+Setup builds the Linux x86_64 development image, fetches locked Cargo dependencies, and pulls the pinned Playwright MCP image. The image includes Rust 1.98.0, rustfmt, Clippy, the WASM target, Trunk 0.21.14, wasm-bindgen 0.2.129, Python, actionlint 1.7.12, and matching Chrome/ChromeDriver 154.0.8037.92. Host Rust, Node, and browser installations are not required. Browser tooling is for tests and inspection; collection uses Rust HTTP/WebSocket clients.
 
 `rust-toolchain.toml`, the dashboard's `Trunk.toml`, `Cargo.lock`, and the Dockerfile record the corresponding pinned versions. Update the Dockerfile alongside toolchain/build-tool upgrades. Setup may access package registries and tool downloads; test execution uses local fixtures and never requests source metrics.
 
 Build caches live in ignored `.cache/docker/` and `target/docker/`. Container outputs use your user/group IDs. Existing host build artifacts are kept separate. Use `./bin/dev.sh -- COMMAND...` for additional commands inside the same image.
+
+GitHub jobs reuse `.github/actions/setup/` to build this image with a Docker layer cache and restore Cargo caches. `./bin/dev.sh setup --image-ready` fetches dependencies after that image has been loaded; it skips rebuilding the image and pulling the interactive MCP service. Application commands are the same locally and in CI.
 
 ## Local use
 
@@ -111,6 +113,8 @@ mkdir -p .session/manual-replay
 ## Checks
 
 ```bash
+./bin/check-environment.sh
+./bin/check-actions.sh
 ./bin/check-format.sh
 ./bin/check-lints.sh
 ./bin/test.sh
@@ -119,6 +123,8 @@ mkdir -p .session/manual-replay
 ```
 
 Native tests cover JSONL validation and exports, collection and history preservation, dashboard aggregation, ratios, daily correlation sampling, range boundaries, calendar alignment, and missing observations. Browser tests exercise every chart family, all six ranges, exact values, historical servers, comparisons with more than two series, and complete downloads under filters. They also verify root/subpath hosting, runtime asset requests, history-only cached rebuilds, failed builds preserving the last site, and the development preview with watched history updates. The browser clock is fixed by a small test-only clock stub; application logic and test assertions are Rust. Tests use loopback servers and keep scratch inputs, browser profiles, and logs under ignored `.session/tests/`. They never modify `data/history.jsonl` or captured source fixtures.
+
+Publication tests use temporary local Git repositories to verify history-only commits, unchanged-data no-ops, invalid-history rejection, and rejected pushes preserving concurrent changes and the collected sample. The notification probe uses a local malformed fixture. These tests do not contact GitHub or the public metrics source. `check-actions.sh` uses actionlint to check workflow syntax, expressions, and action inputs without running a workflow.
 
 Donna runs these checks with focused repair actions:
 
@@ -131,4 +137,52 @@ donna -p llm run @/workflows/polish.donna.md
 
 Depmesh exposes only `governs` and `governed_by`. Agents use those relationships to review changes against the specifications. Each implementation step ends with user review and a commit before the next begins; task plans and approval records stay under `.session/`.
 
-Scheduled GitHub collection, Pages deployment, and failure notifications are not configured yet; their setup belongs to the automation step.
+## GitHub operation
+
+### Workflows
+
+- **Code checks** (`code-checks.yml`) runs the shared checks on pull requests and manual dispatch. It has read-only repository access and does not publish a site or collect metrics.
+- **Collect metrics** (`collect.yml`) runs at minute 17 of every UTC hour and supports manual dispatch on the default branch. It checks out the latest default branch, collects one current-state observation, validates history, and commits only `data/history.jsonl` using `GITHUB_TOKEN`. Unchanged history produces no commit. Running collectors are serialized and are not canceled by another collection trigger.
+- **Publish dashboard** (`pages.yml`) runs on pushes to `main`, successful completion of **Collect metrics** on `main`, and manual dispatch on the default branch. It checks out the latest default branch, builds the complete history into WASM using the configured Pages path, and uploads/deploys through the official Pages actions. Only the deployment job has `pages: write` and `id-token: write` permissions.
+
+The default branch is `main`; update the two branch filters in `pages.yml` if it is renamed. Code and history stay on the same branch. Generated site assets are published as a Pages artifact, not committed to a deployment branch.
+
+The collection-completion trigger is essential: a push using `GITHUB_TOKEN` does not start another push workflow. The `workflow_run` event instead starts Pages after the collector has published its data commit. Both workflow files must exist on the default branch. [GitHub token behavior](https://docs.github.com/en/actions/concepts/security/github_token), [workflow-run events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run).
+
+Pages serializes the entire build/deploy cycle without canceling a running deployment. Every queued run checks out the latest branch after the preceding cycle finishes, so delayed older triggers cannot publish an older checkout over a newer deployment. Invalid history or a failed build prevents deployment and leaves the last published site in place. Failed-collection runs use separate concurrency groups so they cannot replace a pending successful collection's deployment. GitHub may replace other pending runs; the surviving run still builds the latest branch. [Concurrency behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
+
+### Setup
+
+1. Review and publish the workflows to `main`.
+2. In repository **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. The workflow reads this setting; it does not enable Pages automatically. Allow deployments from `main` in the `github-pages` environment. [Custom Pages workflow setup](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+3. Ensure Actions can run and repository rules permit the collector's `GITHUB_TOKEN` to push the history commit. The workflow explicitly requests `contents: write` for collection. No personal access token is needed. If a branch rule rejects the bot, review that rule with the maintainer; the workflow does not bypass it.
+4. Configure native failure notifications as described below, then perform the acceptance checks.
+
+After a successful deployment, the expected default URL is [tiendil.github.io/monsters-and-memories-stats](https://tiendil.github.io/monsters-and-memories-stats/). The **Publish dashboard** run reports the actual URL, including any configured custom domain.
+
+### Failure notifications
+
+The responsible maintainer must enable GitHub Actions email or web notifications in their account's notification settings; failure-only notifications are sufficient. A repository watch alone does not establish delivery. Manual-run notifications go to the person who triggers that run. Scheduled notifications go to the workflow's initial creator, then to the most recent cron editor, or to the person who re-enables a disabled schedule. If ownership changes, the intended recipient should re-enable the schedule and verify their settings. [GitHub notification rules](https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs).
+
+To verify delivery, that maintainer should manually run **Collect metrics** on `main` with **verify_failure_notification** selected. This deliberately replays a malformed local fixture and fails; it never contacts the metrics page, changes repository history, or builds/deploys Pages. Confirm receipt of the failure notification and that the existing dashboard remains available. Ordinary collection leaves the option unchecked. A failed run badge is not proof that a notification arrived.
+
+### Recovery and scheduling limits
+
+Schedules are best-effort: runs can be delayed or dropped, and public repositories' schedules may be disabled after 60 days without repository activity. The minute-17 offset avoids the documented start-of-hour load peak but does not guarantee timely execution. Re-enable a disabled **Collect metrics** workflow from the Actions tab and run it manually once; review the notification recipient after re-enabling. Missed intervals remain gaps. [Schedule limits and recovery](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+For source or validation failures, inspect the failing step, review the source contract and fixtures, and ship the fix through ordinary code review. Repeated failures stay visible until fixed. Do not bypass validation or replace earlier observations. The existing dashboard remains usable and marks data stale after three hours.
+
+For a rejected history push, the run fails without force-pushing and retains `collection-history-RUN_ID-ATTEMPT` for 30 days. The artifact contains the complete local history, including the unpublished observation. Download it before retrying. Compare it with the latest branch history; preserve any missing observation in chronological order, retain existing records, reject duplicate UTC hours, and validate the result with `./bin/validate-history.sh PATH` before a reviewed recovery commit. Never replace the branch's history wholesale with the artifact. An ordinary retry collects the current hour and cannot recreate a lost earlier sample.
+
+If collection succeeds but Pages fails, fix the build or Pages configuration and manually run **Publish dashboard**. Its fresh checkout rebuilds all committed history. Invalid data cannot replace the last valid dashboard.
+
+### Deployment acceptance
+
+Local checks do not establish hosted operation. Before leaving collection unattended, retain evidence of:
+
+- A passing manual **Code checks** run.
+- A passing manual **Collect metrics** run and its history-only commit.
+- A passing scheduled collection and preservation of earlier observations.
+- An automatically triggered **Publish dashboard** run containing the bot's committed observation.
+- The hosted dashboard's latest collection time and downloaded `history.json` matching the complete committed history used by that build, including after a history-only update.
+- A received notification from the controlled failure probe, with the last valid page still available.

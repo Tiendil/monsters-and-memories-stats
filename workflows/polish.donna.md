@@ -7,7 +7,7 @@ start_operation_id = "validate_workflows"
 
 Run the available deterministic repository checks in order.
 Each failure has a focused repair action; every repair restarts the check sequence so success describes the final files.
-Checks cover workflow syntax, Depmesh configuration, Compose and shell syntax, Rust formatting and linting, native behavior tests, browser/build integration, and the release WASM build.
+Checks cover Donna and GitHub workflow syntax, Depmesh configuration, Compose and shell syntax, Rust formatting and linting, native behavior tests, browser/build integration, and the release WASM build.
 
 ## Validate Donna workflows
 
@@ -83,7 +83,7 @@ id = "check_environment"
 kind = "donna.lib.run_script"
 save_stdout_to = "environment_stdout"
 save_stderr_to = "environment_stderr"
-goto_on_success = "check_format"
+goto_on_success = "check_actions"
 goto_on_failure = "fix_environment"
 timeout = 120
 ```
@@ -108,6 +108,40 @@ kind = "donna.lib.request_action"
 
 Repair the reported Compose configuration or shell syntax error.
 Dependency installation belongs to the explicit setup command, not a check.
+After the repair, {{ donna.lib.goto("validate_workflows") }}.
+If an external action is required, leave this request pending and report the concrete blocker.
+
+## Check GitHub workflows
+
+```toml donna
+id = "check_actions"
+kind = "donna.lib.run_script"
+save_stdout_to = "actions_stdout"
+save_stderr_to = "actions_stderr"
+goto_on_success = "check_format"
+goto_on_failure = "fix_actions"
+timeout = 120
+```
+
+```bash donna script
+#!/usr/bin/env bash
+set -euo pipefail
+./bin/check-actions.sh
+```
+
+## Repair GitHub workflows
+
+```toml donna
+id = "fix_actions"
+kind = "donna.lib.request_action"
+```
+
+```text
+{{ donna.lib.task_variable("actions_stdout") }}
+{{ donna.lib.task_variable("actions_stderr") }}
+```
+
+Repair the reported GitHub Actions syntax, expression, or action-input error.
 After the repair, {{ donna.lib.goto("validate_workflows") }}.
 If an external action is required, leave this request pending and report the concrete blocker.
 

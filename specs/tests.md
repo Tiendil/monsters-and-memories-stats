@@ -122,6 +122,14 @@ Coverage MUST include valid empty history, invalid input diagnostics, and changi
 Demo generation MUST be checked using a fixed timestamp; interactive demos MAY use the current time.
 Browser inspection through MCP MUST use local synthetic data or existing local history and MUST NOT refresh source fixtures.
 
+### Automation
+
+History publication tests MUST use isolated local Git repositories and local remotes.
+They MUST verify that publication commits only validated history, skips unchanged history, and rejects malformed history before committing.
+A rejected push MUST leave remote changes intact and retain the collected observation for recovery.
+Notification-probe coverage MUST verify an intentional failure from local input without changing repository history.
+Automated checks MUST validate GitHub workflow syntax and expressions without dispatching production workflows or deploying the dashboard.
+
 ## Delivery and reporting
 
 Each implementation step MUST include passing tests for the behavior it introduces.
