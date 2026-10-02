@@ -240,6 +240,10 @@ Missing samples MUST NOT be plotted as zeros; line charts MUST break across gaps
 Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
 Users MUST be able to inspect exact plotted values through an accessible table or point details.
+Hovering a plotted observation with the mouse MUST show its series, exact value, and original collection timestamp labeled UTC.
+This MUST work for every chart family and comparison mode, including dense series and overlapping comparison points.
+Ratio details MUST include the exact numerator and denominator alongside the rounded percentage.
+Hover details MUST refer only to collected observations, MUST NOT invent points inside gaps, and MUST clear when the pointer leaves the plot or the selection changes.
 The following states MUST be understandable:
 
 - initialization.

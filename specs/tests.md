@@ -98,6 +98,8 @@ Automated browser tests MUST run against a locally built dashboard with embedded
 They MUST cover:
 
 - Rendering and exact-value inspection for the supported metric families.
+- Mouse hover details with exact counts, ratio numerators and denominators, series identity, and original UTC timestamps, including comparison plots, overlapping points, and scaled or horizontally scrolled charts.
+- Clearing hover details when leaving a plot or changing selections, without showing values inside gaps or for unavailable observations.
 - Range selection and server selection, including historical servers.
 - Unavailable metrics and empty or invalid data states.
 - Month-to-month and year-to-year comparisons with at least three periods.

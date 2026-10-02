@@ -79,7 +79,7 @@ Use **View** to choose a comparison:
 
 Period comparisons use their selected periods and the server scope; the shared range still controls correlations. Remove individual selections with their **Remove** buttons. There is no two-series limit. Incomplete periods are not extrapolated, and lines break at missing values or gaps longer than two hours.
 
-Each chart has **Inspect exact values**, with paginated UTC observations. Counts are exact; ratios show a rounded percentage together with the exact numerator and denominator. Zero denominators display “not available,” and ratios may exceed 100 percent. Narrow screens can scroll charts and tables horizontally.
+Hover a plotted point to see its series, exact value, and original UTC collection timestamp, including in comparisons. Overlapping points show their individual details. Each chart also has **Inspect exact values**, with paginated UTC observations. Counts are exact; ratios show a rounded percentage together with the exact numerator and denominator. Zero denominators display “not available,” and ratios may exceed 100 percent. Narrow screens can scroll charts and tables horizontally.
 
 Correlations use Pearson's r on the last jointly available observation per UTC day, show the paired-day count, and require at least three days with variation in both metrics. Correlation does not establish causation, and overlapping source activity windows limit interpretation.
 
