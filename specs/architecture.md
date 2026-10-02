@@ -66,7 +66,7 @@ Changes to required metric labels or the approved zone roster require a reviewed
 
 Development builds, checks, and local preview MUST use the shared Docker Compose development image through project commands.
 The image MUST provide the pinned Rust and WebAssembly toolchain and the tools needed by existing browser tests so host installations do not change their behavior.
-Dependency installation MUST be a separate setup operation.
+Development tool installation MUST be a separate setup operation.
 Donna and Depmesh run on the host and orchestrate those commands.
 
 The dashboard preview MUST run in Compose and expose the same built application to the user's browser and the agent's Playwright MCP browser.
@@ -318,6 +318,8 @@ GitHub schedules are best-effort and may be delayed or dropped.
 The workflow MUST live on the default branch and collect against its latest state.
 Overlapping collection runs MUST preserve existing observations and MUST NOT cancel a writer while it is updating history.
 It MUST commit only the validated history file using the repository's `GITHUB_TOKEN` and `contents: write` permission.
+Collector commits MUST use the subject `collector: record snapshot at <observed_at>`, where `<observed_at>` is the latest snapshot's stored collection timestamp, formatted as RFC 3339 UTC with a `Z` suffix and any nonzero fractional seconds preserved.
+The message MUST use the observation time rather than the workflow or commit execution time.
 It MUST skip a commit when the file is unchanged, and MUST NOT force-push or overwrite unrelated concurrent changes.
 A push conflict MUST either be resolved without losing samples or fail visibly for a later retry.
 Repository rules that disallow the bot's data commit MUST be identified during deployment setup rather than bypassed.

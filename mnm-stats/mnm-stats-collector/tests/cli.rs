@@ -2,6 +2,66 @@ use std::{fs, path::PathBuf, process::Command};
 mod common;
 
 #[test]
+fn notification_probe_fails_with_local_fixture_without_changing_repository_history() {
+    let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let history = project.join("data/history.jsonl");
+    let before = fs::read(&history).unwrap();
+    let result = Command::new(project.join("bin/verify-collection-failure.sh"))
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    let error = String::from_utf8_lossy(&result.stderr);
+    assert!(error.contains("Intentional notification verification"));
+    assert!(error.contains("replay"), "{error}");
+    assert_eq!(fs::read(history).unwrap(), before);
+}
+
+#[test]
+fn latest_observed_at_uses_the_complete_validated_history() {
+    let scratch = common::Scratch::new();
+    let path = scratch.0.join("history.jsonl");
+    let record = |timestamp| {
+        format!(
+            "{}\n",
+            serde_json::json!({
+                "schema_version": 1,
+                "observed_at": timestamp,
+                "active_subscriptions": 0,
+                "servers": []
+            })
+        )
+    };
+    let first = record("2001-02-03T04:05:06Z");
+    let latest = record("2001-02-03T05:06:07.123456789+00:00");
+    for (contents, expected) in [
+        (String::new(), Some("")),
+        (first.clone(), Some("2001-02-03T04:05:06Z\n")),
+        (
+            format!("{first}{latest}"),
+            Some("2001-02-03T05:06:07.123456789Z\n"),
+        ),
+        (format!("{{broken\n{latest}"), None),
+    ] {
+        fs::write(&path, &contents).unwrap();
+        let output = Command::new(env!("CARGO_BIN_EXE_mnm-stats-collector"))
+            .arg("validate-history")
+            .arg(&path)
+            .arg("--latest-observed-at")
+            .output()
+            .unwrap();
+        assert_eq!(output.status.success(), expected.is_some());
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            expected.unwrap_or("")
+        );
+        if expected.is_none() {
+            assert!(String::from_utf8(output.stderr).unwrap().contains("line 1"));
+        }
+        assert_eq!(fs::read_to_string(&path).unwrap(), contents);
+    }
+}
+
+#[test]
 fn validates_local_inputs_and_never_changes_them() {
     let scratch = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!(
         "../../.session/tests/collector-{}",

@@ -21,6 +21,7 @@
 - These restrictions apply equally to direct actions and actions caused indirectly through scripts, workflows, bots, tools, or other agents. An automated commit, push, or deployment initiated by an agent requires the same permission as performing it directly.
 - Approval of a design or implementation, confirmation that the developer committed changes, or an instruction to continue a goal does not grant permission for these operations. Permission must explicitly cover the operation, its target, and any resulting commits, pushes, or deployments.
 - Permission to read or edit local project files does not grant permission to use Git or access remote repository services. Complete authorized local work without performing restricted operations.
+- Normal local builds, including their dependency resolution and downloads, are allowed within authorized work.
 
 ## Development environment
 
