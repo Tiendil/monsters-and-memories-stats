@@ -8,6 +8,8 @@ start_operation_id = "validate_workflows"
 Run the available deterministic repository checks in order.
 Each failure has a focused repair action; every repair restarts the check sequence so success describes the final files.
 Checks cover Donna and GitHub workflow syntax, Depmesh configuration, Compose and shell syntax, Rust formatting and linting, native behavior tests, browser/build integration, and the release WASM build.
+All checks run locally without project Git operations or hosted workflows.
+Normal build dependency resolution and downloads are allowed; tests use local inputs and services.
 
 ## Validate Donna workflows
 

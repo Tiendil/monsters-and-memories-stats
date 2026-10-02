@@ -124,9 +124,6 @@ Browser inspection through MCP MUST use local synthetic data or existing local h
 
 ### Automation
 
-History publication tests MUST use isolated local Git repositories and local remotes.
-They MUST verify that publication commits only validated history, skips unchanged history, and rejects malformed history before committing.
-A rejected push MUST leave remote changes intact and retain the collected observation for recovery.
 Notification-probe coverage MUST verify an intentional failure from local input without changing repository history.
 Automated checks MUST validate GitHub workflow syntax and expressions without dispatching production workflows or deploying the dashboard.
 

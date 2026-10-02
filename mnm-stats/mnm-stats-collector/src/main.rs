@@ -1,9 +1,9 @@
-use chrono::Utc;
+use chrono::{SecondsFormat, Utc};
 use mnm_stats_collector::{Result, SOURCE, acquisition, storage::HistoryFile};
 use mnm_stats_model::History;
 use std::{env, fs, path::PathBuf, process::ExitCode, time::Duration};
 
-const USAGE: &str = "usage: mnm-stats-collector validate-history PATH | collect --history PATH [--source URL | --replay FILE [--observed-at RFC3339]]";
+const USAGE: &str = "usage: mnm-stats-collector validate-history PATH [--latest-observed-at] | collect --history PATH [--source URL | --replay FILE [--observed-at RFC3339]]";
 
 fn run() -> Result<()> {
     let mut args = env::args_os().skip(1);
@@ -11,11 +11,27 @@ fn run() -> Result<()> {
     match command.as_ref().and_then(|s| s.to_str()) {
         Some("validate-history") => {
             let path = args.next().ok_or("validate-history needs a path")?;
+            let latest_observed_at = match args.next() {
+                None => false,
+                Some(flag) if flag == "--latest-observed-at" => true,
+                Some(_) => return Err("unexpected validate-history argument".into()),
+            };
             if args.next().is_some() {
                 return Err("unexpected validate-history argument".into());
             }
             let history = History::from_jsonl(&fs::read_to_string(path)?)?;
-            println!("Valid history: {} observations", history.snapshots().len());
+            if latest_observed_at {
+                if let Some(snapshot) = history.snapshots().last() {
+                    println!(
+                        "{}",
+                        snapshot
+                            .observed_at
+                            .to_rfc3339_opts(SecondsFormat::AutoSi, true)
+                    );
+                }
+            } else {
+                println!("Valid history: {} observations", history.snapshots().len());
+            }
         }
         Some("collect") => {
             let mut history = None;

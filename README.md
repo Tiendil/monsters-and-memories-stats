@@ -124,9 +124,9 @@ mkdir -p .session/manual-replay
 
 Native tests cover JSONL validation and exports, collection and history preservation, dashboard aggregation, ratios, daily correlation sampling, range boundaries, calendar alignment, and missing observations. Browser tests exercise every chart family, all six ranges, exact values, historical servers, comparisons with more than two series, and complete downloads under filters. They also verify root/subpath hosting, runtime asset requests, history-only cached rebuilds, failed builds preserving the last site, and the development preview with watched history updates. The browser clock is fixed by a small test-only clock stub; application logic and test assertions are Rust. Tests use loopback servers and keep scratch inputs, browser profiles, and logs under ignored `.session/tests/`. They never modify `data/history.jsonl` or captured source fixtures.
 
-Publication tests use temporary local Git repositories to verify history-only commits, unchanged-data no-ops, invalid-history rejection, and rejected pushes preserving concurrent changes and the collected sample. The notification probe uses a local malformed fixture. These tests do not contact GitHub or the public metrics source. `check-actions.sh` uses actionlint to check workflow syntax, expressions, and action inputs without running a workflow.
+The notification-probe test uses a local malformed fixture. `check-actions.sh` uses actionlint to check workflow syntax, expressions, and action inputs without running a workflow.
 
-Donna runs these checks with focused repair actions:
+Donna runs these checks locally with focused repair actions, without project Git operations or hosted workflows. Normal build dependency resolution and downloads are allowed; tests use local inputs and services:
 
 ```bash
 donna -p llm status
@@ -146,6 +146,8 @@ Depmesh exposes only `governs` and `governed_by`. Agents use those relationships
 - **Publish dashboard** (`pages.yml`) runs on pushes to `main`, successful completion of **Collect metrics** on `main`, and manual dispatch on the default branch. It checks out the latest default branch, builds the complete history into WASM using the configured Pages path, and uploads/deploys through the official Pages actions. Only the deployment job has `pages: write` and `id-token: write` permissions.
 
 The default branch is `main`; update the two branch filters in `pages.yml` if it is renamed. Code and history stay on the same branch. Generated site assets are published as a Pages artifact, not committed to a deployment branch.
+
+Collector commit subjects use `collector: record snapshot at <observed_at>`, for example `collector: record snapshot at 2026-10-02T20:39:21.494914513Z`. The timestamp comes from the latest stored observation in UTC, preserving fractional seconds, so publication retries still identify the collected data.
 
 The collection-completion trigger is essential: a push using `GITHUB_TOKEN` does not start another push workflow. The `workflow_run` event instead starts Pages after the collector has published its data commit. Both workflow files must exist on the default branch. [GitHub token behavior](https://docs.github.com/en/actions/concepts/security/github_token), [workflow-run events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run).
 

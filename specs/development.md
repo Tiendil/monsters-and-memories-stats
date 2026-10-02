@@ -43,7 +43,7 @@ GitHub Actions MUST own event handling and job orchestration, while Donna MUST o
 CI verification commands MUST report failures without requiring agent interaction.
 Shared application commands MUST execute in the project's Docker development environment, including when invoked by Donna or CI.
 Repository inspection, editing, Donna, and Depmesh MAY run on the host.
-Setup MUST install dependencies before checks; checks MUST fail clearly when setup is missing.
+Setup MUST provide the required development tools before checks; checks MUST fail clearly when those tools are missing.
 Containers MUST preserve reusable build caches and produce host-user-writable artifacts.
 
 ## Browser inspection
@@ -59,6 +59,9 @@ Agents MUST stop temporary services they start before handoff unless the user as
 
 Donna MUST discover project workflows under `workflows/` and keep runtime state under ignored `.session/donna/`.
 The polish workflow MUST run deterministic checks for artifacts that exist at the current delivery stage.
+Polish MUST run locally without project Git operations or invoking hosted workflows, deployments, or repository-management APIs.
+Normal builds MAY resolve and download package dependencies.
+Test execution MUST use only local inputs and services.
 Each check MUST have a focused failure handler that exposes its diagnostics.
 Every repair MUST restart the check sequence so successful completion applies to the final artifact state.
 Checks MUST NOT report skipped or nonexistent application checks as passed.
