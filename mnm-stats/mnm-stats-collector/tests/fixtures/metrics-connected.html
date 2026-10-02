@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Metrics fixture</title></head><body>
+<main>
+
+            <div id="fixture-liveview" class="phx-connected"><div id="flash-group">
+  
+  
+  <div id="client-error" phx-click="[[&quot;push&quot;,{&quot;value&quot;:{&quot;key&quot;:&quot;error&quot;},&quot;event&quot;:&quot;lv:clear-flash&quot;}],[&quot;hide&quot;,{&quot;time&quot;:200,&quot;to&quot;:&quot;#client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;transform&quot;,&quot;ease-in&quot;,&quot;duration-200&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;]]}]]" role="alert" class="fixed top-2 right-2 mr-2 w-80 sm:w-96 z-50 rounded-lg p-3 shadow-lg border bg-zinc-800 border-red-700 text-red-200" hidden="" phx-connected="[[&quot;hide&quot;,{&quot;time&quot;:200,&quot;to&quot;:&quot;#client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;transform&quot;,&quot;ease-in&quot;,&quot;duration-200&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;]]}]]" phx-disconnected="[[&quot;show&quot;,{&quot;time&quot;:300,&quot;to&quot;:&quot;.phx-client-error #client-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;transform&quot;,&quot;ease-out&quot;,&quot;duration-300&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;]]}]]">
+  <p class="flex items-center gap-1.5 text-sm font-semibold leading-6">
+    
+    <span class="hero-exclamation-circle-mini h-4 w-4"></span>
+    We can't find the internet
+  </p>
+  <p class="mt-2 text-sm leading-5">
+    Attempting to reconnect
+    <span class="hero-arrow-path ml-1 h-3 w-3 animate-spin"></span>
+  </p>
+  <button type="button" class="group absolute top-1 right-1 p-2" aria-label="close">
+    <span class="hero-x-mark-solid h-5 w-5 opacity-40 group-hover:opacity-70"></span>
+  </button>
+</div>
+
+  <div id="server-error" phx-click="[[&quot;push&quot;,{&quot;value&quot;:{&quot;key&quot;:&quot;error&quot;},&quot;event&quot;:&quot;lv:clear-flash&quot;}],[&quot;hide&quot;,{&quot;time&quot;:200,&quot;to&quot;:&quot;#server-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;transform&quot;,&quot;ease-in&quot;,&quot;duration-200&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;]]}]]" role="alert" class="fixed top-2 right-2 mr-2 w-80 sm:w-96 z-50 rounded-lg p-3 shadow-lg border bg-zinc-800 border-red-700 text-red-200" hidden="" phx-connected="[[&quot;hide&quot;,{&quot;time&quot;:200,&quot;to&quot;:&quot;#server-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;transform&quot;,&quot;ease-in&quot;,&quot;duration-200&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;]]}]]" phx-disconnected="[[&quot;show&quot;,{&quot;time&quot;:300,&quot;to&quot;:&quot;.phx-server-error #server-error&quot;,&quot;transition&quot;:[[&quot;transition-all&quot;,&quot;transform&quot;,&quot;ease-out&quot;,&quot;duration-300&quot;],[&quot;opacity-0&quot;,&quot;translate-y-4&quot;,&quot;sm:translate-y-0&quot;,&quot;sm:scale-95&quot;],[&quot;opacity-100&quot;,&quot;translate-y-0&quot;,&quot;sm:scale-100&quot;]]}]]">
+  <p class="flex items-center gap-1.5 text-sm font-semibold leading-6">
+    
+    <span class="hero-exclamation-circle-mini h-4 w-4"></span>
+    Something went wrong!
+  </p>
+  <p class="mt-2 text-sm leading-5">
+    Hang in there while we get back on track
+    <span class="hero-arrow-path ml-1 h-3 w-3 animate-spin"></span>
+  </p>
+  <button type="button" class="group absolute top-1 right-1 p-2" aria-label="close">
+    <span class="hero-x-mark-solid h-5 w-5 opacity-40 group-hover:opacity-70"></span>
+  </button>
+</div>
+</div>
+
+  
+  <div class="px-4 sm:px-6 lg:px-8 py-6">
+    <div class="mx-auto max-w-4xl">
+      <div class="sm:flex sm:items-center sm:justify-between mb-6">
+  <div class="min-w-0 flex-1">
+    <h1 class="text-xl sm:text-2xl font-semibold text-zinc-100">
+      
+        Server Metrics
+        
+    </h1>
+    <p class="mt-1 text-sm text-zinc-400">
+      Live population and activity across all public servers
+    </p>
+  </div>
+  <div class="mt-4 sm:mt-0 sm:ml-4 flex-shrink-0">
+    
+          <div id="public-metric-summary" class="flex flex-col items-start gap-2 sm:items-end">
+
+              <span id="active-subscriptions-count" class="inline-flex items-center bg-zinc-100/10 px-3 py-1.5 text-sm font-medium text-zinc-200">
+                18866 Active Subscriptions
+              </span>
+
+
+              <span class="inline-flex items-center bg-green-500/10 px-3 py-1.5 text-sm font-medium text-green-300">
+                4488 Total Online
+              </span>
+
+          </div>
+        
+  </div>
+</div>
+
+      <div id="metrics-servers">
+
+          <div>
+            <div class="grid grid-cols-1 gap-6">
+
+
+
+
+
+                <div id="server-metrics-kravvin" class="paper-frame p-10 text-zinc-800">
+                  <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-zinc-900 break-words">
+                      Kravvin - God of Slaughter (NA PvP)
+                    </h2>
+                  </div>
+
+                  <div id="server-stats-kravvin" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        DAILY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        1172
+                      </div>
+                    </div>
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        MONTHLY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        1249
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex flex-col items-stretch gap-4 sm:flex-row">
+                      <div class="flex shrink-0 flex-col justify-center sm:w-24 sm:border-r-2 sm:border-zinc-600/40 sm:pr-4">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                          Online
+                        </div>
+                        <div class="mt-2 text-3xl font-bold tabular-nums text-zinc-900">
+                          334
+                        </div>
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-zinc-800">
+                          Last 24 Hours
+                        </div>
+                        <div class="mt-4 h-24 w-full">
+                          <canvas id="ccu-history-kravvin" phx-hook="MetricsCcuChart" phx-update="ignore" data-chart-data="[{&quot;time&quot;:&quot;2026-10-01T14:00:00&quot;,&quot;player_count&quot;:371},{&quot;time&quot;:&quot;2026-10-01T14:30:00&quot;,&quot;player_count&quot;:379},{&quot;time&quot;:&quot;2026-10-01T15:00:00&quot;,&quot;player_count&quot;:405},{&quot;time&quot;:&quot;2026-10-01T15:30:00&quot;,&quot;player_count&quot;:410},{&quot;time&quot;:&quot;2026-10-01T16:00:00&quot;,&quot;player_count&quot;:439},{&quot;time&quot;:&quot;2026-10-01T16:30:00&quot;,&quot;player_count&quot;:451},{&quot;time&quot;:&quot;2026-10-01T17:00:00&quot;,&quot;player_count&quot;:454},{&quot;time&quot;:&quot;2026-10-01T17:30:00&quot;,&quot;player_count&quot;:457},{&quot;time&quot;:&quot;2026-10-01T18:00:00&quot;,&quot;player_count&quot;:455},{&quot;time&quot;:&quot;2026-10-01T18:30:00&quot;,&quot;player_count&quot;:460},{&quot;time&quot;:&quot;2026-10-01T19:00:00&quot;,&quot;player_count&quot;:441},{&quot;time&quot;:&quot;2026-10-01T19:30:00&quot;,&quot;player_count&quot;:456},{&quot;time&quot;:&quot;2026-10-01T20:00:00&quot;,&quot;player_count&quot;:471},{&quot;time&quot;:&quot;2026-10-01T20:30:00&quot;,&quot;player_count&quot;:483},{&quot;time&quot;:&quot;2026-10-01T21:00:00&quot;,&quot;player_count&quot;:488},{&quot;time&quot;:&quot;2026-10-01T21:30:00&quot;,&quot;player_count&quot;:482},{&quot;time&quot;:&quot;2026-10-01T22:00:00&quot;,&quot;player_count&quot;:460},{&quot;time&quot;:&quot;2026-10-01T22:30:00&quot;,&quot;player_count&quot;:464},{&quot;time&quot;:&quot;2026-10-01T23:00:00&quot;,&quot;player_count&quot;:480},{&quot;time&quot;:&quot;2026-10-01T23:30:00&quot;,&quot;player_count&quot;:495},{&quot;time&quot;:&quot;2026-10-02T00:00:00&quot;,&quot;player_count&quot;:500},{&quot;time&quot;:&quot;2026-10-02T00:30:00&quot;,&quot;player_count&quot;:521},{&quot;time&quot;:&quot;2026-10-02T01:00:00&quot;,&quot;player_count&quot;:542},{&quot;time&quot;:&quot;2026-10-02T01:30:00&quot;,&quot;player_count&quot;:544},{&quot;time&quot;:&quot;2026-10-02T02:00:00&quot;,&quot;player_count&quot;:543},{&quot;time&quot;:&quot;2026-10-02T02:30:00&quot;,&quot;player_count&quot;:540},{&quot;time&quot;:&quot;2026-10-02T03:00:00&quot;,&quot;player_count&quot;:512},{&quot;time&quot;:&quot;2026-10-02T03:30:00&quot;,&quot;player_count&quot;:488},{&quot;time&quot;:&quot;2026-10-02T04:00:00&quot;,&quot;player_count&quot;:468},{&quot;time&quot;:&quot;2026-10-02T04:30:00&quot;,&quot;player_count&quot;:423},{&quot;time&quot;:&quot;2026-10-02T05:00:00&quot;,&quot;player_count&quot;:371},{&quot;time&quot;:&quot;2026-10-02T05:30:00&quot;,&quot;player_count&quot;:348},{&quot;time&quot;:&quot;2026-10-02T06:00:00&quot;,&quot;player_count&quot;:311},{&quot;time&quot;:&quot;2026-10-02T06:30:00&quot;,&quot;player_count&quot;:285},{&quot;time&quot;:&quot;2026-10-02T07:00:00&quot;,&quot;player_count&quot;:253},{&quot;time&quot;:&quot;2026-10-02T07:30:00&quot;,&quot;player_count&quot;:220},{&quot;time&quot;:&quot;2026-10-02T08:00:00&quot;,&quot;player_count&quot;:198},{&quot;time&quot;:&quot;2026-10-02T08:30:00&quot;,&quot;player_count&quot;:188},{&quot;time&quot;:&quot;2026-10-02T09:00:00&quot;,&quot;player_count&quot;:176},{&quot;time&quot;:&quot;2026-10-02T09:30:00&quot;,&quot;player_count&quot;:176},{&quot;time&quot;:&quot;2026-10-02T10:00:00&quot;,&quot;player_count&quot;:182},{&quot;time&quot;:&quot;2026-10-02T10:30:00&quot;,&quot;player_count&quot;:182},{&quot;time&quot;:&quot;2026-10-02T11:00:00&quot;,&quot;player_count&quot;:193},{&quot;time&quot;:&quot;2026-10-02T11:30:00&quot;,&quot;player_count&quot;:196},{&quot;time&quot;:&quot;2026-10-02T12:00:00&quot;,&quot;player_count&quot;:226},{&quot;time&quot;:&quot;2026-10-02T12:30:00&quot;,&quot;player_count&quot;:264},{&quot;time&quot;:&quot;2026-10-02T13:00:00&quot;,&quot;player_count&quot;:284},{&quot;time&quot;:&quot;2026-10-02T13:30:00&quot;,&quot;player_count&quot;:300},{&quot;time&quot;:&quot;2026-10-02T14:00:00&quot;,&quot;player_count&quot;:325},{&quot;time&quot;:&quot;2026-10-02T14:56:05Z&quot;,&quot;player_count&quot;:334}]" data-server="kravvin" role="img" aria-label="Last 24 hours online player trend ending at 334" width="704" height="96" style="display: block; box-sizing: border-box; height: 96px; width: 704px;">
+                          </canvas>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section id="starting-zones-kravvin" class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex items-end justify-between gap-4">
+                      <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-900">
+                          Starting Zones
+                        </h3>
+                        <p class="mt-1 text-xs text-zinc-700">
+                          Live population in character starting areas
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <span id="starting-zone-total-kravvin" class="text-2xl font-bold tabular-nums text-zinc-900">
+                          204
+                        </span>
+                        <span class="block text-[0.65rem] uppercase tracking-wider text-zinc-700">
+                          Players
+                        </span>
+                      </div>
+                    </div>
+
+                    <div id="starting-zone-list-kravvin" class="mt-4 space-y-3">
+
+                        <div id="starting-zone-kravvin-ailvorith">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Ail'vorith
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              24
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 4%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-kravvin-evergrove">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Evershade Weald
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              22
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 3%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-kravvin-nightharbore">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (East)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              54
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 8%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-kravvin-nightharborw">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (West)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              44
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 7%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-kravvin-underdocks">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Underdocks
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              60
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 9%">
+                            </div>
+                          </div>
+                        </div>
+
+                    </div>
+                  </section>
+                </div>
+
+
+
+
+
+                <div id="server-metrics-nunavoth" class="paper-frame p-10 text-zinc-800">
+                  <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-zinc-900 break-words">
+                      Nunavoth - God of Gluttony (NA 3 Box)
+                    </h2>
+                  </div>
+
+                  <div id="server-stats-nunavoth" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        DAILY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        745
+                      </div>
+                    </div>
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        MONTHLY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        797
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex flex-col items-stretch gap-4 sm:flex-row">
+                      <div class="flex shrink-0 flex-col justify-center sm:w-24 sm:border-r-2 sm:border-zinc-600/40 sm:pr-4">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                          Online
+                        </div>
+                        <div class="mt-2 text-3xl font-bold tabular-nums text-zinc-900">
+                          270
+                        </div>
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-zinc-800">
+                          Last 24 Hours
+                        </div>
+                        <div class="mt-4 h-24 w-full">
+                          <canvas id="ccu-history-nunavoth" phx-hook="MetricsCcuChart" phx-update="ignore" data-chart-data="[{&quot;time&quot;:&quot;2026-10-01T14:00:00&quot;,&quot;player_count&quot;:250},{&quot;time&quot;:&quot;2026-10-01T14:30:00&quot;,&quot;player_count&quot;:252},{&quot;time&quot;:&quot;2026-10-01T15:00:00&quot;,&quot;player_count&quot;:252},{&quot;time&quot;:&quot;2026-10-01T15:30:00&quot;,&quot;player_count&quot;:271},{&quot;time&quot;:&quot;2026-10-01T16:00:00&quot;,&quot;player_count&quot;:299},{&quot;time&quot;:&quot;2026-10-01T16:30:00&quot;,&quot;player_count&quot;:309},{&quot;time&quot;:&quot;2026-10-01T17:00:00&quot;,&quot;player_count&quot;:313},{&quot;time&quot;:&quot;2026-10-01T17:30:00&quot;,&quot;player_count&quot;:316},{&quot;time&quot;:&quot;2026-10-01T18:00:00&quot;,&quot;player_count&quot;:316},{&quot;time&quot;:&quot;2026-10-01T18:30:00&quot;,&quot;player_count&quot;:330},{&quot;time&quot;:&quot;2026-10-01T19:00:00&quot;,&quot;player_count&quot;:324},{&quot;time&quot;:&quot;2026-10-01T19:30:00&quot;,&quot;player_count&quot;:318},{&quot;time&quot;:&quot;2026-10-01T20:00:00&quot;,&quot;player_count&quot;:327},{&quot;time&quot;:&quot;2026-10-01T20:30:00&quot;,&quot;player_count&quot;:326},{&quot;time&quot;:&quot;2026-10-01T21:00:00&quot;,&quot;player_count&quot;:340},{&quot;time&quot;:&quot;2026-10-01T21:30:00&quot;,&quot;player_count&quot;:350},{&quot;time&quot;:&quot;2026-10-01T22:00:00&quot;,&quot;player_count&quot;:352},{&quot;time&quot;:&quot;2026-10-01T22:30:00&quot;,&quot;player_count&quot;:341},{&quot;time&quot;:&quot;2026-10-01T23:00:00&quot;,&quot;player_count&quot;:347},{&quot;time&quot;:&quot;2026-10-01T23:30:00&quot;,&quot;player_count&quot;:368},{&quot;time&quot;:&quot;2026-10-02T00:00:00&quot;,&quot;player_count&quot;:381},{&quot;time&quot;:&quot;2026-10-02T00:30:00&quot;,&quot;player_count&quot;:378},{&quot;time&quot;:&quot;2026-10-02T01:00:00&quot;,&quot;player_count&quot;:397},{&quot;time&quot;:&quot;2026-10-02T01:30:00&quot;,&quot;player_count&quot;:391},{&quot;time&quot;:&quot;2026-10-02T02:00:00&quot;,&quot;player_count&quot;:371},{&quot;time&quot;:&quot;2026-10-02T02:30:00&quot;,&quot;player_count&quot;:355},{&quot;time&quot;:&quot;2026-10-02T03:00:00&quot;,&quot;player_count&quot;:324},{&quot;time&quot;:&quot;2026-10-02T03:30:00&quot;,&quot;player_count&quot;:294},{&quot;time&quot;:&quot;2026-10-02T04:00:00&quot;,&quot;player_count&quot;:271},{&quot;time&quot;:&quot;2026-10-02T04:30:00&quot;,&quot;player_count&quot;:240},{&quot;time&quot;:&quot;2026-10-02T05:00:00&quot;,&quot;player_count&quot;:230},{&quot;time&quot;:&quot;2026-10-02T05:30:00&quot;,&quot;player_count&quot;:211},{&quot;time&quot;:&quot;2026-10-02T06:00:00&quot;,&quot;player_count&quot;:172},{&quot;time&quot;:&quot;2026-10-02T06:30:00&quot;,&quot;player_count&quot;:136},{&quot;time&quot;:&quot;2026-10-02T07:00:00&quot;,&quot;player_count&quot;:119},{&quot;time&quot;:&quot;2026-10-02T07:30:00&quot;,&quot;player_count&quot;:110},{&quot;time&quot;:&quot;2026-10-02T08:00:00&quot;,&quot;player_count&quot;:108},{&quot;time&quot;:&quot;2026-10-02T08:30:00&quot;,&quot;player_count&quot;:111},{&quot;time&quot;:&quot;2026-10-02T09:00:00&quot;,&quot;player_count&quot;:106},{&quot;time&quot;:&quot;2026-10-02T09:30:00&quot;,&quot;player_count&quot;:103},{&quot;time&quot;:&quot;2026-10-02T10:00:00&quot;,&quot;player_count&quot;:113},{&quot;time&quot;:&quot;2026-10-02T10:30:00&quot;,&quot;player_count&quot;:115},{&quot;time&quot;:&quot;2026-10-02T11:00:00&quot;,&quot;player_count&quot;:124},{&quot;time&quot;:&quot;2026-10-02T11:30:00&quot;,&quot;player_count&quot;:138},{&quot;time&quot;:&quot;2026-10-02T12:00:00&quot;,&quot;player_count&quot;:157},{&quot;time&quot;:&quot;2026-10-02T12:30:00&quot;,&quot;player_count&quot;:164},{&quot;time&quot;:&quot;2026-10-02T13:00:00&quot;,&quot;player_count&quot;:196},{&quot;time&quot;:&quot;2026-10-02T13:30:00&quot;,&quot;player_count&quot;:219},{&quot;time&quot;:&quot;2026-10-02T14:00:00&quot;,&quot;player_count&quot;:235},{&quot;time&quot;:&quot;2026-10-02T14:56:05Z&quot;,&quot;player_count&quot;:270}]" data-server="nunavoth" role="img" aria-label="Last 24 hours online player trend ending at 270" width="704" height="96" style="display: block; box-sizing: border-box; height: 96px; width: 704px;">
+                          </canvas>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section id="starting-zones-nunavoth" class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex items-end justify-between gap-4">
+                      <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-900">
+                          Starting Zones
+                        </h3>
+                        <p class="mt-1 text-xs text-zinc-700">
+                          Live population in character starting areas
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <span id="starting-zone-total-nunavoth" class="text-2xl font-bold tabular-nums text-zinc-900">
+                          157
+                        </span>
+                        <span class="block text-[0.65rem] uppercase tracking-wider text-zinc-700">
+                          Players
+                        </span>
+                      </div>
+                    </div>
+
+                    <div id="starting-zone-list-nunavoth" class="mt-4 space-y-3">
+
+                        <div id="starting-zone-nunavoth-ailvorith">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Ail'vorith
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              6
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 1%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-nunavoth-evergrove">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Evershade Weald
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              20
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 3%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-nunavoth-nightharbore">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (East)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              42
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 6%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-nunavoth-nightharborw">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (West)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              56
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 9%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-nunavoth-underdocks">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Underdocks
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              33
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 5%">
+                            </div>
+                          </div>
+                        </div>
+
+                    </div>
+                  </section>
+                </div>
+
+
+
+
+
+                <div id="server-metrics-vespyra" class="paper-frame p-10 text-zinc-800">
+                  <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-zinc-900 break-words">
+                      Vespyra - Goddess of Magic (EU 1)
+                    </h2>
+                  </div>
+
+                  <div id="server-stats-vespyra" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        DAILY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        2003
+                      </div>
+                    </div>
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        MONTHLY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        2106
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex flex-col items-stretch gap-4 sm:flex-row">
+                      <div class="flex shrink-0 flex-col justify-center sm:w-24 sm:border-r-2 sm:border-zinc-600/40 sm:pr-4">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                          Online
+                        </div>
+                        <div class="mt-2 text-3xl font-bold tabular-nums text-zinc-900">
+                          694
+                        </div>
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-zinc-800">
+                          Last 24 Hours
+                        </div>
+                        <div class="mt-4 h-24 w-full">
+                          <canvas id="ccu-history-vespyra" phx-hook="MetricsCcuChart" phx-update="ignore" data-chart-data="[{&quot;time&quot;:&quot;2026-10-01T14:00:00&quot;,&quot;player_count&quot;:711},{&quot;time&quot;:&quot;2026-10-01T14:30:00&quot;,&quot;player_count&quot;:755},{&quot;time&quot;:&quot;2026-10-01T15:00:00&quot;,&quot;player_count&quot;:759},{&quot;time&quot;:&quot;2026-10-01T15:30:00&quot;,&quot;player_count&quot;:801},{&quot;time&quot;:&quot;2026-10-01T16:00:00&quot;,&quot;player_count&quot;:823},{&quot;time&quot;:&quot;2026-10-01T16:30:00&quot;,&quot;player_count&quot;:834},{&quot;time&quot;:&quot;2026-10-01T17:00:00&quot;,&quot;player_count&quot;:861},{&quot;time&quot;:&quot;2026-10-01T17:30:00&quot;,&quot;player_count&quot;:903},{&quot;time&quot;:&quot;2026-10-01T18:00:00&quot;,&quot;player_count&quot;:922},{&quot;time&quot;:&quot;2026-10-01T18:30:00&quot;,&quot;player_count&quot;:929},{&quot;time&quot;:&quot;2026-10-01T19:00:00&quot;,&quot;player_count&quot;:952},{&quot;time&quot;:&quot;2026-10-01T19:30:00&quot;,&quot;player_count&quot;:979},{&quot;time&quot;:&quot;2026-10-01T20:00:00&quot;,&quot;player_count&quot;:964},{&quot;time&quot;:&quot;2026-10-01T20:30:00&quot;,&quot;player_count&quot;:898},{&quot;time&quot;:&quot;2026-10-01T21:00:00&quot;,&quot;player_count&quot;:834},{&quot;time&quot;:&quot;2026-10-01T21:30:00&quot;,&quot;player_count&quot;:747},{&quot;time&quot;:&quot;2026-10-01T22:00:00&quot;,&quot;player_count&quot;:641},{&quot;time&quot;:&quot;2026-10-01T22:30:00&quot;,&quot;player_count&quot;:551},{&quot;time&quot;:&quot;2026-10-01T23:00:00&quot;,&quot;player_count&quot;:463},{&quot;time&quot;:&quot;2026-10-01T23:30:00&quot;,&quot;player_count&quot;:379},{&quot;time&quot;:&quot;2026-10-02T00:00:00&quot;,&quot;player_count&quot;:293},{&quot;time&quot;:&quot;2026-10-02T00:30:00&quot;,&quot;player_count&quot;:235},{&quot;time&quot;:&quot;2026-10-02T01:00:00&quot;,&quot;player_count&quot;:201},{&quot;time&quot;:&quot;2026-10-02T01:30:00&quot;,&quot;player_count&quot;:162},{&quot;time&quot;:&quot;2026-10-02T02:00:00&quot;,&quot;player_count&quot;:143},{&quot;time&quot;:&quot;2026-10-02T02:30:00&quot;,&quot;player_count&quot;:128},{&quot;time&quot;:&quot;2026-10-02T03:00:00&quot;,&quot;player_count&quot;:122},{&quot;time&quot;:&quot;2026-10-02T03:30:00&quot;,&quot;player_count&quot;:123},{&quot;time&quot;:&quot;2026-10-02T04:00:00&quot;,&quot;player_count&quot;:139},{&quot;time&quot;:&quot;2026-10-02T04:30:00&quot;,&quot;player_count&quot;:147},{&quot;time&quot;:&quot;2026-10-02T05:00:00&quot;,&quot;player_count&quot;:180},{&quot;time&quot;:&quot;2026-10-02T05:30:00&quot;,&quot;player_count&quot;:217},{&quot;time&quot;:&quot;2026-10-02T06:00:00&quot;,&quot;player_count&quot;:292},{&quot;time&quot;:&quot;2026-10-02T06:30:00&quot;,&quot;player_count&quot;:338},{&quot;time&quot;:&quot;2026-10-02T07:00:00&quot;,&quot;player_count&quot;:390},{&quot;time&quot;:&quot;2026-10-02T07:30:00&quot;,&quot;player_count&quot;:443},{&quot;time&quot;:&quot;2026-10-02T08:00:00&quot;,&quot;player_count&quot;:484},{&quot;time&quot;:&quot;2026-10-02T08:30:00&quot;,&quot;player_count&quot;:494},{&quot;time&quot;:&quot;2026-10-02T09:00:00&quot;,&quot;player_count&quot;:554},{&quot;time&quot;:&quot;2026-10-02T09:30:00&quot;,&quot;player_count&quot;:575},{&quot;time&quot;:&quot;2026-10-02T10:00:00&quot;,&quot;player_count&quot;:572},{&quot;time&quot;:&quot;2026-10-02T10:30:00&quot;,&quot;player_count&quot;:578},{&quot;time&quot;:&quot;2026-10-02T11:00:00&quot;,&quot;player_count&quot;:634},{&quot;time&quot;:&quot;2026-10-02T11:30:00&quot;,&quot;player_count&quot;:640},{&quot;time&quot;:&quot;2026-10-02T12:00:00&quot;,&quot;player_count&quot;:662},{&quot;time&quot;:&quot;2026-10-02T12:30:00&quot;,&quot;player_count&quot;:671},{&quot;time&quot;:&quot;2026-10-02T13:00:00&quot;,&quot;player_count&quot;:667},{&quot;time&quot;:&quot;2026-10-02T13:30:00&quot;,&quot;player_count&quot;:675},{&quot;time&quot;:&quot;2026-10-02T14:00:00&quot;,&quot;player_count&quot;:673},{&quot;time&quot;:&quot;2026-10-02T14:56:05Z&quot;,&quot;player_count&quot;:694}]" data-server="vespyra" role="img" aria-label="Last 24 hours online player trend ending at 694" width="704" height="96" style="display: block; box-sizing: border-box; height: 96px; width: 704px;">
+                          </canvas>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section id="starting-zones-vespyra" class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex items-end justify-between gap-4">
+                      <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-900">
+                          Starting Zones
+                        </h3>
+                        <p class="mt-1 text-xs text-zinc-700">
+                          Live population in character starting areas
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <span id="starting-zone-total-vespyra" class="text-2xl font-bold tabular-nums text-zinc-900">
+                          506
+                        </span>
+                        <span class="block text-[0.65rem] uppercase tracking-wider text-zinc-700">
+                          Players
+                        </span>
+                      </div>
+                    </div>
+
+                    <div id="starting-zone-list-vespyra" class="mt-4 space-y-3">
+
+                        <div id="starting-zone-vespyra-ailvorith">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Ail'vorith
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              51
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 8%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-vespyra-evergrove">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Evershade Weald
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              69
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 11%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-vespyra-nightharbore">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (East)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              103
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 16%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-vespyra-nightharborw">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (West)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              163
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 25%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-vespyra-underdocks">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Underdocks
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              120
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 18%">
+                            </div>
+                          </div>
+                        </div>
+
+                    </div>
+                  </section>
+                </div>
+
+
+
+
+
+                <div id="server-metrics-trem" class="paper-frame p-10 text-zinc-800">
+                  <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-zinc-900 break-words">
+                      Trem - God of Commerce (NA East 1)
+                    </h2>
+                  </div>
+
+                  <div id="server-stats-trem" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        DAILY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        5566
+                      </div>
+                    </div>
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        MONTHLY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        6011
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex flex-col items-stretch gap-4 sm:flex-row">
+                      <div class="flex shrink-0 flex-col justify-center sm:w-24 sm:border-r-2 sm:border-zinc-600/40 sm:pr-4">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                          Online
+                        </div>
+                        <div class="mt-2 text-3xl font-bold tabular-nums text-zinc-900">
+                          1581
+                        </div>
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-zinc-800">
+                          Last 24 Hours
+                        </div>
+                        <div class="mt-4 h-24 w-full">
+                          <canvas id="ccu-history-trem" phx-hook="MetricsCcuChart" phx-update="ignore" data-chart-data="[{&quot;time&quot;:&quot;2026-10-01T14:00:00&quot;,&quot;player_count&quot;:1544},{&quot;time&quot;:&quot;2026-10-01T14:30:00&quot;,&quot;player_count&quot;:1672},{&quot;time&quot;:&quot;2026-10-01T15:00:00&quot;,&quot;player_count&quot;:1693},{&quot;time&quot;:&quot;2026-10-01T15:30:00&quot;,&quot;player_count&quot;:1698},{&quot;time&quot;:&quot;2026-10-01T16:00:00&quot;,&quot;player_count&quot;:1694},{&quot;time&quot;:&quot;2026-10-01T16:30:00&quot;,&quot;player_count&quot;:1672},{&quot;time&quot;:&quot;2026-10-01T17:00:00&quot;,&quot;player_count&quot;:1646},{&quot;time&quot;:&quot;2026-10-01T17:30:00&quot;,&quot;player_count&quot;:1653},{&quot;time&quot;:&quot;2026-10-01T18:00:00&quot;,&quot;player_count&quot;:1946},{&quot;time&quot;:&quot;2026-10-01T18:30:00&quot;,&quot;player_count&quot;:2119},{&quot;time&quot;:&quot;2026-10-01T19:00:00&quot;,&quot;player_count&quot;:2151},{&quot;time&quot;:&quot;2026-10-01T19:30:00&quot;,&quot;player_count&quot;:2173},{&quot;time&quot;:&quot;2026-10-01T20:00:00&quot;,&quot;player_count&quot;:2177},{&quot;time&quot;:&quot;2026-10-01T20:30:00&quot;,&quot;player_count&quot;:2181},{&quot;time&quot;:&quot;2026-10-01T21:00:00&quot;,&quot;player_count&quot;:2174},{&quot;time&quot;:&quot;2026-10-01T21:30:00&quot;,&quot;player_count&quot;:2193},{&quot;time&quot;:&quot;2026-10-01T22:00:00&quot;,&quot;player_count&quot;:2185},{&quot;time&quot;:&quot;2026-10-01T22:30:00&quot;,&quot;player_count&quot;:2185},{&quot;time&quot;:&quot;2026-10-01T23:00:00&quot;,&quot;player_count&quot;:2189},{&quot;time&quot;:&quot;2026-10-01T23:30:00&quot;,&quot;player_count&quot;:2189},{&quot;time&quot;:&quot;2026-10-02T00:00:00&quot;,&quot;player_count&quot;:2203},{&quot;time&quot;:&quot;2026-10-02T00:30:00&quot;,&quot;player_count&quot;:2194},{&quot;time&quot;:&quot;2026-10-02T01:00:00&quot;,&quot;player_count&quot;:2187},{&quot;time&quot;:&quot;2026-10-02T01:30:00&quot;,&quot;player_count&quot;:2187},{&quot;time&quot;:&quot;2026-10-02T02:00:00&quot;,&quot;player_count&quot;:2180},{&quot;time&quot;:&quot;2026-10-02T02:30:00&quot;,&quot;player_count&quot;:2178},{&quot;time&quot;:&quot;2026-10-02T03:00:00&quot;,&quot;player_count&quot;:2134},{&quot;time&quot;:&quot;2026-10-02T03:30:00&quot;,&quot;player_count&quot;:1974},{&quot;time&quot;:&quot;2026-10-02T04:00:00&quot;,&quot;player_count&quot;:1773},{&quot;time&quot;:&quot;2026-10-02T04:30:00&quot;,&quot;player_count&quot;:1574},{&quot;time&quot;:&quot;2026-10-02T05:00:00&quot;,&quot;player_count&quot;:1351},{&quot;time&quot;:&quot;2026-10-02T05:30:00&quot;,&quot;player_count&quot;:1156},{&quot;time&quot;:&quot;2026-10-02T06:00:00&quot;,&quot;player_count&quot;:1014},{&quot;time&quot;:&quot;2026-10-02T06:30:00&quot;,&quot;player_count&quot;:893},{&quot;time&quot;:&quot;2026-10-02T07:00:00&quot;,&quot;player_count&quot;:780},{&quot;time&quot;:&quot;2026-10-02T07:30:00&quot;,&quot;player_count&quot;:674},{&quot;time&quot;:&quot;2026-10-02T08:00:00&quot;,&quot;player_count&quot;:654},{&quot;time&quot;:&quot;2026-10-02T08:30:00&quot;,&quot;player_count&quot;:587},{&quot;time&quot;:&quot;2026-10-02T09:00:00&quot;,&quot;player_count&quot;:568},{&quot;time&quot;:&quot;2026-10-02T09:30:00&quot;,&quot;player_count&quot;:550},{&quot;time&quot;:&quot;2026-10-02T10:00:00&quot;,&quot;player_count&quot;:558},{&quot;time&quot;:&quot;2026-10-02T10:30:00&quot;,&quot;player_count&quot;:549},{&quot;time&quot;:&quot;2026-10-02T11:00:00&quot;,&quot;player_count&quot;:648},{&quot;time&quot;:&quot;2026-10-02T11:30:00&quot;,&quot;player_count&quot;:801},{&quot;time&quot;:&quot;2026-10-02T12:00:00&quot;,&quot;player_count&quot;:908},{&quot;time&quot;:&quot;2026-10-02T12:30:00&quot;,&quot;player_count&quot;:1092},{&quot;time&quot;:&quot;2026-10-02T13:00:00&quot;,&quot;player_count&quot;:1257},{&quot;time&quot;:&quot;2026-10-02T13:30:00&quot;,&quot;player_count&quot;:1390},{&quot;time&quot;:&quot;2026-10-02T14:00:00&quot;,&quot;player_count&quot;:1460},{&quot;time&quot;:&quot;2026-10-02T14:56:05Z&quot;,&quot;player_count&quot;:1581}]" data-server="trem" role="img" aria-label="Last 24 hours online player trend ending at 1581" width="704" height="96" style="display: block; box-sizing: border-box; height: 96px; width: 704px;">
+                          </canvas>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section id="starting-zones-trem" class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex items-end justify-between gap-4">
+                      <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-900">
+                          Starting Zones
+                        </h3>
+                        <p class="mt-1 text-xs text-zinc-700">
+                          Live population in character starting areas
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <span id="starting-zone-total-trem" class="text-2xl font-bold tabular-nums text-zinc-900">
+                          1082
+                        </span>
+                        <span class="block text-[0.65rem] uppercase tracking-wider text-zinc-700">
+                          Players
+                        </span>
+                      </div>
+                    </div>
+
+                    <div id="starting-zone-list-trem" class="mt-4 space-y-3">
+
+                        <div id="starting-zone-trem-ailvorith">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Ail'vorith
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              127
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 20%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-trem-evergrove">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Evershade Weald
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              143
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 22%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-trem-nightharbore">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (East)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              203
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 31%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-trem-nightharborw">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (West)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              313
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 48%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-trem-underdocks">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Underdocks
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              296
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 46%">
+                            </div>
+                          </div>
+                        </div>
+
+                    </div>
+                  </section>
+                </div>
+
+
+
+
+
+                <div id="server-metrics-estaire" class="paper-frame p-10 text-zinc-800">
+                  <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-zinc-900 break-words">
+                      Estaire - God of Time (NA West 1)
+                    </h2>
+                  </div>
+
+                  <div id="server-stats-estaire" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        DAILY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        4156
+                      </div>
+                    </div>
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        MONTHLY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        4387
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex flex-col items-stretch gap-4 sm:flex-row">
+                      <div class="flex shrink-0 flex-col justify-center sm:w-24 sm:border-r-2 sm:border-zinc-600/40 sm:pr-4">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                          Online
+                        </div>
+                        <div class="mt-2 text-3xl font-bold tabular-nums text-zinc-900">
+                          792
+                        </div>
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-zinc-800">
+                          Last 24 Hours
+                        </div>
+                        <div class="mt-4 h-24 w-full">
+                          <canvas id="ccu-history-estaire" phx-hook="MetricsCcuChart" phx-update="ignore" data-chart-data="[{&quot;time&quot;:&quot;2026-10-01T14:00:00&quot;,&quot;player_count&quot;:825},{&quot;time&quot;:&quot;2026-10-01T14:30:00&quot;,&quot;player_count&quot;:883},{&quot;time&quot;:&quot;2026-10-01T15:00:00&quot;,&quot;player_count&quot;:935},{&quot;time&quot;:&quot;2026-10-01T15:30:00&quot;,&quot;player_count&quot;:1026},{&quot;time&quot;:&quot;2026-10-01T16:00:00&quot;,&quot;player_count&quot;:1080},{&quot;time&quot;:&quot;2026-10-01T16:30:00&quot;,&quot;player_count&quot;:1115},{&quot;time&quot;:&quot;2026-10-01T17:00:00&quot;,&quot;player_count&quot;:1176},{&quot;time&quot;:&quot;2026-10-01T17:30:00&quot;,&quot;player_count&quot;:1198},{&quot;time&quot;:&quot;2026-10-01T18:00:00&quot;,&quot;player_count&quot;:1233},{&quot;time&quot;:&quot;2026-10-01T18:30:00&quot;,&quot;player_count&quot;:1252},{&quot;time&quot;:&quot;2026-10-01T19:00:00&quot;,&quot;player_count&quot;:1258},{&quot;time&quot;:&quot;2026-10-01T19:30:00&quot;,&quot;player_count&quot;:1301},{&quot;time&quot;:&quot;2026-10-01T20:00:00&quot;,&quot;player_count&quot;:1312},{&quot;time&quot;:&quot;2026-10-01T20:30:00&quot;,&quot;player_count&quot;:1347},{&quot;time&quot;:&quot;2026-10-01T21:00:00&quot;,&quot;player_count&quot;:1350},{&quot;time&quot;:&quot;2026-10-01T21:30:00&quot;,&quot;player_count&quot;:1380},{&quot;time&quot;:&quot;2026-10-01T22:00:00&quot;,&quot;player_count&quot;:1427},{&quot;time&quot;:&quot;2026-10-01T22:30:00&quot;,&quot;player_count&quot;:1462},{&quot;time&quot;:&quot;2026-10-01T23:00:00&quot;,&quot;player_count&quot;:1544},{&quot;time&quot;:&quot;2026-10-01T23:30:00&quot;,&quot;player_count&quot;:1545},{&quot;time&quot;:&quot;2026-10-02T00:00:00&quot;,&quot;player_count&quot;:1590},{&quot;time&quot;:&quot;2026-10-02T00:30:00&quot;,&quot;player_count&quot;:1595},{&quot;time&quot;:&quot;2026-10-02T01:00:00&quot;,&quot;player_count&quot;:1596},{&quot;time&quot;:&quot;2026-10-02T01:30:00&quot;,&quot;player_count&quot;:1598},{&quot;time&quot;:&quot;2026-10-02T02:00:00&quot;,&quot;player_count&quot;:1592},{&quot;time&quot;:&quot;2026-10-02T02:30:00&quot;,&quot;player_count&quot;:1599},{&quot;time&quot;:&quot;2026-10-02T03:00:00&quot;,&quot;player_count&quot;:1594},{&quot;time&quot;:&quot;2026-10-02T03:30:00&quot;,&quot;player_count&quot;:1597},{&quot;time&quot;:&quot;2026-10-02T04:00:00&quot;,&quot;player_count&quot;:1599},{&quot;time&quot;:&quot;2026-10-02T04:30:00&quot;,&quot;player_count&quot;:1597},{&quot;time&quot;:&quot;2026-10-02T05:00:00&quot;,&quot;player_count&quot;:1589},{&quot;time&quot;:&quot;2026-10-02T05:30:00&quot;,&quot;player_count&quot;:1481},{&quot;time&quot;:&quot;2026-10-02T06:00:00&quot;,&quot;player_count&quot;:1347},{&quot;time&quot;:&quot;2026-10-02T06:30:00&quot;,&quot;player_count&quot;:1225},{&quot;time&quot;:&quot;2026-10-02T07:00:00&quot;,&quot;player_count&quot;:1062},{&quot;time&quot;:&quot;2026-10-02T07:30:00&quot;,&quot;player_count&quot;:902},{&quot;time&quot;:&quot;2026-10-02T08:00:00&quot;,&quot;player_count&quot;:774},{&quot;time&quot;:&quot;2026-10-02T08:30:00&quot;,&quot;player_count&quot;:683},{&quot;time&quot;:&quot;2026-10-02T09:00:00&quot;,&quot;player_count&quot;:616},{&quot;time&quot;:&quot;2026-10-02T09:30:00&quot;,&quot;player_count&quot;:548},{&quot;time&quot;:&quot;2026-10-02T10:00:00&quot;,&quot;player_count&quot;:524},{&quot;time&quot;:&quot;2026-10-02T10:30:00&quot;,&quot;player_count&quot;:486},{&quot;time&quot;:&quot;2026-10-02T11:00:00&quot;,&quot;player_count&quot;:473},{&quot;time&quot;:&quot;2026-10-02T11:30:00&quot;,&quot;player_count&quot;:439},{&quot;time&quot;:&quot;2026-10-02T12:00:00&quot;,&quot;player_count&quot;:516},{&quot;time&quot;:&quot;2026-10-02T12:30:00&quot;,&quot;player_count&quot;:559},{&quot;time&quot;:&quot;2026-10-02T13:00:00&quot;,&quot;player_count&quot;:591},{&quot;time&quot;:&quot;2026-10-02T13:30:00&quot;,&quot;player_count&quot;:680},{&quot;time&quot;:&quot;2026-10-02T14:00:00&quot;,&quot;player_count&quot;:717},{&quot;time&quot;:&quot;2026-10-02T14:56:05Z&quot;,&quot;player_count&quot;:792}]" data-server="estaire" role="img" aria-label="Last 24 hours online player trend ending at 792" width="704" height="96" style="display: block; box-sizing: border-box; height: 96px; width: 704px;">
+                          </canvas>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section id="starting-zones-estaire" class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex items-end justify-between gap-4">
+                      <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-900">
+                          Starting Zones
+                        </h3>
+                        <p class="mt-1 text-xs text-zinc-700">
+                          Live population in character starting areas
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <span id="starting-zone-total-estaire" class="text-2xl font-bold tabular-nums text-zinc-900">
+                          557
+                        </span>
+                        <span class="block text-[0.65rem] uppercase tracking-wider text-zinc-700">
+                          Players
+                        </span>
+                      </div>
+                    </div>
+
+                    <div id="starting-zone-list-estaire" class="mt-4 space-y-3">
+
+                        <div id="starting-zone-estaire-ailvorith">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Ail'vorith
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              63
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 10%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-estaire-evergrove">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Evershade Weald
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              77
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 12%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-estaire-nightharbore">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (East)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              97
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 15%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-estaire-nightharborw">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (West)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              167
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 26%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-estaire-underdocks">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Underdocks
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              153
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 24%">
+                            </div>
+                          </div>
+                        </div>
+
+                    </div>
+                  </section>
+                </div>
+
+
+
+
+
+                <div id="server-metrics-tilustra" class="paper-frame p-10 text-zinc-800">
+                  <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-zinc-900 break-words">
+                      Tilustra - Goddess of Knowledge (NA East 2)
+                    </h2>
+                  </div>
+
+                  <div id="server-stats-tilustra" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        DAILY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        3211
+                      </div>
+                    </div>
+                    <div class="bg-zinc-900/5 px-4 py-3">
+                      <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        MONTHLY ACTIVE
+                      </div>
+                      <div class="mt-2 text-2xl font-bold text-zinc-900">
+                        3300
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex flex-col items-stretch gap-4 sm:flex-row">
+                      <div class="flex shrink-0 flex-col justify-center sm:w-24 sm:border-r-2 sm:border-zinc-600/40 sm:pr-4">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                          Online
+                        </div>
+                        <div class="mt-2 text-3xl font-bold tabular-nums text-zinc-900">
+                          817
+                        </div>
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-zinc-800">
+                          Last 24 Hours
+                        </div>
+                        <div class="mt-4 h-24 w-full">
+                          <canvas id="ccu-history-tilustra" phx-hook="MetricsCcuChart" phx-update="ignore" data-chart-data="[{&quot;time&quot;:&quot;2026-10-01T14:00:00&quot;,&quot;player_count&quot;:667},{&quot;time&quot;:&quot;2026-10-01T14:30:00&quot;,&quot;player_count&quot;:718},{&quot;time&quot;:&quot;2026-10-01T15:00:00&quot;,&quot;player_count&quot;:743},{&quot;time&quot;:&quot;2026-10-01T15:30:00&quot;,&quot;player_count&quot;:789},{&quot;time&quot;:&quot;2026-10-01T16:00:00&quot;,&quot;player_count&quot;:807},{&quot;time&quot;:&quot;2026-10-01T16:30:00&quot;,&quot;player_count&quot;:855},{&quot;time&quot;:&quot;2026-10-01T17:00:00&quot;,&quot;player_count&quot;:884},{&quot;time&quot;:&quot;2026-10-01T17:30:00&quot;,&quot;player_count&quot;:922},{&quot;time&quot;:&quot;2026-10-01T18:00:00&quot;,&quot;player_count&quot;:954},{&quot;time&quot;:&quot;2026-10-01T18:30:00&quot;,&quot;player_count&quot;:959},{&quot;time&quot;:&quot;2026-10-01T19:00:00&quot;,&quot;player_count&quot;:946},{&quot;time&quot;:&quot;2026-10-01T19:30:00&quot;,&quot;player_count&quot;:986},{&quot;time&quot;:&quot;2026-10-01T20:00:00&quot;,&quot;player_count&quot;:990},{&quot;time&quot;:&quot;2026-10-01T20:30:00&quot;,&quot;player_count&quot;:1009},{&quot;time&quot;:&quot;2026-10-01T21:00:00&quot;,&quot;player_count&quot;:1047},{&quot;time&quot;:&quot;2026-10-01T21:30:00&quot;,&quot;player_count&quot;:1116},{&quot;time&quot;:&quot;2026-10-01T22:00:00&quot;,&quot;player_count&quot;:1188},{&quot;time&quot;:&quot;2026-10-01T22:30:00&quot;,&quot;player_count&quot;:1275},{&quot;time&quot;:&quot;2026-10-01T23:00:00&quot;,&quot;player_count&quot;:1359},{&quot;time&quot;:&quot;2026-10-01T23:30:00&quot;,&quot;player_count&quot;:1418},{&quot;time&quot;:&quot;2026-10-02T00:00:00&quot;,&quot;player_count&quot;:1489},{&quot;time&quot;:&quot;2026-10-02T00:30:00&quot;,&quot;player_count&quot;:1549},{&quot;time&quot;:&quot;2026-10-02T01:00:00&quot;,&quot;player_count&quot;:1546},{&quot;time&quot;:&quot;2026-10-02T01:30:00&quot;,&quot;player_count&quot;:1540},{&quot;time&quot;:&quot;2026-10-02T02:00:00&quot;,&quot;player_count&quot;:1502},{&quot;time&quot;:&quot;2026-10-02T02:30:00&quot;,&quot;player_count&quot;:1396},{&quot;time&quot;:&quot;2026-10-02T03:00:00&quot;,&quot;player_count&quot;:1284},{&quot;time&quot;:&quot;2026-10-02T03:30:00&quot;,&quot;player_count&quot;:1121},{&quot;time&quot;:&quot;2026-10-02T04:00:00&quot;,&quot;player_count&quot;:992},{&quot;time&quot;:&quot;2026-10-02T04:30:00&quot;,&quot;player_count&quot;:848},{&quot;time&quot;:&quot;2026-10-02T05:00:00&quot;,&quot;player_count&quot;:706},{&quot;time&quot;:&quot;2026-10-02T05:30:00&quot;,&quot;player_count&quot;:618},{&quot;time&quot;:&quot;2026-10-02T06:00:00&quot;,&quot;player_count&quot;:519},{&quot;time&quot;:&quot;2026-10-02T06:30:00&quot;,&quot;player_count&quot;:455},{&quot;time&quot;:&quot;2026-10-02T07:00:00&quot;,&quot;player_count&quot;:411},{&quot;time&quot;:&quot;2026-10-02T07:30:00&quot;,&quot;player_count&quot;:316},{&quot;time&quot;:&quot;2026-10-02T08:00:00&quot;,&quot;player_count&quot;:163},{&quot;time&quot;:&quot;2026-10-02T08:30:00&quot;,&quot;player_count&quot;:199},{&quot;time&quot;:&quot;2026-10-02T09:00:00&quot;,&quot;player_count&quot;:216},{&quot;time&quot;:&quot;2026-10-02T09:30:00&quot;,&quot;player_count&quot;:234},{&quot;time&quot;:&quot;2026-10-02T10:00:00&quot;,&quot;player_count&quot;:277},{&quot;time&quot;:&quot;2026-10-02T10:30:00&quot;,&quot;player_count&quot;:318},{&quot;time&quot;:&quot;2026-10-02T11:00:00&quot;,&quot;player_count&quot;:331},{&quot;time&quot;:&quot;2026-10-02T11:30:00&quot;,&quot;player_count&quot;:352},{&quot;time&quot;:&quot;2026-10-02T12:00:00&quot;,&quot;player_count&quot;:422},{&quot;time&quot;:&quot;2026-10-02T12:30:00&quot;,&quot;player_count&quot;:551},{&quot;time&quot;:&quot;2026-10-02T13:00:00&quot;,&quot;player_count&quot;:621},{&quot;time&quot;:&quot;2026-10-02T13:30:00&quot;,&quot;player_count&quot;:697},{&quot;time&quot;:&quot;2026-10-02T14:00:00&quot;,&quot;player_count&quot;:757},{&quot;time&quot;:&quot;2026-10-02T14:56:05Z&quot;,&quot;player_count&quot;:817}]" data-server="tilustra" role="img" aria-label="Last 24 hours online player trend ending at 817" width="704" height="96" style="display: block; box-sizing: border-box; height: 96px; width: 704px;">
+                          </canvas>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section id="starting-zones-tilustra" class="mt-6 border-t-2 border-zinc-600/40 pt-6">
+                    <div class="flex items-end justify-between gap-4">
+                      <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-900">
+                          Starting Zones
+                        </h3>
+                        <p class="mt-1 text-xs text-zinc-700">
+                          Live population in character starting areas
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <span id="starting-zone-total-tilustra" class="text-2xl font-bold tabular-nums text-zinc-900">
+                          573
+                        </span>
+                        <span class="block text-[0.65rem] uppercase tracking-wider text-zinc-700">
+                          Players
+                        </span>
+                      </div>
+                    </div>
+
+                    <div id="starting-zone-list-tilustra" class="mt-4 space-y-3">
+
+                        <div id="starting-zone-tilustra-ailvorith">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Ail'vorith
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              68
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 10%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-tilustra-evergrove">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Evershade Weald
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              86
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 13%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-tilustra-nightharbore">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (East)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              112
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 17%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-tilustra-nightharborw">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Night Harbor (West)
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              151
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 23%">
+                            </div>
+                          </div>
+                        </div><div id="starting-zone-tilustra-underdocks">
+                          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+                            <span class="break-words min-w-0 text-sm font-medium text-zinc-800">
+                              Underdocks
+                            </span>
+                            <span class="shrink-0 text-sm font-semibold tabular-nums text-zinc-900">
+                              156
+                            </span>
+                          </div>
+                          <div class="h-3 overflow-hidden border-2 border-zinc-600 bg-zinc-900/10">
+                            <div class="h-full transition-[width] duration-500 ease-out bg-zinc-700" data-over-capacity="false" style="width: 24%">
+                            </div>
+                          </div>
+                        </div>
+
+                    </div>
+                  </section>
+                </div>
+
+            </div>
+          </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+        </main>
+</body></html>
