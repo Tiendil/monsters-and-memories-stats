@@ -1,0 +1,3 @@
+version = 1
+session_dir = ".session/donna"
+workflow_dirs = ["./workflows", "./.session/donna"]

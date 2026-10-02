@@ -1,0 +1,52 @@
+version = 1
+
+[[relations]]
+id = "governed_by"
+description = "Specifications that apply to the artifact."
+
+[[relations]]
+id = "governs"
+description = "Artifacts governed by the specification."
+
+# General rules govern all specifications, including themselves.
+[[rules]]
+relation = "governed_by"
+input = { type = "glob", pattern = "@/specs/**/*.md" }
+output = { type = "list", artifacts = ["@/specs/meta/general.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/meta/general.md"] }
+output = { type = "files", pattern = "@/specs/**/*.md" }
+
+# The working agreement also governs the repository's agent workflow and investigation notes.
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+  { type = "one_of", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/docs/source-analysis.md"] },
+  { type = "glob", pattern = "@/workflows/*.donna.md" },
+  { type = "glob", pattern = "@/bin/*.sh" },
+  { type = "glob", pattern = "@/.agents/skills/**/SKILL.md" },
+] }
+output = { type = "list", artifacts = ["@/specs/development.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/development.md"] }
+output = { type = "union", items = [
+  { type = "list", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/docs/source-analysis.md"] },
+  { type = "files", pattern = "@/workflows/*.donna.md" },
+  { type = "files", pattern = "@/bin/*.sh" },
+  { type = "files", pattern = "@/.agents/skills/**/SKILL.md" },
+] }
+
+# Check workflows follow the testing contract.
+[[rules]]
+relation = "governed_by"
+input = { type = "glob", pattern = "@/workflows/*.donna.md" }
+output = { type = "list", artifacts = ["@/specs/tests.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/tests.md"] }
+output = { type = "files", pattern = "@/workflows/*.donna.md" }

@@ -1,0 +1,122 @@
+# Application testing
+
+## Goal of the document
+
+This document defines required application test coverage, test data conventions, and offline execution rules.
+
+## Scope
+
+This specification covers project test code, test data, and test execution during development and CI.
+Production collection and operational verification are outside its scope except for their separation from test execution.
+
+## Offline execution
+
+Tests MUST NOT make internet requests.
+This includes optional or ignored tests when explicitly invoked.
+Tests MUST NOT request the public statistics page or any other external service.
+Test setup and teardown MUST follow the same restriction and MUST NOT download or refresh fixtures.
+
+Local loopback connections MAY be used for fixture servers and dashboard previews.
+
+Installing toolchains, dependencies, and browser binaries MAY use the internet; this is separate from test execution and MUST NOT fetch source metrics or refresh fixtures.
+Missing local test inputs MUST produce an explicit failure instead of triggering a download.
+
+**Example:** A collector HTTP test receives a saved response from a loopback server even when the public statistics page is unavailable.
+Deleting that saved response causes a local missing-fixture failure, without a request to the public page.
+
+## Test data
+
+Parser tests MUST use committed source fixtures or locally constructed variants of those fixtures.
+Captured fixtures MUST record their source and inspection date and exclude credentials or session-specific data.
+Fixture updates MUST be reviewed separately from test execution.
+Expected results MUST describe the fixture's contents without making its server identities a hardcoded production roster.
+
+Historical test data MUST be synthetic or a committed fixture, with explicit timestamps and expected values.
+Time-sensitive tests MUST control the current time so their results do not depend on the date they run.
+Generated test inputs MUST be reproducible.
+Test scratch files MUST use isolated locations under ignored `.session/` and MUST NOT modify committed history or fixtures.
+
+## Test coverage
+
+Tests MUST verify the behavioral and data contracts defined in [requirements.md](requirements.md) and [architecture.md](architecture.md).
+Expected results MUST be derived independently of the function under test.
+Test coverage MUST include successful behavior and relevant failure or boundary cases.
+
+### Shared data model
+
+Tests for `mnm-stats-model` MUST cover:
+
+- Serialization and deserialization of versioned JSONL records and serialization of shared history values into JSON exports.
+- Valid empty and populated histories loaded from JSONL and their corresponding JSON exports.
+- Rejection of unknown schema versions and malformed records, including blank lines and a truncated final JSONL record.
+- Count and identity validation.
+- Timestamp validity, chronological ordering, and duplicate-hour rejection.
+- Preservation of all observations, their order, source values, and identities when reading JSONL into shared history values and exporting those values as JSON.
+- Mapping of per-record schema versions to the JSON export's root version.
+
+### Collector
+
+Tests for `mnm-stats-collector` MUST cover:
+
+- Extraction of expected values from a representative source fixture, including published zeros.
+- Dynamic discovery of added, removed, and reordered server cards.
+- Preservation of source display names.
+- Rejection of missing or duplicate identities and incompatible required fields.
+- Rejection of malformed counts and inconsistent published totals.
+- Acceptance of cosmetic HTML changes that preserve the source contract.
+- HTTP failure handling using local responses or simulated failures, including status errors and timeouts.
+- Adding exactly one JSONL record for a new UTC-hour observation, preserving earlier lines and unchanged values in a new hour.
+- Same-hour no-op behavior and missing intervals without fabricated samples.
+- Preservation of existing history after failure at any collection stage, including writing.
+- Safe handling of interrupted writes and overlapping collection runs.
+- CLI success and failure results using local inputs and isolated output files.
+
+**Example:** A fixture adds a server with a previously unseen ID while preserving valid metrics and totals.
+Collection includes that server without a parser change; removing a required count from its card makes collection fail while leaving earlier history unchanged.
+
+### Dashboard calculations
+
+Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
+
+- Server and starting-zone aggregation without claiming deduplicated global activity.
+- Ratio values, including zero denominators and values above 100 percent.
+- Correlation with known expected results and selection of the last jointly available sample per UTC day.
+- Unavailable correlation for insufficient paired days or zero variance.
+- All required time ranges and their UTC boundaries.
+- Stale-data detection and gaps between observations.
+- Equal-duration and calendar-period comparison alignment, including unequal month lengths and leap days.
+- Comparisons with more than two periods or entities and with missing observations.
+
+### Dashboard integration
+
+Automated browser tests MUST run against a locally built dashboard with embedded test history and locally available assets.
+They MUST cover:
+
+- Rendering and exact-value inspection for the supported metric families.
+- Range selection and server selection, including historical servers.
+- Unavailable metrics and empty or invalid data states.
+- Month-to-month and year-to-year comparisons with at least three periods.
+- Server-to-server and all-servers-to-server comparisons with at least three series.
+- Adding and removing comparison selections.
+- Complete-history JSON downloads independent of filters, including valid empty history.
+- Operation under a repository subpath.
+- Absence of separate runtime requests for metrics data.
+
+Build integration tests MUST verify that a history-only change updates the embedded dataset even when caches are reused.
+They MUST verify that empty and populated JSONL fixtures become equivalent embedded history available through the dashboard's shared Rust snapshot types.
+These tests MUST verify preserved observations without depending on a particular internal embedded representation.
+Invalid JSONL history MUST fail the build without silently omitting records.
+The downloaded `history.json` MUST be a valid JSON document matching the complete embedded history and preserving every observation from the build's JSONL input.
+
+## Delivery and reporting
+
+Each implementation step MUST include passing tests for the behavior it introduces.
+Regression fixes to covered behavior MUST include a test that demonstrates the corrected result.
+Tests run locally and in CI MUST follow the same rules for local data and internet requests.
+Required suites MUST run through Donna polish once their implementation exists.
+Missing or skipped required tests MUST NOT be reported as passing coverage.
+Test reports MUST identify failed cases and the relevant local inputs without relying on live service responses.
+
+Live source investigation and GitHub deployment or notification verification MUST remain separate operational activities outside test commands and recurring test jobs.
+Those activities MAY contact live services when needed for an approved delivery step; they MUST NOT become test-suite prerequisites or automatic fixture-refresh hooks.
+Controlled failure-notification verification MUST use a local invalid fixture or simulated collector failure rather than repeated requests to the statistics page.
