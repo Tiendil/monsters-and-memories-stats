@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 mnm-stats-model.workspace = true
 chrono.workspace = true
+plotters.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 leptos.workspace = true

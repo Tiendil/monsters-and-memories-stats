@@ -41,6 +41,19 @@ Tool invocations and their options MUST be owned by these commands or the underl
 Local use, Donna checks, and GitHub Actions MUST reuse the applicable commands so their behavior does not diverge.
 GitHub Actions MUST own event handling and job orchestration, while Donna MUST own the agent's check sequence and repair actions.
 CI verification commands MUST report failures without requiring agent interaction.
+Shared application commands MUST execute in the project's Docker development environment, including when invoked by Donna or CI.
+Repository inspection, editing, Donna, and Depmesh MAY run on the host.
+Setup MUST install dependencies before checks; checks MUST fail clearly when setup is missing.
+Containers MUST preserve reusable build caches and produce host-user-writable artifacts.
+
+## Browser inspection
+
+For frontend changes affecting rendered behavior, agents MUST inspect the supported running preview through Playwright MCP before handoff.
+Inspection MUST cover the changed interactions and relevant desktop or narrow-screen layouts, including console and network diagnostics.
+Agents MUST retain screenshots and other browser evidence under ignored `.session/playwright/` and distinguish observed behavior from assumptions.
+An unavailable MCP connection MUST be reported instead of claiming browser inspection succeeded.
+Automated browser regression tests remain required independently of interactive inspection.
+Agents MUST stop temporary services they start before handoff unless the user asks to keep them running.
 
 ## Donna
 
@@ -96,4 +109,4 @@ Behavioral requirements and approval gates MUST remain in their governing specif
 The general specification rules and session skill are copied unchanged from the user-specified Feeds Fun repository.
 The Donna polish structure follows its focused failure handlers and restarting checks after repairs.
 The separation between GitHub Actions orchestration and project commands follows its code-checks workflow and `bin/` scripts.
-That project's Docker setup and other dependencies are not inherited by this repository.
+The Docker preview and Playwright MCP workflow draws on the user-specified Clio repository's project launchers and browser inspection setup.

@@ -64,8 +64,22 @@ Changes to required metric labels or the approved zone roster require a reviewed
 
 ### Development
 
-Development uses native Rust tooling locally and on GitHub-hosted Linux runners, with minimal Donna/Depmesh configuration.
-This requires no container infrastructure or external journal.
+Development builds, checks, and local preview MUST use the shared Docker Compose development image through project commands.
+The image MUST provide the pinned Rust and WebAssembly toolchain and the tools needed by existing browser tests so host installations do not change their behavior.
+Dependency installation MUST be a separate setup operation.
+Donna and Depmesh run on the host and orchestrate those commands.
+
+The dashboard preview MUST run in Compose and expose the same built application to the user's browser and the agent's Playwright MCP browser.
+The MCP server MUST run in a temporary stdio container on the project's Compose network, with browser artifacts retained under ignored `.session/playwright/`.
+Its image MUST be pinned, and project-scoped Codex configuration MUST declare its launcher.
+The preview MUST publish to host loopback by default; the browser container MUST reach it through Compose service discovery.
+
+The preview launcher MUST support an explicit history path and a synthetic demo mode.
+It MUST identify its selected history and observation count, rebuild when that history changes, and keep preview output separate from release and test output.
+Demo generation MUST remain Rust tooling, support reproducible input timestamps, and include recent observations visible in the default range.
+The UI MUST identify demo data as synthetic.
+Preview and test operations MUST NOT collect source metrics or modify committed history.
+These development services do not form part of the deployed static dashboard.
 
 ## Components
 
@@ -151,6 +165,9 @@ README.md
 Cargo.toml
 Cargo.lock
 rust-toolchain.toml
+docker-compose.yml       # shared development, preview, and browser services
+docker/dev/              # development image
+.codex/                  # project browser MCP configuration
 mnm-stats/
   mnm-stats-model/        # shared data contract and validation
   mnm-stats-collector/    # native CLI and parser fixture tests

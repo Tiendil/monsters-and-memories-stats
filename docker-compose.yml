@@ -1,0 +1,47 @@
+name: mnm-stats
+
+x-dev: &dev
+  image: mnm-stats-dev:local
+  platform: linux/amd64
+  build:
+    context: .
+    dockerfile: docker/dev/Dockerfile
+  init: true
+  user: "${MNM_STATS_UID:-1000}:${MNM_STATS_GID:-1000}"
+  working_dir: /workspace
+  shm_size: 1gb
+  environment:
+    MNM_STATS_CONTAINER: "1"
+    MNM_STATS_HISTORY: "${MNM_STATS_CONTAINER_HISTORY:-/workspace/data/history.jsonl}"
+    CARGO_HOME: /workspace/.cache/docker/cargo
+    CARGO_TARGET_DIR: /workspace/target/docker
+    XDG_CACHE_HOME: /workspace/.cache/docker/tools
+    XDG_CONFIG_HOME: /workspace/.cache/docker/config
+  volumes:
+    - .:/workspace
+    - type: bind
+      source: "${MNM_STATS_HISTORY_DIR:-./data}"
+      target: /input-history
+      read_only: true
+
+services:
+  dev:
+    <<: *dev
+    profiles: [tools]
+  dashboard:
+    <<: *dev
+    command: ["./bin/serve-dashboard.sh"]
+    ports:
+      - "127.0.0.1:${MNM_STATS_PORT:-8080}:8080"
+  playwright-mcp:
+    image: mcr.microsoft.com/playwright/mcp@sha256:18c0a9c934004fe9580cc79f1e8e6e6cde7c667348b215335e8a23fd3e509804
+    profiles: [tools]
+    init: true
+    stdin_open: true
+    shm_size: 1gb
+    user: "${MNM_STATS_UID:-1000}:${MNM_STATS_GID:-1000}"
+    working_dir: /workspace/.session/playwright
+    volumes:
+      - ./.session/playwright:/workspace/.session/playwright
+    entrypoint: ["node", "/app/cli.js"]
+    command: ["--headless", "--browser", "chromium", "--no-sandbox", "--isolated", "--output-dir", "/workspace/.session/playwright"]
