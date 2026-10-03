@@ -70,8 +70,7 @@ impl Session {
                     .get("rendered")
                     .ok_or("join lacks rendered metrics")?
                     .clone();
-                let page = parser::parse_page(&liveview::render(&rendered)?, now)?;
-                self.initial_charts = page.charts;
+                self.initial_charts = parser::readiness_charts(&liveview::render(&rendered)?)?;
                 self.rendered = Some(rendered);
                 Ok(None)
             }
@@ -81,8 +80,9 @@ impl Session {
                     .as_mut()
                     .ok_or("metrics diff arrived before join")?;
                 liveview::merge(current, &fields[4]);
-                let page = parser::parse_page(&liveview::render(current)?, now)?;
-                if !page.charts.keys().eq(self.initial_charts.keys()) {
+                let html = liveview::render(current)?;
+                let charts = parser::readiness_charts(&html)?;
+                if !charts.keys().eq(self.initial_charts.keys()) {
                     return Err(
                         "server membership changed during collection; retry a fresh observation"
                             .into(),
@@ -96,17 +96,15 @@ impl Session {
                 let batch = liveview::updated_batches(current, &fields[4])?
                     .into_iter()
                     .any(|html| {
-                        page.snapshot
-                            .servers
-                            .iter()
-                            .all(|s| html.contains(&format!("id=\"server-stats-{}\"", s.id)))
+                        charts
+                            .keys()
+                            .all(|id| html.contains(&format!("id=\"server-stats-{id}\"")))
                     });
-                let complete = page
-                    .charts
+                let complete = charts
                     .iter()
                     .all(|(id, chart)| self.initial_charts.get(id) != Some(chart));
                 if batch && complete {
-                    Ok(Some(page.snapshot))
+                    Ok(Some(parser::parse_snapshot(&html, now)?))
                 } else {
                     Ok(None)
                 }

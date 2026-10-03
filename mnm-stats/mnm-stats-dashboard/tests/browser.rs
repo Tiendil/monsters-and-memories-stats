@@ -127,8 +127,8 @@ impl Browser {
             session,
             _driver: driver,
         };
-        // A clock stub is the only browser-side test helper; fixtures and
-        // assertions stay in Rust. Pausing all Chrome timers stalls navigation.
+        // Fix the browser clock; fixtures and assertions stay in Rust.
+        // Pausing all Chrome timers stalls navigation.
         let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
         browser.request(
             Method::POST,
@@ -238,6 +238,16 @@ impl Browser {
             "/goog/cdp/execute",
             json!({
                 "cmd":"DOM.scrollIntoViewIfNeeded", "params":{"nodeId":node["nodeId"]}
+            }),
+        );
+        // Scrolling queues an event that clears hover details. Let the browser
+        // finish that frame before moving the pointer onto the scrolled marker.
+        self.request(
+            Method::POST,
+            "/execute/async",
+            json!({
+                "script":"const done = arguments[0]; requestAnimationFrame(() => requestAnimationFrame(() => done(null)));",
+                "args":[]
             }),
         );
         self.move_pointer(selector, 0, 0);

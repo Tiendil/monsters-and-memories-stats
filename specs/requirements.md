@@ -182,6 +182,11 @@ If collection fails during the next hour, history contains no invented observati
 The snapshot stores online population 100 once; it does not store the chart points.
 If an approved source field instead exposes its last known state as a final chart point, that one value can supply the snapshot's metric without importing the rest of the series.
 
+Current metric fields MUST be validated after the asynchronous load completes.
+Temporary loading placeholders before completion MUST NOT be treated as completed metric values or as source-contract failures.
+The identities and protocol fields needed to establish readiness MUST remain valid throughout collection.
+An invalid completed rendering MUST fail collection without waiting for a later response to conceal the problem.
+
 The parser MUST check:
 
 - required sections.
@@ -203,6 +208,14 @@ Ordinary population changes and cosmetic HTML changes that preserve this contrac
 No parser can reliably detect an upstream semantic change that leaves all observable structure and labels unchanged; that limitation MUST be documented.
 
 Failure MUST produce a failing Actions run with a diagnostic that identifies the source-contract problem.
+Diagnostics for unexpected elements in a starting-zone list MUST include:
+
+- server identity.
+- containing list.
+- element tag.
+- ID when present.
+- a bounded excerpt of visible text.
+
 Maintainer notification setup and a demonstrated failure notification MUST be part of deployment acceptance.
 The last valid dashboard data MUST remain usable after collection failure.
 

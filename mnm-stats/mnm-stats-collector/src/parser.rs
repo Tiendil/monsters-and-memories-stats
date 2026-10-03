@@ -82,14 +82,61 @@ fn sum(mut values: impl Iterator<Item = u64>, context: &str) -> Result<u64> {
     })
 }
 
-/// Parsed page values are not proof of asynchronous completion. Acquisition
-/// establishes readiness separately before exposing a snapshot for storage.
-pub(crate) struct Page {
-    pub snapshot: Snapshot,
-    pub charts: BTreeMap<String, Value>,
+fn server_cards(root: ElementRef<'_>) -> Result<Vec<ElementRef<'_>>> {
+    let container = id(root, "metrics-servers")?;
+    let cards = select(container, "[id^='server-metrics-']");
+    if cards.is_empty() {
+        return Err("no server metric cards found".into());
+    }
+    if select(container, "h2").len() != cards.len() {
+        return Err("server card has a missing or unexpected identity".into());
+    }
+    Ok(cards)
 }
 
-pub(crate) fn parse_page(html: &str, observed_at: DateTime<Utc>) -> Result<Page> {
+fn chart_data(card: ElementRef<'_>, server_id: &str) -> Result<Value> {
+    let chart = id(card, &format!("ccu-history-{server_id}"))?;
+    if chart.value().attr("data-server") != Some(server_id) {
+        return Err("chart server identity mismatch".into());
+    }
+    let data: Value = serde_json::from_str(
+        chart
+            .value()
+            .attr("data-chart-data")
+            .ok_or("missing chart payload for readiness")?,
+    )?;
+    if !data.is_array() {
+        return Err("invalid chart payload for readiness".into());
+    }
+    Ok(data)
+}
+
+/// Inspect only the fields needed to track asynchronous completion. Current
+/// metric fields may still contain placeholders until acquisition is ready.
+pub(crate) fn readiness_charts(html: &str) -> Result<BTreeMap<String, Value>> {
+    let doc = Html::parse_document(html);
+    let mut charts = BTreeMap::new();
+    for card in server_cards(doc.root_element())? {
+        let server_id = card
+            .value()
+            .id()
+            .unwrap()
+            .strip_prefix("server-metrics-")
+            .unwrap();
+        if server_id.is_empty() {
+            return Err("empty server identity".into());
+        }
+        let data = chart_data(card, server_id).map_err(|e| format!("server {server_id:?}: {e}"))?;
+        if charts.insert(server_id.into(), data).is_some() {
+            return Err(format!("duplicate server identity {server_id:?}").into());
+        }
+    }
+    Ok(charts)
+}
+
+/// Decode current fields from an already completed rendering. This alone does
+/// not establish readiness; live collection and fixture replay use acquisition.
+pub fn parse_snapshot(html: &str, observed_at: DateTime<Utc>) -> Result<Snapshot> {
     let doc = Html::parse_document(html);
     let root = doc.root_element();
     let heading = one(root, "h1")?;
@@ -118,16 +165,8 @@ pub(crate) fn parse_page(html: &str, observed_at: DateTime<Utc>) -> Result<Page>
         "Total Online",
     )?;
 
-    let container = id(root, "metrics-servers")?;
-    let cards = select(container, "[id^='server-metrics-']");
-    if cards.is_empty() {
-        return Err("no server metric cards found".into());
-    }
-    if select(container, "h2").len() != cards.len() {
-        return Err("server card has a missing or unexpected identity".into());
-    }
+    let cards = server_cards(root)?;
     let mut servers = Vec::new();
-    let mut charts = BTreeMap::new();
     for card in cards {
         let server_id = card
             .value()
@@ -164,7 +203,13 @@ pub(crate) fn parse_page(html: &str, observed_at: DateTime<Utc>) -> Result<Page>
                     .value()
                     .id()
                     .and_then(|s| s.strip_prefix(&prefix))
-                    .ok_or("missing or unexpected zone identity")?;
+                    .filter(|id| ZONES.contains(id))
+                    .ok_or_else(|| format!(
+                        "#starting-zone-list-{server_id}: missing or unexpected zone identity; expected prefix {prefix:?} and an approved zone ID, found <{}> with id {:?} and text {:?}",
+                        zone.value().name(),
+                        zone.value().id(),
+                        text(zone).chars().take(160).collect::<String>()
+                    ))?;
                 let fields = select(zone, "span");
                 if fields.len() != 2 {
                     return Err("zone must contain its name and count".into());
@@ -185,22 +230,7 @@ pub(crate) fn parse_page(html: &str, observed_at: DateTime<Utc>) -> Result<Page>
                 return Err("starting-zone total does not equal zone counts".into());
             }
             starting_zones.sort_by(|a, b| a.id.cmp(&b.id));
-            let chart = id(card, &format!("ccu-history-{server_id}"))?;
-            if chart.value().attr("data-server") != Some(server_id) {
-                return Err("chart server identity mismatch".into());
-            }
-            let chart_data: Value = serde_json::from_str(
-                chart
-                    .value()
-                    .attr("data-chart-data")
-                    .ok_or("missing chart payload for readiness")?,
-            )?;
-            if !chart_data.is_array() {
-                return Err("invalid chart payload for readiness".into());
-            }
-            if charts.insert(server_id.into(), chart_data).is_some() {
-                return Err("duplicate server identity".into());
-            }
+            chart_data(card, server_id)?;
             Ok(Server {
                 id: server_id.into(),
                 name,
@@ -223,11 +253,5 @@ pub(crate) fn parse_page(html: &str, observed_at: DateTime<Utc>) -> Result<Page>
         servers,
     };
     snapshot.validate()?;
-    Ok(Page { snapshot, charts })
-}
-
-/// Decode current fields from an already completed rendering. This alone does
-/// not establish readiness; live collection and fixture replay use acquisition.
-pub fn parse_snapshot(html: &str, observed_at: DateTime<Utc>) -> Result<Snapshot> {
-    Ok(parse_page(html, observed_at)?.snapshot)
+    Ok(snapshot)
 }

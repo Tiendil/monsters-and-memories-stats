@@ -48,6 +48,79 @@ fn replay_waits_for_every_server_and_retains_only_current_state() {
 }
 
 #[test]
+fn temporary_zone_elements_wait_for_completed_metrics() {
+    let mut frames = frames();
+    let last = frames.len() - 1;
+    for (index, frame) in frames[..last].iter_mut().enumerate() {
+        let server = rows(frame, index == 0)
+            .iter_mut()
+            .find(|row| row[0] == "vespyra")
+            .unwrap();
+        // Synthetic loading state, not a captured claim about the source UI.
+        server[14] = json!("<p>Loading starting zones</p>");
+    }
+    for length in 1..frames.len() {
+        let error = replay(&frames[..length], time()).unwrap_err().to_string();
+        assert!(error.contains("incomplete fixture"), "{error}");
+    }
+    let snapshot = replay(&frames, time()).unwrap();
+    let server = snapshot.servers.iter().find(|s| s.id == "vespyra").unwrap();
+    assert_eq!(
+        (server.daily_active, server.monthly_active, server.online),
+        (2003, 2106, 731)
+    );
+    assert_eq!(
+        server
+            .starting_zones
+            .iter()
+            .map(|z| (z.id.as_str(), z.online))
+            .collect::<Vec<_>>(),
+        [
+            ("ailvorith", 53),
+            ("evergrove", 73),
+            ("nightharbore", 111),
+            ("nightharborw", 177),
+            ("underdocks", 123)
+        ]
+    );
+}
+
+#[test]
+fn invalid_completed_zones_fail_with_element_context() {
+    for (element, identity) in [
+        ("<p>Starting zones unavailable</p>", "id None"),
+        (
+            "<p id=\"zone-status\">Starting zones unavailable</p>",
+            "id Some(\"zone-status\")",
+        ),
+        (
+            "<p id=\"starting-zone-vespyra-unknown\">Starting zones unavailable</p>",
+            "id Some(\"starting-zone-vespyra-unknown\")",
+        ),
+    ] {
+        let mut frames = frames();
+        let valid = frames.last().unwrap().clone();
+        let server = rows(frames.last_mut().unwrap(), false)
+            .iter_mut()
+            .find(|row| row[0] == "vespyra")
+            .unwrap();
+        server[14] = json!(element);
+        // Once readiness is established, invalid fields fail immediately.
+        frames.push(valid);
+        let error = replay(&frames, time()).unwrap_err().to_string();
+        for expected in [
+            "server \"vespyra\"",
+            "starting-zone-list-vespyra",
+            "<p>",
+            identity,
+            "Starting zones unavailable",
+        ] {
+            assert!(error.contains(expected), "missing {expected:?}: {error}");
+        }
+    }
+}
+
+#[test]
 fn zero_activity_and_empty_history_can_complete_without_point_count_rules() {
     let mut frames = frames();
     let baseline = rows(&mut frames[0], true).clone();
