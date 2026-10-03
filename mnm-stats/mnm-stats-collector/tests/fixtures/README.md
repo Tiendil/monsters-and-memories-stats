@@ -17,6 +17,10 @@ Its channel identity and join/message references are replaced with fixture value
 HTTP initialization in transport tests uses synthetic session values and a loopback server.
 The captured protocol data is never refreshed by tests.
 
+Zone-loading regressions construct synthetic variants of `liveview.json`, replacing Vespyra's zone rows with a message in initial and intermediate responses and restoring the captured rows at completion.
+Failure variants retain that message in the completed response and verify diagnostics and unchanged history.
+These messages are synthetic inputs, not captured upstream text or a reconstruction of the failed 2026-10-03 collection response.
+
 Sanitization keeps the original main-content structure, replaces the generated LiveView root ID with a fixed fixture ID, removes session-specific `data-phx-*` attributes, and wraps the content in a minimal local HTML document.
 The original head, external scripts, navigation, cookies, CSRF token, and LiveView session credentials are not included.
 The captures do not replay LiveView and must not load upstream assets.

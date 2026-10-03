@@ -60,6 +60,8 @@ Tests for `mnm-stats-collector` MUST cover:
 
 - Extraction of expected values from a representative source fixture, including published zeros.
 - Rejection of initial placeholder values before every discovered server's asynchronous metrics load completes.
+- Temporary zone-loading elements in initial and intermediate responses, followed by successful extraction from a valid completed response.
+- Rejection of invalid completed zone elements with useful element diagnostics and preservation of existing history.
 - Readiness with legitimately zero activity counts and delayed updates, without requiring a fixed number of chart points.
 - Extraction of current-state values without storing the source's historical series or backfilling earlier observations.
 - Selection of a final historical point only when the source contract establishes last-known-state semantics, and rejection of an unverified historical bucket as a current value.

@@ -123,6 +123,22 @@ A chart-point count, nonzero activity, or a fixed wait does not establish readin
 When a completed server result is indistinguishable from its initial payload, the collector cannot establish readiness and times out without changing history.
 Changes to this rendering protocol may require a reviewed collector update.
 
+## Collection failure investigation
+
+The scheduled collection at 10:29 UTC on 2026-10-03 failed with `server "vespyra": missing or unexpected zone identity`.
+The retained history matched the preceding successful collection byte for byte; the failed observation was not stored.
+The failing response was not retained, so its offending element and whether it occurred before or after asynchronous completion cannot be established from the logs.
+
+A separate browser session at 13:14 UTC on the same date showed the usual five named zone rows for Vespyra.
+Replaying its captured metrics join and six updates through the collector succeeded.
+All extracted current-state values and names matched that session's rendered browser view: 20,715 subscriptions, 3,633 online, six servers, and thirty starting-zone rows.
+That later response does not establish the content of the earlier failed response.
+
+Inspection identified validation of current fields before asynchronous completion as a collector defect: a temporary zone-loading element can fail collection even when the completed rendering is valid.
+A synthetic variant of the existing protocol fixture reproduces that failure and verifies waiting for completion before validating current fields.
+Completed invalid fields still fail without replacing missing data with zeros, and unexpected zone elements include their tag, identity, and bounded text in the diagnostic.
+This addresses the reproduced premature-validation case; the original incident's exact trigger remains unverified.
+
 ## Remaining verification
 
 The counting semantics of DAILY ACTIVE and MONTHLY ACTIVE remain unverified.

@@ -132,12 +132,19 @@ fn replay_cli_appends_once_and_preserves_history_on_failures() {
     let before = fs::read_to_string(&history).unwrap();
     assert_eq!(before.lines().count(), 2);
     assert!(before.starts_with(&first));
+    let mut invalid_zones = common::frames();
+    let rows = invalid_zones.last_mut().unwrap()[4]["0"]["1"]["0"]["1"]["0"]["d"]
+        .as_array_mut()
+        .unwrap();
+    rows.iter_mut().find(|row| row[0] == "vespyra").unwrap()[14] =
+        serde_json::json!("<p>Starting zones unavailable</p>");
     for frames in [
         "{broken".to_owned(),
         serde_json::to_string(&common::frames()[..1]).unwrap(),
         serde_json::to_string(&common::frames())
             .unwrap()
             .replace("DAILY ACTIVE", "DAILY USERS"),
+        serde_json::to_string(&invalid_zones).unwrap(),
     ] {
         fs::write(&fixture, frames).unwrap();
         assert!(!run("2026-10-02T18:20:00Z").status.success());
