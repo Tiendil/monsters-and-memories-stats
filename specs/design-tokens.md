@@ -13,7 +13,7 @@ Screen composition, metric semantics, and collection behavior are outside its sc
 
 Shared token terminology is defined in the [project dictionary](dictionary.md#presentation-terms).
 
-`specs/design-tokens.tokens.json` MUST be the single authored source for reusable dashboard presentation values.
+`mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json` MUST be the single authored source for reusable dashboard presentation values.
 It MUST use the [Design Tokens Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/), with the project profile defined below.
 The dashboard MUST consume generated representations of that artifact in both CSS and chart configuration.
 Generated representations MUST NOT be edited by hand or committed as another source of token values.
@@ -147,7 +147,7 @@ Token names MUST NOT encode collected server identities or imply that colors cha
 
 Token generation MUST be deterministic and MUST run as part of the supported dashboard build and preview commands.
 Token-only changes MUST update CSS and chart presentation even when build caches are reused.
-The running local preview MUST rebuild after token-only changes, including atomic replacement of the artifact outside the dashboard crate.
+The running local preview MUST rebuild after token-only changes, including atomic replacement and overrides that select an artifact outside the dashboard crate.
 The frontend MUST NOT fetch the token artifact at runtime.
 
 Invalid tokens or values that cannot be represented by their consumers MUST fail the build with the affected token path and reason.

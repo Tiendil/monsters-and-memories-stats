@@ -2,7 +2,7 @@
 set -euo pipefail
 project_root="$(cd "$(dirname "$0")/.." && pwd)"
 history="${MNM_STATS_HISTORY:-$project_root/data/history.jsonl}"
-tokens="${MNM_STATS_TOKENS:-$project_root/specs/design-tokens.tokens.json}"
+tokens="${MNM_STATS_TOKENS:-$project_root/mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json}"
 demo=0
 explicit_history=0
 args=()

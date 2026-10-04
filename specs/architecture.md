@@ -69,7 +69,7 @@ This keeps the displayed data and downloaded history tied to the same frontend b
 
 ### Design tokens
 
-The dashboard owns the presentation contract defined in [design-tokens.md](design-tokens.md), including the machine-readable token artifact under `specs/`.
+The dashboard owns the presentation contract defined in [design-tokens.md](design-tokens.md), including the machine-readable token artifact in the dashboard crate.
 Rust build tooling MUST validate that artifact and generate both CSS custom properties and typed values for Plotly figure configuration from one resolved token set.
 This keeps browser styles and chart presentation consistent without introducing a separate runtime styling service.
 Generation MUST use the project's supported DTCG profile and existing Cargo/Trunk build flow.
@@ -77,7 +77,7 @@ Handwritten CSS MUST retain selectors and layout rules, with token references su
 Generated CSS MUST be embedded in the compiled frontend and applied when the WASM application mounts, without a separate runtime stylesheet request.
 Build-time resolution MUST supply token values in CSS contexts that cannot use custom properties.
 Generated output MUST remain in ignored build locations.
-The preview MUST watch the token artifact outside the application crate and rebuild both representations when it changes.
+The preview MUST watch the selected token artifact and rebuild both representations when it changes, including when an override selects a file outside the application crate.
 
 ### Automation and notifications
 

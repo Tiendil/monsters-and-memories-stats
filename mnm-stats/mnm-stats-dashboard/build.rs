@@ -11,7 +11,7 @@ fn main() {
     let manifest = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let token_input = env::var_os("MNM_STATS_TOKENS")
         .map(PathBuf::from)
-        .unwrap_or_else(|| manifest.join("../../specs/design-tokens.tokens.json"));
+        .unwrap_or_else(|| manifest.join("design-tokens.tokens.json"));
     println!("cargo:rerun-if-changed={}", token_input.display());
     let token_source = fs::read_to_string(&token_input)
         .unwrap_or_else(|e| panic!("cannot read tokens {}: {e}", token_input.display()));

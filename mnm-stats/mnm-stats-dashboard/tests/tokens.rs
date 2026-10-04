@@ -182,7 +182,7 @@ fn invalid_values_and_unsupported_features_fail_explicitly() {
 
 #[test]
 fn authored_tokens_generate_styles_and_typed_chart_values() {
-    let source = include_str!("../../../specs/design-tokens.tokens.json");
+    let source = include_str!("../design-tokens.tokens.json");
     let styles = include_str!("../style.css");
     let result = adapter::generate(source, styles).unwrap();
     assert!(result.css.contains("@media (max-width: 1150px)"));
@@ -215,7 +215,7 @@ fn authored_tokens_generate_styles_and_typed_chart_values() {
 #[test]
 fn shared_scales_propagate_without_coupling_component_overrides() {
     let mut tokens: Value =
-        serde_json::from_str(include_str!("../../../specs/design-tokens.tokens.json")).unwrap();
+        serde_json::from_str(include_str!("../design-tokens.tokens.json")).unwrap();
     tokens["scale"]["spacing"]["3"]["$value"]["value"] = json!(1);
     let shared = generate(&tokens);
     for role in [
@@ -257,7 +257,7 @@ fn shared_scales_propagate_without_coupling_component_overrides() {
 #[test]
 fn invalid_chart_consumer_types_and_geometry_report_semantic_paths() {
     let original: Value =
-        serde_json::from_str(include_str!("../../../specs/design-tokens.tokens.json")).unwrap();
+        serde_json::from_str(include_str!("../design-tokens.tokens.json")).unwrap();
     let mut invalid = original.clone();
     invalid["chart"]["viewport"]["min-height"]["$value"]["value"] = json!(10);
     rejected(&invalid, "chart.viewport.min-height", "drawing space");

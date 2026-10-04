@@ -1397,7 +1397,8 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
 
 fn changed_tokens(root: &Path) -> Value {
     let mut tokens: Value = serde_json::from_str(
-        &fs::read_to_string(root.join("specs/design-tokens.tokens.json")).unwrap(),
+        &fs::read_to_string(root.join("mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json"))
+            .unwrap(),
     )
     .unwrap();
     tokens["color"]["surface"]["page"]["$value"]["components"] =
@@ -1415,7 +1416,11 @@ fn changed_tokens(root: &Path) -> Value {
 
 fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let tokens = scratch.join("preview-tokens.json");
-    fs::copy(root.join("specs/design-tokens.tokens.json"), &tokens).unwrap();
+    fs::copy(
+        root.join("mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json"),
+        &tokens,
+    )
+    .unwrap();
     let history = scratch.join("preview history.jsonl");
     let at = "2026-06-01T12:00:00Z";
     let generate = || {
@@ -1533,7 +1538,11 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     browser.verify_token_styles(true);
     // Watchers must survive more than one atomic replacement.
     let original = fs::read(&index).unwrap();
-    fs::copy(root.join("specs/design-tokens.tokens.json"), &replacement).unwrap();
+    fs::copy(
+        root.join("mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json"),
+        &replacement,
+    )
+    .unwrap();
     fs::rename(&replacement, &tokens).unwrap();
     wait_for_preview_rebuild(&index, &original);
     browser.verify(&origin, &expected, scratch);

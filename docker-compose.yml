@@ -15,7 +15,7 @@ x-dev: &dev
     MNM_STATS_BUILD_REVISION: "${MNM_STATS_BUILD_REVISION:-}"
     MNM_STATS_BUILD_BRANCH: "${MNM_STATS_BUILD_BRANCH:-}"
     MNM_STATS_HISTORY: "${MNM_STATS_CONTAINER_HISTORY:-/workspace/data/history.jsonl}"
-    MNM_STATS_TOKENS: "${MNM_STATS_CONTAINER_TOKENS:-/workspace/specs/design-tokens.tokens.json}"
+    MNM_STATS_TOKENS: "${MNM_STATS_CONTAINER_TOKENS:-/workspace/mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json}"
     CARGO_HOME: /workspace/.cache/docker/cargo
     CARGO_TARGET_DIR: /workspace/target/docker
     XDG_CACHE_HOME: /workspace/.cache/docker/tools
@@ -27,7 +27,7 @@ x-dev: &dev
       target: /input-history
       read_only: true
     - type: bind
-      source: "${MNM_STATS_TOKENS_DIR:-./specs}"
+      source: "${MNM_STATS_TOKENS_DIR:-./mnm-stats/mnm-stats-dashboard}"
       target: /input-tokens
       read_only: true
 

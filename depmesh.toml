@@ -110,7 +110,6 @@ output = { type = "list", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-
 [[rules]]
 relation = "governed_by"
 input = { type = "any", items = [
-  { type = "glob", pattern = "@/specs/design-tokens.tokens.json" },
   { type = "glob", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
   { type = "glob", pattern = "@/bin/*dashboard.sh" },
 ] }
@@ -120,7 +119,6 @@ output = { type = "list", artifacts = ["@/specs/design-tokens.md"] }
 relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/design-tokens.md"] }
 output = { type = "union", items = [
-  { type = "files", pattern = "@/specs/design-tokens.tokens.json" },
   { type = "files", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
   { type = "files", pattern = "@/bin/*dashboard.sh" },
 ] }
@@ -128,19 +126,13 @@ output = { type = "union", items = [
 # Dashboard composition and visual behavior.
 [[rules]]
 relation = "governed_by"
-input = { type = "any", items = [
-  { type = "one_of", artifacts = ["@/specs/design-tokens.tokens.json"] },
-  { type = "glob", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
-] }
+input = { type = "glob", pattern = "@/mnm-stats/mnm-stats-dashboard/**" }
 output = { type = "list", artifacts = ["@/specs/dashboard-design.md"] }
 
 [[rules]]
 relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/dashboard-design.md"] }
-output = { type = "union", items = [
-  { type = "list", artifacts = ["@/specs/design-tokens.tokens.json"] },
-  { type = "files", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
-] }
+output = { type = "files", pattern = "@/mnm-stats/mnm-stats-dashboard/**" }
 
 # Development environment ownership.
 [[rules]]

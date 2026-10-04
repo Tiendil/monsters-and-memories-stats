@@ -74,7 +74,7 @@ Start the preview, then navigate the MCP browser to `http://dashboard:8080/`. Th
 
 ## Styling
 
-[Design tokens](specs/design-tokens.tokens.json) are the shared source for CSS and chart presentation, following the project's [DTCG format profile](specs/design-tokens.md). Edit semantic values there; keep selectors and layout rules in `mnm-stats/mnm-stats-dashboard/style.css`. CSS uses `var(--mnm-...)`; media-query conditions use `token(breakpoint.medium)` so the build can substitute a concrete dimension.
+[Design tokens](mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json) are the shared source for CSS and chart presentation, following the project's [DTCG format profile](specs/design-tokens.md). Edit semantic values there; keep selectors and layout rules in `mnm-stats/mnm-stats-dashboard/style.css`. CSS uses `var(--mnm-...)`; media-query conditions use `token(breakpoint.medium)` so the build can substitute a concrete dimension.
 
 The Rust build validates tokens and aliases, then generates CSS and typed chart values under Cargo's ignored build output. Generated CSS is compiled into WASM and inserted into the page when the application mounts, with no separate stylesheet request. The initial loading message uses browser-default styling until WASM starts. Token data is never fetched at runtime, and generated styles should not be edited. Plotly chart dimensions and font sizes use whole CSS pixels; other CSS dimensions retain their declared `px` or `rem` units.
 
