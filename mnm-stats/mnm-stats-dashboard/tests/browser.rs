@@ -380,7 +380,9 @@ impl Browser {
                 .contains("2026-06-01T12:00:00Z")
         );
         assert!(self.text("#freshness").contains("Stale data"));
-        assert!(self.text("#weekly-unavailable").contains("not available"));
+        assert!(self.text(".source-notes").contains(
+            "Per-server subscriptions and deduplicated global activity are unavailable."
+        ));
         assert_eq!(self.count(".chart-card"), metrics.len());
         assert!(self.text("#server-scope").contains("Retired server"));
         for (key, days) in [

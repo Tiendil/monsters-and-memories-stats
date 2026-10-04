@@ -39,7 +39,6 @@ The dashboard MUST present the following metric families:
 
 - daily active counts.
 - monthly active counts.
-- weekly active counts, if available.
 - active subscriptions.
 - starting-zone statistics.
 
@@ -142,8 +141,7 @@ Source investigation evidence is recorded in the [source analysis](../docs/sourc
 The UI MUST distinguish source-reported counts from derived values and explain that DAU/MAU are the source's daily/monthly active fields with unverified counting semantics.
 It MUST label subscriptions as subscriptions, without equating them with unique people.
 Missing fields MUST NOT become zero; a literal published zero MUST remain zero, with the source limitation visible.
-The dashboard MUST NOT infer WAU by adding daily counts or infer MAU by summing observations.
-It MUST show WAU as unavailable until the source provides a defensible weekly unique-activity metric and the source contract is reviewed.
+The dashboard MUST NOT infer MAU by summing observations.
 
 Starting-zone counts MAY be summed by zone ID across servers, and across zones within a server.
 Daily/monthly activity MAY be summed across servers only when clearly labeled as a sum without deduplication.
@@ -280,10 +278,8 @@ In per-server views, the subscription denominator MUST be explicitly labeled glo
 Values that compare activity with subscriptions MUST be described as ratios of reported counts, not as proven fractions of subscribers playing.
 They MUST NOT be clamped to 100 percent.
 A zero denominator or unavailable value MUST yield “not available,” never infinity or a fabricated zero.
-If WAU becomes available after review, the same approach MUST include daily/weekly and weekly/monthly ratios and weekly/subscriptions.
 
 Correlation MUST use Pearson's r for available pairs among daily activity, monthly activity, and global subscriptions over the selected range and server scope.
-If WAU becomes available after review, it MUST be included in those pairwise correlations.
 To avoid treating repeated hourly daily/monthly counts as independent days, it MUST use the last jointly available observation per UTC day inside that range.
 It MUST show the paired-day count and return “not available” for fewer than three paired days or zero variance.
 Missing data MUST NOT be interpolated for correlation.
@@ -345,7 +341,6 @@ Collection and deployment are not complete merely because local tests pass.
 The dashboard and README MUST explain the unavailability of:
 
 - pre-collection history and missed collection intervals.
-- WAU while the source lacks a defensible weekly metric.
 - deduplicated global activity.
 - per-server subscriptions.
 

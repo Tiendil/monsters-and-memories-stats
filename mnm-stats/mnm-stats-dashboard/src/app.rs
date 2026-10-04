@@ -413,7 +413,6 @@ pub fn App() -> impl IntoView {
             </section>
             <Correlations history=history.clone() scope range now/>
             <section class="source-notes" aria-labelledby="source-heading"><h2 id="source-heading">"What these numbers can tell us"</h2>
-                <p id="weekly-unavailable">"Weekly active (WAU): not available. The source does not publish a defensible weekly unique-activity count."</p>
                 <p>"DAU and MAU retain the source's daily/monthly active values; their counting units and window boundaries are unverified. Adding observations cannot recover unique activity. Subscriptions are not assumed to represent unique people."</p>
                 <p>"Per-server subscriptions and deduplicated global activity are unavailable. Starting-zone population is not a count of new players."</p>
                 <p>"The archive starts with successful collections. Earlier history and missed intervals are unavailable. These hourly snapshots are not an exhaustive record of every change within the hour."</p>

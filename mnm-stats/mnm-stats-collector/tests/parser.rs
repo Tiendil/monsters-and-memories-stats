@@ -54,7 +54,7 @@ fn extracts_current_values_and_source_names_without_importing_charts() {
 fn missing_malformed_duplicated_or_renamed_fields_fail() {
     for (from, to) in [
         ("DAILY ACTIVE", "DAILY USERS"),
-        ("MONTHLY ACTIVE", "WEEKLY ACTIVE"),
+        ("MONTHLY ACTIVE", "MONTHLY USERS"),
         ("Total Online", "Currently Online"),
         (
             "\n                          Online\n",

@@ -78,7 +78,7 @@ Both build and preview commands use the authored token file by default. For an i
 
 ## Dashboard
 
-History contains hourly current-state snapshots only. Pre-collection history and missed intervals are unavailable. The source does not provide WAU, deduplicated global activity, or per-server subscription counts. Daily/monthly activity fields have unverified counting semantics; subscriptions are not assumed to count distinct people.
+History contains hourly current-state snapshots only. Pre-collection history and missed intervals are unavailable. The source does not provide deduplicated global activity or per-server subscription counts. Daily/monthly activity fields have unverified counting semantics; subscriptions are not assumed to count distinct people.
 
 The dashboard plots daily and monthly activity, global subscriptions, online population, starting-zone totals and individual zones, and the three activity ratios. The shared time range applies to ordinary charts, entity comparisons, and correlations. Server choices and zone charts come from the complete embedded history, including historical entities.
 

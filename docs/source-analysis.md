@@ -15,7 +15,6 @@ The resulting behavioral requirements are in [requirements.md](../specs/requirem
 - Online — concurrent population for each server.
 - Starting Zones — per-server current populations, a starting-zone total, and individual named zones with IDs.
 - Last 24 Hours — the initial HTML contained two identical current points per server; after LiveView updates, each server exposed 50 distinct points spanning roughly a day.
-- Weekly activity — no weekly-active field found.
 
 ## Observed identities
 

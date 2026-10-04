@@ -306,7 +306,7 @@ Validation MUST reject the following before a file is changed:
 - duplicate hours.
 - corrupt counts.
 
-New source metrics such as WAU MUST require an explicitly reviewed schema change; they MUST NOT retroactively appear as zeros in old snapshots.
+New source metrics MUST require an explicitly reviewed schema change; they MUST NOT retroactively appear as zeros in old snapshots.
 
 ### Collection updates
 

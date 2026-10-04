@@ -22,7 +22,6 @@ It does not define the upstream counting semantics that the public source leaves
 
 - `DAU` — the project's shorthand for the source's daily active count, without asserting counting semantics that the source has not established.
 - `MAU` — the project's shorthand for the source's monthly active count, with the same limitation on counting semantics.
-- `WAU` — weekly active count; the project can report this metric only if the source provides a defensible weekly unique-activity count.
 - `active subscriptions` — the global subscription count reported by the source, which is not assumed to count distinct people.
 - `online population` — the concurrent population reported by the source within a stated scope.
 
