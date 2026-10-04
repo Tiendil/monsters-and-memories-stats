@@ -364,7 +364,7 @@ pub fn App() -> impl IntoView {
                 <p id="demo-notice" role="status">"Demo · synthetic data and server names."</p>
             })}
             <header class="page-header">
-                <div><p class="eyebrow">"Independent community statistics"</p><h1>"Monsters & Memories"</h1></div>
+                <div><p class="eyebrow">"Made with love and curiosity by "<a href="https://tiendil.org" target="_blank" rel="noopener">"Tiendil"</a></p><h1>"Monsters & Memories"</h1></div>
                 <div class="header-actions">
                     <div class="download"><button class="secondary" id="download-history" aria-describedby="download-help" on:click=move |_| download_error.set(download(&download_history).err().map(|_| "The history download could not be created. Please try again.".into()))>"Download JSON"</button><p id="download-help">"Complete archive"</p></div>
                     <div class="community-actions">

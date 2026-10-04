@@ -254,7 +254,7 @@
       "$type": "number",
       "eyebrow": {
         "$value": 0.13,
-        "$description": "Letter spacing of uppercase introductory labels, multiplied by 1em in CSS."
+        "$description": "Letter spacing of the introductory credit above the page title, multiplied by 1em in CSS."
       }
     },
     "size": {
@@ -310,7 +310,7 @@
       "eyebrow": {
         "$type": "dimension",
         "$value": "{scale.font-size.1}",
-        "$description": "Uppercase introductory label above the page title."
+        "$description": "Introductory credit above the page title."
       },
       "summary": {
         "$type": "dimension",

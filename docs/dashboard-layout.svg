@@ -17,8 +17,8 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="34" y="63" class="small muted">Illustrative synthetic data · proportions and colors are not implementation tokens</text>
 <rect x="28" y="85" width="1090" height="937" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
 <text x="56" y="115" class="label muted">DESKTOP · OVERVIEW</text>
-<text x="56" y="161" class="display" font-size="32">Monsters &amp; Memories</text>
-<text x="57" y="186" class="body muted">Independent community statistics</text>
+<text x="57" y="139" class="body muted">Made with love and curiosity by <a href="https://tiendil.org" target="_blank" rel="noopener" text-decoration="underline">Tiendil</a></text>
+<text x="56" y="176" class="display" font-size="32">Monsters &amp; Memories</text>
 <rect x="870" y="134" width="218" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
 <text x="887" y="161" class="body">Download history (JSON)</text>
 <text x="57" y="220" class="small muted">Updated 4 Oct 2026, 10:00 UTC · Collected hourly</text>
@@ -88,8 +88,8 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="974" y="994" class="small muted">Charts by Plotly</text>
 <rect x="1160" y="85" width="412" height="937" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
 <text x="1180" y="115" class="label muted">NARROW SCREEN · OVERVIEW</text>
-<text x="1180" y="157" class="display" font-size="28">Monsters &amp; Memories</text>
-<text x="1180" y="182" class="small muted">Independent community statistics</text>
+<text x="1180" y="137" class="small muted">Made with love and curiosity by <a href="https://tiendil.org" target="_blank" rel="noopener" text-decoration="underline">Tiendil</a></text>
+<text x="1180" y="174" class="display" font-size="28">Monsters &amp; Memories</text>
 <text x="1180" y="210" class="small muted">Updated 4 Oct, 10:00 UTC · Hourly</text>
 <text x="1180" y="239" class="small accent">Archive details  +</text>
 <text x="1357" y="239" class="small accent">Download history (JSON)</text>

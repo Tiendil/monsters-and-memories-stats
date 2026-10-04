@@ -27,7 +27,8 @@ The [layout illustration](../docs/dashboard-layout.svg) demonstrates the hierarc
 
 ### Masthead and collection status
 
-The masthead MUST contain the game name and the dashboard's community identity.
+The masthead MUST contain the game name and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
+The name “Tiendil” MUST link to `https://tiendil.org`, open in a new tab, and be visibly identifiable as a link.
 Its action group MUST provide “Download JSON,” “Star on GitHub,” and “Request a feature.”
 It MUST remain compact rather than use a promotional hero layout.
 On wide screens, the action group MUST sit beside the title; on narrow screens, the title MUST precede a compact action row.
