@@ -45,7 +45,7 @@ Stale and synthetic-data notices MUST remain visible without opening another vie
 
 The available history interval and observation count MUST be accessible through a labeled archive-details disclosure near this status.
 These details MUST NOT occupy a large, separate introductory panel.
-Human-readable UTC dates SHOULD be used in summaries to reduce scanning effort; exact original timestamps MUST remain available in point details, data tables, and downloads.
+Human-readable UTC dates SHOULD be used in summaries to reduce scanning effort; exact original timestamps MUST remain available in point details and downloads.
 
 ### Exploration controls
 
@@ -163,7 +163,7 @@ Each chart MUST present a short metric title, a concise scope or unit label, and
 The same chart anatomy MUST be used across sections.
 Observation counts and detailed qualifications SHOULD appear in captions or disclosures to reduce repeated visual clutter, except when a qualification is necessary beside the title.
 Axis labels MUST remain readable at narrow widths; reduce tick density before reducing text size.
-Counts MAY use compact axis labels when their scale is clear, while hover and exact-value tables MUST retain exact values.
+Counts MAY use compact axis labels when their scale is clear, while hover details MUST retain exact values.
 
 Normal time axes MUST run chronologically from left to right and identify UTC.
 Comparison axes MUST describe their alignment in human terms, retaining original timestamps in details.
@@ -193,10 +193,7 @@ The design MUST be reviewed with at least seven simultaneous series, including o
 ### Value inspection
 
 Native chart hover MUST retain the exact-value and original UTC timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
-Every chart MUST also provide a clearly labeled “View data” disclosure containing accessible exact values.
-This MUST support touch and keyboard users without requiring pointer hover.
-Table headers MUST identify series, timestamp, and value; numeric values MUST align consistently and use tabular digits.
-Table pagination and its current position MUST remain visible while inspecting a page of values.
+The complete-history JSON download MUST remain available independently of chart hover, including to touch and keyboard users.
 
 ## Visual language
 
@@ -216,8 +213,8 @@ Textures or game artwork MUST NOT appear behind plots, controls, or body text.
 
 The masthead and major section headings MUST use an old-style serif display treatment compatible with the game's visual identity.
 IM Fell English SHOULD be used for this limited display role because it matches the inspected official site; a readable serif fallback MAY be used where font loading is unavailable.
-Body copy, controls, chart labels, tables, and metric values MUST use a legible sans-serif family.
-Metric values and tabular data MUST use tabular numerals where supported.
+Body copy, controls, chart labels, and metric values MUST use a legible sans-serif family.
+Metric values MUST use tabular numerals where supported.
 Display lettering MUST NOT be used for dense numbers or chart axes.
 
 Body and control text SHOULD use a 1rem base; compact metadata and chart labels SHOULD remain at least 0.875rem at the default text size.
@@ -256,7 +253,7 @@ Decorative borders and nonessential gridlines need not have the prominence of me
 
 Page content MUST reflow at 320 CSS pixels without horizontal document scrolling.
 Ordinary charts SHOULD fit their container by adapting tick density and margins.
-When a dense comparison or exact-value table requires two-dimensional space, horizontal scrolling MUST be confined to a labeled, keyboard-accessible region.
+When a dense comparison requires two-dimensional space, horizontal scrolling MUST be confined to a labeled, keyboard-accessible region.
 Axis labels and value details MUST remain reachable within that region.
 Narrow layouts MUST preserve metric coverage, comparison controls, downloads, and data explanations.
 
@@ -285,7 +282,7 @@ The interface MUST distinguish:
 
 Empty or unavailable values MUST use a clear label rather than a misleading zero, flat line, or unlabeled dash.
 An empty interval MUST offer a direct way to select all time while retaining the server scope.
-Chart-engine failure MUST leave the surrounding values, exact-value tables, and history download usable.
+Chart-engine failure MUST leave the surrounding values and history download usable.
 State messages MUST explain what the user can do without suggesting that reloading fetches fresh metrics from a backend.
 The initial pre-WASM loading state MAY retain the browser-default styling permitted by [design-tokens.md](design-tokens.md#css-consumption).
 

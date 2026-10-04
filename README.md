@@ -33,7 +33,7 @@ GitHub jobs reuse `.github/actions/setup/` to build this image with a Docker lay
 
 Overview shows the last counts in the selected interval and the online trend. Activity, Population, and Relationships expose the detailed charts while preserving the selected server, range, and comparison. Population includes a zone selector drawn from the full archive.
 
-Use Compare for multiple servers, calendar months/years, or equal-duration intervals. Chart colors and line patterns stay attached to the selected series during the session. “View data” provides exact timestamps and values; “Download history (JSON)” always includes the complete archive.
+Use Compare for multiple servers, calendar months/years, or equal-duration intervals. Chart colors and line patterns stay attached to the selected series during the session. Chart hover provides exact timestamps and values; “Download JSON” always includes the complete archive.
 
 Presentation follows [the dashboard design](specs/dashboard-design.md) and [design tokens](specs/design-tokens.md). IM Fell English is distributed locally with its [SIL Open Font License](mnm-stats/mnm-stats-dashboard/fonts/OFL.txt) and [source attribution](mnm-stats/mnm-stats-dashboard/fonts/README.txt).
 
@@ -105,7 +105,7 @@ Use **View** to choose a comparison:
 
 Period comparisons use their selected periods and the server scope; the shared range still controls correlations. Remove individual selections with their **Remove** buttons. There is no two-series limit. Incomplete periods are not extrapolated, and lines break at missing values or gaps longer than two hours.
 
-Hover a plotted point to see its series, exact value, and original UTC collection timestamp, including in comparisons. Overlapping points show their individual details. Each chart also has **Inspect exact values**, with paginated UTC observations. Counts are exact; ratios show a rounded percentage together with the exact numerator and denominator. Zero denominators display “not available,” and ratios may exceed 100 percent. Narrow screens can scroll charts and tables horizontally.
+Hover a plotted point to see its series, exact value, and original UTC collection timestamp, including in comparisons. Overlapping points show their individual details. The **Download JSON** action provides all recorded observations. Counts are exact; ratios show a rounded percentage together with the exact numerator and denominator. Zero denominators produce gaps, and ratios may exceed 100 percent. Narrow screens can scroll comparison charts horizontally when needed.
 
 Correlations use Pearson's r on the last jointly available observation per UTC day, show the paired-day count, and require at least three days with variation in both metrics. Correlation does not establish causation, and overlapping source activity windows limit interpretation.
 

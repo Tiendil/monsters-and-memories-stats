@@ -64,7 +64,7 @@ Component-specific tokens MUST NOT be reused for unrelated components solely bec
 Independent roles that share a scale value MUST alias the common scale entry rather than alias one another.
 Descriptions of shared semantic roles MUST state their intended reusable pattern.
 
-**Example:** Input and table-cell padding can alias the same spacing scale entry through separate semantic tokens.
+**Example:** Input and comparison-chip padding can alias the same spacing scale entry through separate semantic tokens.
 Changing the input-padding alias affects inputs only; changing their common scale entry affects both roles.
 
 ### Coverage

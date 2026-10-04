@@ -321,9 +321,10 @@ pub mod browser {
             }
         });
         let label = format!(
-            "{}; {}. Hover a point or inspect exact values below.",
+            "{}; {}. {} Hover a point for its exact value and UTC timestamp, or use Download JSON for all recorded observations.",
             metric.title(),
-            metric.unit()
+            metric.unit(),
+            metric.description()
         );
         Effect::new(move |_| {
             let Some(element) = node.get() else {
@@ -343,7 +344,7 @@ pub mod browser {
                     Ok(_) => {
                         let _ = element.set_attribute("data-ready", "true");
                     }
-                    Err(_) => error.set(Some("Chart unavailable. View data below or download the history; reload to retry the chart engine.".into())),
+                    Err(_) => error.set(Some("Chart unavailable. Download the history or reload to retry the chart engine.".into())),
                 }
             });
         });

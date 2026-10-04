@@ -83,7 +83,6 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="564.5" y="888" class="small muted">19 Sep</text>
 <text x="1025" y="888" class="small muted">4 Oct</text>
 <text x="78" y="911" class="small muted">UTC · Gaps remain gaps</text>
-<text x="988" y="911" class="small accent">View data  +</text>
 <text x="56" y="959" class="body accent">About the data  +</text>
 <text x="56" y="994" class="small muted">Source: Monsters &amp; Memories public metrics</text>
 <text x="974" y="994" class="small muted">Charts by Plotly</text>
@@ -144,7 +143,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1358.5" y="940" class="small muted">19 Sep</text>
 <text x="1489" y="940" class="small muted">4 Oct</text>
 <text x="1202" y="963" class="small muted">UTC · Gaps remain gaps</text>
-<text x="1180" y="1005" class="small accent">View data  +      About the data  +</text>
+<text x="1180" y="1005" class="small accent">About the data  +</text>
 <text x="34" y="1058" class="body">Shared selections persist across Activity, Population, and Relationships. Comparisons use full-width charts.</text>
 <text x="34" y="1087" class="body muted">Warm surfaces and serif identity frame the dashboard; sans-serif numbers and plain chart backgrounds carry the analysis.</text>
 </svg>

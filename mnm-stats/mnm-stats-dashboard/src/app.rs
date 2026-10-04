@@ -179,7 +179,6 @@ fn ChartCard(
 ) -> impl IntoView {
     let key = metric.key();
     let title = metric.title();
-    let description = metric.description();
     let unit = metric.unit();
     let chart_metric = metric.clone();
     let styles = expect_context::<Arc<Mutex<charts::SeriesStyles>>>();
@@ -198,12 +197,6 @@ fn ChartCard(
                 Arc::new(plot)
             })
         })
-    });
-    let open = RwSignal::new(false);
-    let page = RwSignal::new(0_usize);
-    Effect::new(move |_| {
-        plotted.track();
-        page.set(0);
     });
     view! {
         <article class="chart-card" data-metric=key>
@@ -230,35 +223,6 @@ fn ChartCard(
                     }.into_any()
                 }
             }}
-            <details class="exact-values" prop:open=move || open.get() on:toggle=move |ev| open.set(event_target::<web_sys::HtmlDetailsElement>(&ev).open())>
-                <summary>"View data"</summary>
-                <p class="metric-description">{description}</p>
-                <p>"Lines break across gaps longer than two hours. Daily/monthly counts retain the source’s unverified counting units and windows; starting-zone counts do not identify new players."</p>
-                <Show when=move || open.get()>
-                    {move || plotted.get().ok().map(|plot| {
-                        let total = plot.series.iter().map(|s| s.points.len()).sum::<usize>();
-                        let offset = page.get() * 50;
-                        let rows = plot.series.iter().enumerate().flat_map(|(i, series)| series.points.iter().map(move |point| (i, &series.label, point)))
-                            .skip(offset).take(50).map(|(index, label, point)| view! {
-                                <tr data-series=index data-at=utc(point.at)>
-                                    <td>{format!("{}. {label}", index + 1)}</td><td>{utc(point.at)}</td>
-                                    <td class="exact-value">{point.value.map_or_else(|| "not available".into(), MetricValue::display)}</td>
-                                </tr>
-                            }).collect_view();
-                        view! {
-                            <p>"Counts are exact. Ratios show rounded percentages and their exact numerator / denominator."</p>
-                            <div class="table-scroll" tabindex="0" aria-label="Scrollable exact observations">
-                                <table><caption>"Selected observations, with original UTC timestamps"</caption><thead><tr><th scope="col">"Series"</th><th scope="col">"Observed at (UTC)"</th><th scope="col">"Value"</th></tr></thead><tbody>{rows}</tbody></table>
-                            </div>
-                            <div class="pagination">
-                                <button class="secondary previous" disabled=move || page.get() == 0 on:click=move |_| page.update(|p| *p = p.saturating_sub(1))>"Previous"</button>
-                                <span>{format!("{}–{} of {total}", if total == 0 { 0 } else { offset + 1 }, (offset + 50).min(total))}</span>
-                                <button class="secondary next" disabled={offset + 50 >= total} on:click=move |_| page.update(|p| *p += 1)>"Next"</button>
-                            </div>
-                        }
-                    })}
-                </Show>
-            </details>
         </article>
     }
 }
@@ -530,7 +494,9 @@ pub fn App() -> impl IntoView {
             <details class="source-notes"><summary>"About the data"</summary>
                 <p>"DAU and MAU retain the source's daily/monthly active values; their counting units and window boundaries are unverified. Adding observations cannot recover unique activity. Subscriptions are not assumed to represent unique people."</p>
                 <p>"Per-server subscriptions and deduplicated global activity are unavailable. Starting-zone population is not a count of new players."</p>
+                <p>"Ratios compare reported counts, not proven fractions of subscribers playing. Subscription denominators stay global in server views. A zero denominator is not available; ratios may exceed 100%."</p>
                 <p>"The archive starts with successful collections. Earlier history and missed intervals are unavailable. These hourly snapshots are not an exhaustive record of every change within the hour."</p>
+                <p>"Chart lines break across gaps longer than two hours."</p>
                 <p>"The download contains every observation in this dashboard build, across all servers and dates, regardless of the controls above."</p>
                 <p>"Display type: IM Fell English by Igino Marini, "<a href="fonts/OFL.txt">"SIL Open Font License"</a>"."</p>
             </details>

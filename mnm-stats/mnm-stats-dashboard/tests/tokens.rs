@@ -221,7 +221,7 @@ fn shared_scales_propagate_without_coupling_component_overrides() {
     let shared = generate(&tokens);
     for role in [
         "input-padding",
-        "table-cell-padding-block",
+        "summary-padding-block",
         "chip-padding-inline",
     ] {
         assert!(shared.css.contains(&format!("--mnm-spacing-{role}: 1rem;")));
@@ -233,7 +233,7 @@ fn shared_scales_propagate_without_coupling_component_overrides() {
             .css
             .contains("--mnm-spacing-input-padding: 0.5rem;")
     );
-    for role in ["table-cell-padding-block", "chip-padding-inline"] {
+    for role in ["summary-padding-block", "chip-padding-inline"] {
         assert!(
             independent
                 .css

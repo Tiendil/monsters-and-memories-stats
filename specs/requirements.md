@@ -278,7 +278,7 @@ Times MUST be labeled UTC.
 Missing samples MUST NOT be plotted as zeros; line charts MUST break across gaps longer than two hours.
 Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
-Users MUST be able to inspect exact plotted values through an accessible table or point details.
+Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSON.
 Hovering a plotted observation with the mouse MUST show its series, exact value, and original collection timestamp labeled UTC.
 This MUST work for every chart family and comparison mode, including dense series and overlapping comparison points.
 Ratio details MUST include the exact numerator and denominator alongside the rounded percentage.

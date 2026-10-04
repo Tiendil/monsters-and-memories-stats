@@ -469,14 +469,15 @@ impl Browser {
         // Test chart-engine failure without a network request: data and download survive.
         self.request(Method::POST, "/execute/sync", json!({"script":"window.savedPlot = Plotly.newPlot; Plotly.newPlot = () => Promise.reject(new Error('test failure'));","args":[]}));
         self.click("#nav-activity");
-        self.expect_text("[data-metric='daily'] .interactive-plot .error", "Chart unavailable. View data below or download the history; reload to retry the chart engine.");
-        self.activate("[data-metric='daily'] summary");
-        wait_until(
-            || self.count("[data-metric='daily'] tbody tr") > 0,
-            "exact rows remain available after chart failure",
+        self.expect_text(
+            "[data-metric='daily'] .interactive-plot .error",
+            "Chart unavailable. Download the history or reload to retry the chart engine.",
         );
+        self.click("#nav-overview");
+        self.expect_count(".headline", 4);
         self.verify_download(expected, scratch);
         self.request(Method::POST, "/execute/sync", json!({"script":"Plotly.newPlot = window.savedPlot; delete window.savedPlot;","args":[]}));
+        self.click("#nav-activity");
         self.click("#nav-overview");
         self.ready("online");
         // Keyboard skip link and section controls preserve a useful focus target.
@@ -596,13 +597,7 @@ impl Browser {
                 self.ready(metric);
             }
         }
-        // Exact values and pagination use original observations, not source chart history.
-        self.click("[data-metric='daily'] summary");
-        self.expect_count("[data-metric='daily'] tbody tr", 50);
-        self.click("[data-metric='daily'] .next");
-        self.expect_count("[data-metric='daily'] tbody tr", records.len() - 50);
-        self.click("[data-metric='daily'] .previous");
-        self.click("[data-metric='daily'] summary");
+        // Hover details retain exact values and original observation timestamps.
         self.select("#time-range", "7");
         self.select("#server-scope", "a");
         let first = records
@@ -678,22 +673,16 @@ impl Browser {
             );
             self.hover(&format!("[data-metric='{metric}'] .unit"));
             self.expect_count(".hovertext", 0);
-            self.click(&format!("[data-metric='{metric}'] summary"));
-            self.expect_text(
-                &format!(
-                    "[data-metric='{metric}'] tr[data-at='2026-05-25T12:00:00Z'] .exact-value"
-                ),
-                &value,
-            );
             if metric.ends_with("-subscriptions") {
-                self.expect_text(
-                    &format!(
-                        "[data-metric='{metric}'] tr[data-at='2026-05-30T13:00:00Z'] .exact-value"
-                    ),
-                    "not available",
+                assert_eq!(
+                    self.request(Method::POST, "/execute/sync", json!({
+                        "script":"const trace=document.querySelector(arguments[0]).data[0]; const i=trace.x.indexOf(Date.parse(arguments[1])/1000); return {present:i>=0,value:trace.y[i],hover:trace.text[i]};",
+                        "args":[format!("[data-metric='{metric}'] .plot-surface"), "2026-05-30T13:00:00Z"]
+                    })),
+                    json!({"present":true,"value":null,"hover":""}),
+                    "zero subscription denominators remain gaps without hover values"
                 );
             }
-            self.click(&format!("[data-metric='{metric}'] summary"));
         }
         self.hover("[data-metric='daily'] .scatterlayer .point");
         self.select("#server-scope", "retired");
@@ -769,12 +758,15 @@ impl Browser {
                 self.expect_hover("zone-w", "Alpha <island> & West", at, "3");
             }
             self.expect_count("[data-metric='zone-w'] .hovertext", 3);
-            self.click("[data-metric='daily'] summary");
-            assert!(
-                self.text("[data-metric='daily'] table")
-                    .contains("2024-02-29T23:00:00Z")
+            self.ready("daily");
+            assert_eq!(
+                self.request(Method::POST, "/execute/sync", json!({
+                    "script":"return document.querySelector('[data-metric=\"daily\"] .plot-surface').data.some(trace=>trace.text.some(text=>text.includes(arguments[0])));",
+                    "args":["2024-02-29T23:00:00Z"]
+                })),
+                true,
+                "comparison hover details retain the leap-day observation timestamp"
             );
-            self.click("[data-metric='daily'] summary");
             self.verify_download(expected, scratch);
             self.click(".remove-period");
             self.expect_count("[data-metric='daily'] .legend li", 2);
@@ -951,7 +943,7 @@ impl Browser {
         );
         assert_eq!(self.computed(".chart-card", "border-radius"), "12px");
         assert_eq!(
-            self.computed(".metric-description", "font-size"),
+            self.computed(".axis-label", "font-size"),
             if changed { "16px" } else { "14px" }
         );
         assert_eq!(

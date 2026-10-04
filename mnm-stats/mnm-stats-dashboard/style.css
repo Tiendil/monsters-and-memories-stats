@@ -47,7 +47,7 @@ legend { padding-inline: var(--mnm-spacing-fieldset-legend-padding); }
 .chart-card { min-width: 0; background: var(--mnm-color-surface-chart); border: var(--mnm-border-width-default) solid var(--mnm-color-border-panel); border-radius: var(--mnm-radius-panel); padding: var(--mnm-spacing-chart-padding); }
 .chart-heading { display: flex; justify-content: space-between; gap: var(--mnm-spacing-gap-medium); align-items: start; }
 .unit { color: var(--mnm-color-text-accent); font-size: var(--mnm-font-size-caption); white-space: nowrap; }
-.metric-description, .chart-note, .axis-label { color: var(--mnm-color-text-muted); font-size: var(--mnm-font-size-body-small); }
+.chart-note, .axis-label { color: var(--mnm-color-text-muted); font-size: var(--mnm-font-size-body-small); }
 .chart-note:empty { display: none; }
 .legend { list-style: none; padding: 0; margin: var(--mnm-spacing-gap-small) 0; font-size: var(--mnm-font-size-body-small); display: flex; flex-wrap: wrap; gap: var(--mnm-spacing-gap-small) var(--mnm-spacing-gap-large); }
 .legend li { display: flex; align-items: center; gap: var(--mnm-spacing-gap-small); overflow-wrap: anywhere; }
@@ -57,16 +57,7 @@ legend { padding-inline: var(--mnm-spacing-fieldset-legend-padding); }
 .plot-surface .hoverlayer .axistext { display: none; }
 .plot-surface { min-width: 0; width: 100%; min-height: var(--mnm-chart-viewport-min-height); }
 .empty-chart { padding: var(--mnm-spacing-empty-padding-block) var(--mnm-spacing-empty-padding-inline); text-align: center; color: var(--mnm-color-text-unavailable); border: var(--mnm-border-width-default) dashed var(--mnm-color-border-unavailable); border-radius: var(--mnm-radius-input); }
-.exact-values { border-top: var(--mnm-border-width-default) solid var(--mnm-color-border-panel); margin-top: var(--mnm-spacing-gap-large); padding-top: var(--mnm-spacing-gap-medium); font-size: var(--mnm-font-size-body-small); }
 summary { min-height: var(--mnm-layout-control-min-height); display: list-item; align-content: center; cursor: pointer; color: var(--mnm-color-text-link); padding: var(--mnm-spacing-gap-tight); }
-.table-scroll { overflow-x: auto; margin-top: var(--mnm-spacing-gap-medium); }
-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-caption { text-align: left; margin-bottom: var(--mnm-spacing-gap-small); color: var(--mnm-color-text-muted); }
-th, td { text-align: left; padding: var(--mnm-spacing-table-cell-padding-block) var(--mnm-spacing-table-cell-padding-inline); border-bottom: var(--mnm-border-width-default) solid var(--mnm-color-border-panel); vertical-align: top; }
-th { color: var(--mnm-color-text-accent); }
-td:nth-child(2), td:nth-child(3) { white-space: nowrap; }
-th:last-child, td:last-child { text-align: right; }
-.pagination { display: flex; gap: var(--mnm-spacing-gap-medium); align-items: center; justify-content: space-between; margin-top: var(--mnm-spacing-gap-medium); }
 .correlation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--mnm-spacing-gap-large); margin-block: var(--mnm-spacing-gap-large); }
 .correlation-value { border-left: var(--mnm-border-width-correlation) solid var(--mnm-color-border-correlation); padding: var(--mnm-spacing-gap-small) var(--mnm-spacing-gap-large); }
 .correlation-value h3 { font-size: var(--mnm-font-size-body-small); }

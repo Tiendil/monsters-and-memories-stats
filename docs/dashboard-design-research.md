@@ -66,7 +66,7 @@ For this project, that supports a compact Overview with headline counts, followe
 It does not require a separate analytics platform or a user-configurable widget system.
 
 [Nielsen Norman Group's progressive-disclosure guidance](https://www.nngroup.com/articles/progressive-disclosure/) recommends deferring advanced or less frequently used options until they are needed.
-Here that applies to period editors, exact-value tables, archive metadata, and detailed methodology.
+Here that applies to period editors, archive metadata, and detailed methodology.
 It does not justify hiding active scope, stale-data status, or important qualifications about the numbers.
 
 [Grafana's dashboard guidance](https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/best-practices/) emphasizes directed exploration, shared variables, and comparing like with like.
@@ -99,8 +99,8 @@ The relevant W3C guidance establishes concrete acceptance criteria:
 - [Unobscured focus](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html): sticky UI must not hide the focused control.
 - [Hover or focus content](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html): supplementary content needs suitable dismissal and persistence behavior; exact data must also be reachable without hover.
 
-The existing accessible value tables are an important alternative to chart pointer interaction.
-The redesign should make them easier to find and use, rather than depend on a chart library's hover affordance for every device.
+The complete-history JSON download provides access to recorded observations independently of chart pointer interaction.
+The download control should remain usable with touch and keyboard input.
 
 ## Recommended composition
 
