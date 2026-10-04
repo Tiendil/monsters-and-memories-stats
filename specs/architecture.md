@@ -59,7 +59,7 @@ The versioned CDN URL MUST be owned by the frontend HTML and work at both root a
 Browser tests MUST load the same CDN script as ordinary builds and previews.
 The browser bundle MUST NOT be committed to the repository or packaged with the site.
 Rust browser bindings MUST initialize charts after their DOM nodes mount, report initialization errors, and purge chart resources on removal.
-Charts MUST resize with the viewport and retain horizontal scrolling at narrow widths.
+Charts MUST resize with the viewport, with horizontal scrolling confined to chart or table regions where needed under [dashboard-design.md](dashboard-design.md#responsive-and-accessible-interaction).
 Chart height MUST accommodate simultaneous hover labels as comparison series are added; the renderer MUST NOT silently drop series details to fit a fixed chart height.
 The shared range controls govern the visible interval; chart-local zoom and the Plotly toolbar are disabled.
 This supports static GitHub Pages deployment with no backend or handwritten JavaScript application logic; the Rust UI retains an accessible exact-value table alongside native hover labels.

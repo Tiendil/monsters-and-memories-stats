@@ -228,6 +228,7 @@ The last valid dashboard data MUST remain usable after collection failure.
 ## Dashboard behavior
 
 This section records the presentation contract for the collected current-state snapshots.
+The dashboard's information hierarchy, layout, and visual interaction MUST follow [dashboard-design.md](dashboard-design.md).
 
 The dashboard footer MUST credit Plotly with a link to its JavaScript charting library.
 

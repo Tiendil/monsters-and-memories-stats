@@ -123,6 +123,38 @@ These tests MUST verify preserved observations without depending on a particular
 Invalid JSONL history MUST fail the build without silently omitting records.
 The downloaded `history.json` MUST be a valid JSON document matching the complete embedded history and preserving every observation from the build's JSONL input.
 
+### Dashboard presentation
+
+Presentation coverage MUST verify [dashboard-design.md](dashboard-design.md) alongside the metric and comparison contracts.
+Automated tests MUST cover:
+
+- Navigation to every content section while retaining the selected scope, range, and comparisons.
+- Headline counts from the same last snapshot inside the selected interval, including an absent historical server, a published zero, and an empty interval.
+- Explicit global subscription scope and all-server activity aggregation labels in the headline summary.
+- Replacement of the ordinary summary when a comparison is active.
+- Dynamic individual-zone selection, including historical and unavailable zones, without losing other selections.
+- Comparison controls that expose only relevant inputs and identify the separate scope of correlations.
+- Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
+- Keyboard operation of navigation, disclosures, comparison editing, exact-value inspection, and downloads.
+- Accessible names, selected and expanded states, useful focus retention, and local validation messages.
+- Empty-range recovery through all time, preserving server scope.
+- Chart-engine failure leaving summary values, exact-value tables, and history download usable.
+
+Rendered review MUST cover:
+
+- The initial-view hierarchy at 1440 by 900 and 375 by 812 CSS pixels, including the synthetic-data notice and long source names.
+- Page reflow at 320 CSS pixels, intermediate widths, and 200-percent text enlargement.
+- Readable axis labels and legends, including dense comparisons and any confined horizontal scrolling.
+- Text and essential-graphic contrast from the actual token colors and rendered backgrounds.
+- Distinctions between series without relying solely on color, and matching line, legend, and hover encodings.
+- Visible focus, touch target sizes, control states, and unobscured content when controls are sticky.
+- Stale, empty, unavailable, initialization, and chart-failure states.
+- Reduced-motion behavior and preservation of chart information without decorative animation.
+
+Synthetic fixture values MUST establish expected summary observations and missing-entity cases independently of the presentation implementation.
+Visual inspection MUST assess hierarchy and readability, not merely the presence of expected DOM elements.
+Passing preexisting browser checks MUST NOT be reported as coverage of presentation behavior that has not been implemented.
+
 ### Design tokens
 
 Token tests MUST use local token fixtures and the project's authored artifact, following [design-tokens.md](design-tokens.md).

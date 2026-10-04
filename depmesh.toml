@@ -23,7 +23,8 @@ output = { type = "files", pattern = "@/specs/**/*.md" }
 [[rules]]
 relation = "governed_by"
 input = { type = "any", items = [
-  { type = "one_of", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/docs/source-analysis.md", "@/.codex/config.toml", "@/.dockerignore", "@/docker-compose.yml"] },
+  { type = "one_of", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/.codex/config.toml", "@/.dockerignore", "@/docker-compose.yml"] },
+  { type = "glob", pattern = "@/docs/**" },
   { type = "glob", pattern = "@/docker/**" },
   { type = "glob", pattern = "@/workflows/*.donna.md" },
   { type = "glob", pattern = "@/bin/*.sh" },
@@ -35,7 +36,8 @@ output = { type = "list", artifacts = ["@/specs/development.md"] }
 relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/development.md"] }
 output = { type = "union", items = [
-  { type = "list", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/docs/source-analysis.md", "@/.codex/config.toml", "@/.dockerignore", "@/docker-compose.yml"] },
+  { type = "list", artifacts = ["@/AGENTS.md", "@/README.md", "@/donna.toml", "@/depmesh.toml", "@/.gitignore", "@/.codex/config.toml", "@/.dockerignore", "@/docker-compose.yml"] },
+  { type = "files", pattern = "@/docs/**" },
   { type = "files", pattern = "@/docker/**" },
   { type = "files", pattern = "@/workflows/*.donna.md" },
   { type = "files", pattern = "@/bin/*.sh" },
@@ -121,6 +123,23 @@ output = { type = "union", items = [
   { type = "files", pattern = "@/specs/design-tokens.tokens.json" },
   { type = "files", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
   { type = "files", pattern = "@/bin/*dashboard.sh" },
+] }
+
+# Dashboard composition and visual behavior.
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+  { type = "one_of", artifacts = ["@/specs/design-tokens.tokens.json"] },
+  { type = "glob", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
+] }
+output = { type = "list", artifacts = ["@/specs/dashboard-design.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/dashboard-design.md"] }
+output = { type = "union", items = [
+  { type = "list", artifacts = ["@/specs/design-tokens.tokens.json"] },
+  { type = "files", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
 ] }
 
 # Development environment ownership.

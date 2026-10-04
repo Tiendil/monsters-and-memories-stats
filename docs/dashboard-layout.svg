@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title description">
+<title id="title">Dashboard Overview layout study</title>
+<desc id="description">A warm light desktop dashboard and a narrow-screen arrangement. Compact shared controls precede four headline counts and a full-width population trend. All values and lines are synthetic; this illustration is not an implemented interface or an authoritative design-token source.</desc>
+<style>
+text { font-family: Arial, sans-serif; fill: #282720; }
+.display { font-family: Georgia, serif; }
+.muted { fill: #646052; }
+.accent { fill: #9a401e; }
+.label { font-size: 13px; font-weight: 600; letter-spacing: .6px; }
+.small { font-size: 13px; }
+.body { font-size: 15px; }
+.value { font-size: 34px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rule { stroke: #d8d2c5; stroke-width: 1; }
+</style>
+<rect x="0" y="0" width="1600" height="1120" rx="0" fill="#e8e4dc"/>
+<text x="34" y="36" class="label muted">DASHBOARD PRESENTATION / LAYOUT STUDY</text>
+<text x="34" y="63" class="small muted">Illustrative synthetic data · proportions and colors are not implementation tokens</text>
+<rect x="28" y="85" width="1090" height="937" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
+<text x="56" y="115" class="label muted">DESKTOP · OVERVIEW</text>
+<text x="56" y="161" class="display" font-size="32">Monsters &amp; Memories</text>
+<text x="57" y="186" class="body muted">Independent community statistics</text>
+<rect x="870" y="134" width="218" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
+<text x="887" y="161" class="body">Download history (JSON)</text>
+<text x="57" y="220" class="small muted">Updated 4 Oct 2026, 10:00 UTC · Collected hourly</text>
+<text x="904" y="220" class="small accent">Archive details  +</text>
+<line x1="56" y1="240" x2="1088" y2="240" stroke="#d8d2c5" stroke-width="1"/>
+<text x="56" y="271" class="label muted">SERVER SCOPE</text>
+<text x="408" y="271" class="label muted">TIME RANGE</text>
+<rect x="56" y="282" width="330" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
+<text x="70" y="309" class="body">All servers (sum)</text>
+<text x="362" y="309" class="body">⌄</text>
+<rect x="408" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
+<text x="417" y="309" class="" font-size="14">7 days</text>
+<rect x="492" y="282" width="78" height="42" rx="6" fill="#9a401e"/>
+<text x="501" y="309" style="fill:#fffefa;font:14px Arial">30 days</text>
+<rect x="576" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
+<text x="585" y="309" class="" font-size="14">90 days</text>
+<rect x="660" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
+<text x="669" y="309" class="" font-size="14">180 days</text>
+<rect x="744" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
+<text x="753" y="309" class="" font-size="14">1 year</text>
+<rect x="828" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
+<text x="837" y="309" class="" font-size="14">All time</text>
+<rect x="930" y="282" width="158" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
+<text x="954" y="309" class="body">Compare  +</text>
+<text x="56" y="348" class="small muted">4 Sep–4 Oct 2026 UTC · 712 observations in range</text>
+<text x="56" y="392" class="accent" font-size="17">Overview</text>
+<text x="202" y="392" class="" font-size="17">Activity</text>
+<text x="333" y="392" class="" font-size="17">Population</text>
+<text x="489" y="392" class="" font-size="17">Relationships</text>
+<line x1="56" y1="408" x2="1088" y2="408" stroke="#d8d2c5" stroke-width="1"/>
+<line x1="56" y1="408" x2="150" y2="408" stroke="#9a401e" stroke-width="3"/>
+<text x="56" y="440" class="small muted">Last observation in range · 4 Oct 2026, 10:00 UTC</text>
+<rect x="56" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="73" y="484" class="body muted">Online population</text>
+<text x="73" y="526" class="value">4,328</text>
+<text x="73" y="551" class="small muted">All servers</text>
+<rect x="320" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="337" y="484" class="body muted">Daily active</text>
+<text x="337" y="526" class="value">22,163</text>
+<text x="337" y="551" class="small muted">Sum; not deduplicated</text>
+<rect x="584" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="601" y="484" class="body muted">Monthly active</text>
+<text x="601" y="526" class="value">28,724</text>
+<text x="601" y="551" class="small muted">Sum; not deduplicated</text>
+<rect x="848" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="865" y="484" class="body muted">Subscriptions</text>
+<text x="865" y="526" class="value">19,421</text>
+<text x="865" y="551" class="small muted">Global</text>
+<rect x="56" y="596" width="1032" height="330" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
+<text x="78" y="629" class="display" font-size="22">Online population</text>
+<text x="78" y="654" class="small muted">All servers · hourly observations</text>
+<line x1="106" y1="684.0" x2="1063" y2="684.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="688.0" class="muted" font-size="12">6,000</text>
+<line x1="106" y1="744.0" x2="1063" y2="744.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="748.0" class="muted" font-size="12">4,000</text>
+<line x1="106" y1="804.0" x2="1063" y2="804.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="808.0" class="muted" font-size="12">2,000</text>
+<line x1="106" y1="864.0" x2="1063" y2="864.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="868.0" class="muted" font-size="12">0</text>
+<polyline points="106.0,810.0 162.3,802.8 218.6,817.2 274.9,783.0 331.2,788.4 387.5,770.4 443.8,777.6 500.1,743.4 556.4,754.2 612.6,765.0 668.9,756.0 725.2,730.8 781.5,723.6 837.8,732.6 894.1,716.4 950.4,747.0 1006.7,738.0 1063.0,734.4" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="106" y="888" class="small muted">4 Sep</text>
+<text x="564.5" y="888" class="small muted">19 Sep</text>
+<text x="1025" y="888" class="small muted">4 Oct</text>
+<text x="78" y="911" class="small muted">UTC · Gaps remain gaps</text>
+<text x="988" y="911" class="small accent">View data  +</text>
+<text x="56" y="959" class="body accent">About the data  +</text>
+<text x="56" y="994" class="small muted">Source: Monsters &amp; Memories public metrics</text>
+<text x="974" y="994" class="small muted">Charts by Plotly</text>
+<rect x="1160" y="85" width="412" height="937" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
+<text x="1180" y="115" class="label muted">NARROW SCREEN · OVERVIEW</text>
+<text x="1180" y="157" class="display" font-size="28">Monsters &amp; Memories</text>
+<text x="1180" y="182" class="small muted">Independent community statistics</text>
+<text x="1180" y="210" class="small muted">Updated 4 Oct, 10:00 UTC · Hourly</text>
+<text x="1180" y="239" class="small accent">Archive details  +</text>
+<text x="1357" y="239" class="small accent">Download history (JSON)</text>
+<line x1="1180" y1="255" x2="1552" y2="255" stroke="#d8d2c5" stroke-width="1"/>
+<text x="1180" y="284" class="label muted">SERVER SCOPE</text>
+<text x="1377" y="284" class="label muted">TIME RANGE</text>
+<rect x="1180" y="295" width="181" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
+<rect x="1377" y="295" width="175" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
+<text x="1191" y="322" class="" font-size="14">All servers (sum)  ⌄</text>
+<text x="1390" y="322" class="" font-size="14">Last 30 days  ⌄</text>
+<rect x="1180" y="350" width="125" height="40" rx="6" fill="#fffefa" stroke="#9c9383"/>
+<text x="1195" y="376" class="body">Compare  +</text>
+<text x="1321" y="368" class="small muted">4 Sep–4 Oct 2026 UTC</text>
+<text x="1321" y="387" class="small muted">712 observations</text>
+<text x="1180" y="426" class="accent" font-size="13">Overview</text>
+<text x="1265" y="426" class="" font-size="13">Activity</text>
+<text x="1341" y="426" class="" font-size="13">Population</text>
+<text x="1437" y="426" class="" font-size="13">Relationships</text>
+<line x1="1180" y1="441" x2="1552" y2="441" stroke="#d8d2c5" stroke-width="1"/>
+<line x1="1180" y1="441" x2="1246" y2="441" stroke="#9a401e" stroke-width="3"/>
+<text x="1180" y="465" class="small muted">Last in range · 4 Oct 2026, 10:00 UTC</text>
+<rect x="1180" y="480" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="1192" y="504" class="" font-size="14">Online population</text>
+<text x="1192" y="540" class="" font-size="29">4,328</text>
+<text x="1192" y="562" class="muted" font-size="11">All servers</text>
+<rect x="1373" y="480" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="1385" y="504" class="" font-size="14">Daily active</text>
+<text x="1385" y="540" class="" font-size="29">22,163</text>
+<text x="1385" y="562" class="muted" font-size="11">Sum; not deduplicated</text>
+<rect x="1180" y="590" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="1192" y="614" class="" font-size="14">Monthly active</text>
+<text x="1192" y="650" class="" font-size="29">28,724</text>
+<text x="1192" y="672" class="muted" font-size="11">Sum; not deduplicated</text>
+<rect x="1373" y="590" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="1385" y="614" class="" font-size="14">Subscriptions</text>
+<text x="1385" y="650" class="" font-size="29">19,421</text>
+<text x="1385" y="672" class="muted" font-size="11">Global</text>
+<rect x="1180" y="712" width="372" height="266" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
+<text x="1202" y="745" class="display" font-size="20">Online population</text>
+<text x="1202" y="770" class="small muted">All servers · hourly observations</text>
+<line x1="1230" y1="800.0" x2="1527" y2="800.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="804.0" class="muted" font-size="10">6,000</text>
+<line x1="1230" y1="838.6666666666666" x2="1527" y2="838.6666666666666" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="842.6666666666666" class="muted" font-size="10">4,000</text>
+<line x1="1230" y1="877.3333333333334" x2="1527" y2="877.3333333333334" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="881.3333333333334" class="muted" font-size="10">2,000</text>
+<line x1="1230" y1="916.0" x2="1527" y2="916.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="920.0" class="muted" font-size="10">0</text>
+<polyline points="1230.0,881.2 1247.5,876.6 1264.9,885.8 1282.4,863.8 1299.9,867.3 1317.4,855.7 1334.8,860.3 1352.3,838.3 1369.8,845.2 1387.2,852.2 1404.7,846.4 1422.2,830.2 1439.6,825.5 1457.1,831.3 1474.6,820.9 1492.1,840.6 1509.5,834.8 1527.0,832.5" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="1230" y="940" class="small muted">4 Sep</text>
+<text x="1358.5" y="940" class="small muted">19 Sep</text>
+<text x="1489" y="940" class="small muted">4 Oct</text>
+<text x="1202" y="963" class="small muted">UTC · Gaps remain gaps</text>
+<text x="1180" y="1005" class="small accent">View data  +      About the data  +</text>
+<text x="34" y="1058" class="body">Shared selections persist across Activity, Population, and Relationships. Comparisons use full-width charts.</text>
+<text x="34" y="1087" class="body muted">Warm surfaces and serif identity frame the dashboard; sans-serif numbers and plain chart backgrounds carry the analysis.</text>
+</svg>

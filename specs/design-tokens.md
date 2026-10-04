@@ -17,6 +17,7 @@ Shared token terminology is defined in the [project dictionary](dictionary.md#pr
 It MUST use the [Design Tokens Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/), with the project profile defined below.
 The dashboard MUST consume generated representations of that artifact in both CSS and chart configuration.
 Generated representations MUST NOT be edited by hand or committed as another source of token values.
+Visual roles and their use in the dashboard MUST follow [dashboard-design.md](dashboard-design.md); the token artifact supplies their reusable values.
 
 Specifications SHOULD refer to semantic token names when they need to identify presentation roles, so changes to a value do not require repeating that value in prose.
 Token descriptions MUST explain their intended use.
