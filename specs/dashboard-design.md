@@ -41,6 +41,7 @@ All masthead actions MUST remain available from every content section.
 One visible summary near the masthead MUST show the first observation's date and the latest observation's date and time in UTC.
 It MUST also show the total number of records and describe updates as approximately hourly, without labeling the data “live.”
 The dates and record count MUST represent the complete loaded history, independently of selected filters or comparisons; one record means one collected observation.
+The dates and record count MUST use a medium font weight in the normal dark text color; the surrounding text and update frequency MUST retain normal weight and muted color.
 The summary MUST wrap naturally on narrow screens without requiring an archive-details disclosure.
 Empty history MUST show a clear no-statistics message and zero records without inventing dates.
 

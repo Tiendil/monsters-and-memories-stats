@@ -230,6 +230,10 @@
         "$value": "{tailwind.font-weight.medium}",
         "$description": "Weight of control labels within buttons."
       },
+      "metadata": {
+        "$value": "{tailwind.font-weight.medium}",
+        "$description": "Subtle emphasis for metadata values such as coverage dates and record counts."
+      },
       "emphasis": {
         "$value": "{tailwind.font-weight.semibold}",
         "$description": "Weight of card headings and small emphasized labels."
