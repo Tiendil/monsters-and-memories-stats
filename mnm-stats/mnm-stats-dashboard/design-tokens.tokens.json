@@ -118,7 +118,7 @@
       },
       "link": {
         "$value": "{tailwind.color.orange.800}",
-        "$description": "Text of navigable links and disclosure controls."
+        "$description": "Text of navigable links."
       },
       "stale": {
         "$value": "{tailwind.color.orange.800}",
@@ -370,13 +370,6 @@
         "$description": "Minimum width of multi-series comparison plots; ordinary plots fit their container."
       }
     },
-    "source-note": {
-      "$type": "number",
-      "max-width": {
-        "$value": 78,
-        "$description": "Maximum source-note line length, multiplied by 1ch in CSS."
-      }
-    },
     "control": {
       "min-height": {
         "$type": "dimension",
@@ -386,7 +379,7 @@
       "compact-min-height": {
         "$type": "dimension",
         "$value": "{tailwind.spacing.7}",
-        "$description": "Minimum height for compact disclosure and summary links, with surrounding space."
+        "$description": "Minimum height for compact text links, with surrounding space."
       }
     },
     "compact-grid": {

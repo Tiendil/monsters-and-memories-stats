@@ -18,7 +18,7 @@ All existing metric families and comparison capabilities defined in [requirement
 The visual identity MUST use a restrained fantasy editorial style: warm paper-colored surfaces, dark ink text, and a limited amber or burnt-orange accent.
 Game identity MUST come primarily from the masthead and display typography.
 Charts and controls MUST use plain surfaces and clear functional styling.
-The interface MUST identify itself as an independent community statistics archive and MUST NOT imply that it is the official account service.
+The interface MUST credit its creator and MUST NOT imply that it is the official account service.
 
 The [design research](../docs/dashboard-design-research.md) records supporting evidence and the investigation of official media resources.
 The [layout illustration](../docs/dashboard-layout.svg) demonstrates the hierarchy with synthetic values; its dimensions, artwork, and colors are not an additional token source.
@@ -128,14 +128,13 @@ When chart comparisons use other entities or periods, the correlation block MUST
 ### Data explanations
 
 Short interpretation labels MUST remain close to affected values, including “Global subscriptions” and “Sum across servers; not deduplicated.”
-Detailed methodology, source limitations, and archive coverage MUST live in a labeled “About the data” disclosure accessible from every section.
-Disclosures MUST NOT hide stale-data warnings, active selection, or qualifications needed to interpret a displayed number.
+Detailed methodology, source limitations, and archive coverage MUST be documented in the README.
+Stale-data warnings, active selections, and qualifications needed to interpret a displayed number MUST remain visible.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.
 
-The “About the data” disclosure MUST sit immediately above the footer, with one divider separating this area from the dashboard content.
-The footer MUST form two compact groups: independent community attribution with the UTC convention, and plain links labeled “Data source,” “GitHub,” and “Charts by Plotly.”
-Footer links MUST remain outside disclosures and available from every content section.
-The groups and links MUST wrap on narrow screens with restrained spacing.
+The footer MUST contain only a plain link labeled “Charts by Plotly,” separated from the dashboard content by one subtle divider.
+The credit MUST remain available from every content section and align with the right edge of the content at all supported widths.
+The dashboard MUST NOT include an “About the data” disclosure.
 
 ## Comparisons
 
@@ -168,7 +167,7 @@ Its caption identifies the selected months; a separate correlation block identif
 
 Each chart MUST present a short metric title, a concise scope or unit label, and the visualization before secondary implementation or sampling detail.
 The same chart anatomy MUST be used across sections.
-Observation counts and detailed qualifications SHOULD appear in captions or disclosures to reduce repeated visual clutter, except when a qualification is necessary beside the title.
+Observation counts and detailed qualifications SHOULD appear in captions to reduce repeated visual clutter, except when a qualification is necessary beside the title.
 Axis labels MUST remain readable at narrow widths; reduce tick density before reducing text size.
 Counts MAY use compact axis labels when their scale is clear, while hover details MUST retain exact values.
 
@@ -265,7 +264,7 @@ Axis labels and value details MUST remain reachable within that region.
 Narrow layouts MUST preserve metric coverage, comparison controls, downloads, and data explanations.
 
 All actions MUST be operable by keyboard with visible focus and meaningful accessible names.
-Section navigation, disclosures, and selected controls MUST communicate their current state to assistive technology.
+Section navigation and selected controls MUST communicate their current state to assistive technology.
 The page MUST provide a skip link to its main content and a logical heading hierarchy.
 Primary controls SHOULD have at least 44 by 44 CSS-pixel hit areas for comfortable touch use; compact controls MUST meet WCAG's 24-pixel minimum or spacing exception.
 Text enlargement to 200 percent MUST NOT hide controls, values, or labels.

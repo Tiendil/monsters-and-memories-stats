@@ -141,8 +141,8 @@ Automated tests MUST cover:
 - Dynamic individual-zone selection, including historical and unavailable zones, without losing other selections.
 - Comparison controls that expose only relevant inputs and identify the separate scope of correlations.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
-- Keyboard operation of navigation, disclosures, comparison editing, and downloads.
-- Accessible names, selected and expanded states, useful focus retention, and local validation messages.
+- Keyboard operation of navigation, comparison editing, and downloads.
+- Accessible names, selected states, useful focus retention, and local validation messages.
 - Empty-range recovery through all time, preserving server scope.
 - Chart-engine failure leaving summary values and history download usable.
 

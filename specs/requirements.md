@@ -138,8 +138,9 @@ Changing a token MUST update every consumer of that role through the supported b
 Shared metric and collection terms are defined in the [project dictionary](dictionary.md).
 Source investigation evidence is recorded in the [source analysis](../docs/source-analysis.md).
 
-The UI MUST distinguish source-reported counts from derived values and explain that DAU/MAU are the source's daily/monthly active fields with unverified counting semantics.
-It MUST label subscriptions as subscriptions, without equating them with unique people.
+The UI MUST distinguish source-reported counts from derived values.
+The README MUST explain that DAU/MAU are the source's daily/monthly active fields with unverified counting semantics.
+The UI MUST label subscriptions as subscriptions, without equating them with unique people.
 Missing fields MUST NOT become zero; a literal published zero MUST remain zero, with the source limitation visible.
 The dashboard MUST NOT infer MAU by summing observations.
 
@@ -356,7 +357,7 @@ The complete history means all project-collected snapshots, not the rolling hist
 ## Acceptance evidence
 
 Collection and deployment are not complete merely because local tests pass.
-The dashboard and README MUST explain the unavailability of:
+The README MUST explain the unavailability of:
 
 - pre-collection history and missed collection intervals.
 - deduplicated global activity.

@@ -486,22 +486,8 @@ pub fn App() -> impl IntoView {
                     }
                 }}
             </section>
-            <details class="source-notes"><summary>"About the data"</summary>
-                <p>"DAU and MAU retain the source's daily/monthly active values; their counting units and window boundaries are unverified. Adding observations cannot recover unique activity. Subscriptions are not assumed to represent unique people."</p>
-                <p>"Per-server subscriptions and deduplicated global activity are unavailable. Starting-zone population is not a count of new players."</p>
-                <p>"Ratios compare reported counts, not proven fractions of subscribers playing. Subscription denominators stay global in server views. A zero denominator is not available; ratios may exceed 100%."</p>
-                <p>"The archive starts with successful collections. Earlier history and missed intervals are unavailable. These hourly snapshots are not an exhaustive record of every change within the hour."</p>
-                <p>"Chart lines break across gaps longer than two hours."</p>
-                <p>"The download contains every observation in this dashboard build, across all servers and dates, regardless of the controls above."</p>
-                <p>"Display type: IM Fell English by Igino Marini, "<a href="fonts/OFL.txt">"SIL Open Font License"</a>"."</p>
-            </details>
             <footer>
-                <p>"Independent community archive · All times UTC"</p>
-                <nav class="footer-links" aria-label="Project links">
-                    <a href="https://account.monstersandmemories.com/metrics">"Data source"</a>
-                    <a href=REPOSITORY_URL>"GitHub"</a>
-                    <a href="https://plotly.com/javascript/">"Charts by Plotly"</a>
-                </nav>
+                <a href="https://plotly.com/javascript/">"Charts by Plotly"</a>
             </footer>
         </main>
     }

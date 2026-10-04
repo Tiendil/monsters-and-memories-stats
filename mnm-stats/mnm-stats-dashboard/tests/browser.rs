@@ -589,11 +589,6 @@ impl Browser {
             json!({"width":1280,"height":1000}),
         );
         assert!(self.text("#freshness").contains("Stale data"));
-        self.click(".source-notes summary");
-        assert!(self.text(".source-notes").contains(
-            "Per-server subscriptions and deduplicated global activity are unavailable."
-        ));
-        self.click(".source-notes summary");
         self.expect_count(".chart-card", 1);
         assert!(self.text("#server-scope").contains("Retired server"));
         for (key, days) in [
