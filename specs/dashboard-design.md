@@ -35,7 +35,6 @@ On wide screens, the action group MUST sit beside the title; on narrow screens, 
 On wide screens, the actions MUST share a control height, neutral surfaces, and subtle borders.
 On narrow screens, “Request a feature” MUST use a compact text link below “Star on GitHub” to preserve space for the metrics.
 The actions MUST wrap when needed for narrow widths or enlarged text.
-The download action MUST explain that it contains the complete archive, independently of the current selection.
 The repository action required by [requirements.md](requirements.md#dashboard-behavior) MUST retain link navigation and pair its text with a decorative scalable star icon.
 All masthead actions MUST remain available from every content section.
 

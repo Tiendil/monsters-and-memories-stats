@@ -73,8 +73,7 @@ footer p { margin: 0; }
 .hidden { display: none !important; }
 .visually-hidden, .skip-link:not(:focus) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .skip-link:focus { position: absolute; inset: 0 auto auto 0; z-index: var(--mnm-layer-skip-link); padding: var(--mnm-spacing-gap-large); background: var(--mnm-color-surface-panel); }
-.download p, .history-summary, .scope-caption, .summary-heading p, .chart-scope, .range-details, #demo-notice { font-size: var(--mnm-font-size-body-small); color: var(--mnm-color-text-secondary); }
-.download p { margin: var(--mnm-spacing-gap-tight) 0 0; }
+.history-summary, .scope-caption, .summary-heading p, .chart-scope, .range-details, #demo-notice { font-size: var(--mnm-font-size-body-small); color: var(--mnm-color-text-secondary); }
 #demo-notice { margin: 0 0 var(--mnm-spacing-gap-medium); padding-left: var(--mnm-spacing-gap-small); border-left: var(--mnm-border-width-correlation) solid var(--mnm-color-text-accent); }
 #archive-details { flex: 1 1 auto; }
 #archive-details summary { width: fit-content; }

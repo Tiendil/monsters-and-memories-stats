@@ -366,7 +366,7 @@ pub fn App() -> impl IntoView {
             <header class="page-header">
                 <div><p class="eyebrow">"Made with love and curiosity by "<a href="https://tiendil.org" target="_blank" rel="noopener">"Tiendil"</a></p><h1>"Monsters & Memories"</h1></div>
                 <div class="header-actions">
-                    <div class="download"><button class="secondary" id="download-history" aria-describedby="download-help" on:click=move |_| download_error.set(download(&download_history).err().map(|_| "The history download could not be created. Please try again.".into()))>"Download JSON"</button><p id="download-help">"Complete archive"</p></div>
+                    <button class="secondary" id="download-history" on:click=move |_| download_error.set(download(&download_history).err().map(|_| "The history download could not be created. Please try again.".into()))>"Download JSON"</button>
                     <div class="community-actions">
                         <a class="button-link secondary" href=REPOSITORY_URL>
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 3 14.8 8.7 21 9.6 16.5 14 17.6 20.2 12 17.3 6.4 20.2 7.5 14 3 9.6 9.2 8.7"/></svg>
