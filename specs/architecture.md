@@ -52,11 +52,32 @@ The frontend build validates and embeds the complete JSONL history, and the dash
 
 ### Frontend
 
-The dashboard uses Leptos client-side rendering, built by Trunk, with Plotters generating SVG charts in Rust.
-This supports static GitHub Pages deployment with no backend or handwritten JavaScript chart logic; range controls and exact-value inspection are supplied by the Rust UI.
+The dashboard uses Leptos client-side rendering, built by Trunk, with Plotly.rs constructing figures in Rust and Plotly.js rendering interactive SVG charts in the browser.
+Rust owns metric calculations, time alignment, gap detection, series selection, and exact hover text; Plotly owns chart layout and native hover labels.
+The frontend MUST load a pinned Plotly.js basic bundle compatible with the Rust wrapper from Plotly's official CDN.
+The versioned CDN URL MUST be owned by the frontend HTML and work at both root and Pages subpath URLs.
+Browser tests MUST load the same CDN script as ordinary builds and previews.
+The browser bundle MUST NOT be committed to the repository or packaged with the site.
+Rust browser bindings MUST initialize charts after their DOM nodes mount, report initialization errors, and purge chart resources on removal.
+Charts MUST resize with the viewport and retain horizontal scrolling at narrow widths.
+Chart height MUST accommodate simultaneous hover labels as comparison series are added; the renderer MUST NOT silently drop series details to fit a fixed chart height.
+The shared range controls govern the visible interval; chart-local zoom and the Plotly toolbar are disabled.
+This supports static GitHub Pages deployment with no backend or handwritten JavaScript application logic; the Rust UI retains an accessible exact-value table alongside native hover labels.
 The UI MUST support the time-frame and entity comparisons defined by [R17](requirements.md#r17-plot-comparisons), including more than two series per comparison.
 The complete history MUST be embedded in the compiled frontend and used for both visualization and JSON download, as required by [R18](requirements.md#r18-embedded-history) and [R19](requirements.md#r19-history-download).
 This keeps the displayed data and downloaded history tied to the same frontend build.
+
+### Design tokens
+
+The dashboard owns the presentation contract defined in [design-tokens.md](design-tokens.md), including the machine-readable token artifact under `specs/`.
+Rust build tooling MUST validate that artifact and generate both CSS custom properties and typed values for Plotly figure configuration from one resolved token set.
+This keeps browser styles and chart presentation consistent without introducing a separate runtime styling service.
+Generation MUST use the project's supported DTCG profile and existing Cargo/Trunk build flow.
+Handwritten CSS MUST retain selectors and layout rules, with token references supplying reusable presentation values.
+Generated CSS MUST be embedded in the compiled frontend and applied when the WASM application mounts, without a separate runtime stylesheet request.
+Build-time resolution MUST supply token values in CSS contexts that cannot use custom properties.
+Generated output MUST remain in ignored build locations.
+The preview MUST watch the token artifact outside the application crate and rebuild both representations when it changes.
 
 ### Automation and notifications
 
@@ -146,7 +167,8 @@ The application uses the following libraries and build tools:
 - `tungstenite` with Rustls — synchronous WebSocket connection and message transport for the LiveView session.
 - `scraper` — HTML parsing and scoped DOM selectors; no regex-only HTML extraction.
 - `leptos` with CSR — Rust browser UI and reactive controls.
-- `plotters` with SVG support — existing Rust chart axes, labels, and series rendering.
+- `plotly` (Plotly.rs) — typed Rust figure configuration and serialization.
+- Plotly.js basic bundle — browser rendering and hover interaction, loaded from the CDN at a version supported by the Rust wrapper.
 - Trunk — Rust/WASM asset builds and local preview.
 
 The application MUST contain no handwritten JavaScript/TypeScript logic; generated WASM glue and third-party build/runtime internals are acceptable supporting artifacts.
@@ -158,7 +180,8 @@ The following supporting formats are needed for packaging and orchestration:
 - shell commands.
 
 Leptos documents [static CSR deployment, including GitHub Pages](https://book.leptos.dev/deployment/csr.html).
-Plotters provides [SVG drawing support](https://docs.rs/plotters/latest/plotters/).
+Plotly.rs provides [typed chart configuration](https://docs.rs/plotly/0.14.1/plotly/).
+Plotly documents [loading its browser engine from the CDN](https://plotly.com/javascript/getting-started/).
 Reqwest provides a [blocking HTTP client](https://docs.rs/reqwest/latest/reqwest/blocking/index.html), and Tungstenite provides [WebSocket transport with TLS support](https://docs.rs/tungstenite/latest/tungstenite/).
 Selected dependency versions MUST build together for the native collector and WebAssembly dashboard targets.
 
@@ -301,7 +324,7 @@ Changing required metric labels or the approved zone roster requires review and 
 
 ## Testing
 
-Application tests MUST follow [tests.md](tests.md), including its required coverage and prohibition on internet requests.
+Application tests MUST follow [tests.md](tests.md), including its required coverage and prohibition on contacting the original statistics service.
 Tests MUST be implemented alongside the corresponding features and run through the project's local checks and CI.
 Test runs MUST use local data and MUST NOT invoke the production collector against the public statistics page.
 

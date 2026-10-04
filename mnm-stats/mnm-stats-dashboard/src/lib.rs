@@ -4,6 +4,11 @@ include!(concat!(env!("OUT_DIR"), "/history.rs"));
 pub mod analysis;
 pub mod charts;
 
+#[allow(dead_code)]
+pub mod tokens {
+    include!(concat!(env!("OUT_DIR"), "/tokens.rs"));
+}
+
 #[cfg(target_arch = "wasm32")]
 pub mod app;
 

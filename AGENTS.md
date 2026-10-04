@@ -6,7 +6,7 @@
 - Prefer subsections and lists instead of tables in specifications.
 - Use `specs/requirements.md` for product requirements, `specs/architecture.md` for architecture, and `specs/development.md` for the development workflow and review checkpoints.
 - State current contracts directly in specifications; keep revision history and task-specific approval status in `.session/`.
-- Follow [tests.md](specs/tests.md) when adding or running tests. Tests must make no internet requests and must use local fixtures or synthetic data; never request the public statistics page or refresh fixtures from a test run.
+- Follow [tests.md](specs/tests.md) when adding or running tests. Tests must not contact the original statistics service, including its public page and HTTP or WebSocket endpoints, or refresh fixtures. Use local fixtures or synthetic metric data; third-party runtime assets such as Plotly may load from the internet.
 - Discuss major decisions with the user and obtain approval before implementing them. Writing a specification does not grant implementation approval.
 - Work in bounded steps that leave the repository consistent. At the end of each step, report changes and checks, and ask the user to review and commit before proceeding.
 - Keep the design small. Prefer existing libraries, one source of truth, and direct code over frameworks or abstractions for hypothetical needs.

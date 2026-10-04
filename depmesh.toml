@@ -104,6 +104,25 @@ relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md"] }
 output = { type = "list", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-dashboard.sh", "@/bin/validate-history.sh", "@/bin/collect.sh", "@/bin/publish-history.sh", "@/bin/verify-collection-failure.sh"] }
 
+# Presentation values are shared by CSS, Rust charts, and dashboard packaging.
+[[rules]]
+relation = "governed_by"
+input = { type = "any", items = [
+  { type = "glob", pattern = "@/specs/design-tokens.tokens.json" },
+  { type = "glob", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
+  { type = "glob", pattern = "@/bin/*dashboard.sh" },
+] }
+output = { type = "list", artifacts = ["@/specs/design-tokens.md"] }
+
+[[rules]]
+relation = "governs"
+input = { type = "one_of", artifacts = ["@/specs/design-tokens.md"] }
+output = { type = "union", items = [
+  { type = "files", pattern = "@/specs/design-tokens.tokens.json" },
+  { type = "files", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
+  { type = "files", pattern = "@/bin/*dashboard.sh" },
+] }
+
 # Development environment ownership.
 [[rules]]
 relation = "governed_by"

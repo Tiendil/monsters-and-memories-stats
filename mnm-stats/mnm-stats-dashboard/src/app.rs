@@ -1,4 +1,4 @@
-use crate::{analysis::*, charts};
+use crate::{analysis::*, charts, charts::browser::InteractivePlot};
 use chrono::{DateTime, Datelike, Utc};
 use leptos::prelude::*;
 use mnm_stats_model::History;
@@ -103,67 +103,6 @@ fn PeriodPicker(periods: RwSignal<Vec<Period>>, yearly: bool, initial: String) -
             }).collect_view()}</ul>
         </div>
     }
-}
-
-#[component]
-fn InteractivePlot(plot: Arc<Plot>, metric: Metric) -> impl IntoView {
-    let rendered = match charts::render(&plot, &metric) {
-        Ok(rendered) => rendered,
-        Err(error) => return view! { <p role="alert">"Chart unavailable: "{error}</p> }.into_any(),
-    };
-    let svg = rendered.svg.clone();
-    let rendered = StoredValue::new(rendered);
-    let hovered = RwSignal::new(Vec::<charts::PlotPoint>::new());
-    let surface = NodeRef::<leptos::html::Div>::new();
-    let tooltip_id = format!("tooltip-{}", metric.key());
-    let description_id = tooltip_id.clone();
-    let on_move = move |event: web_sys::MouseEvent| {
-        let Some(svg) = surface
-            .get()
-            .and_then(|node| node.query_selector("svg").ok().flatten())
-        else {
-            return;
-        };
-        let bounds = svg.get_bounding_client_rect();
-        let hits = rendered.with_value(|rendered| {
-            rendered.nearby(
-                f64::from(event.client_x()) - bounds.left(),
-                f64::from(event.client_y()) - bounds.top(),
-                bounds.width(),
-                bounds.height(),
-            )
-        });
-        hovered.set(hits);
-    };
-    view! {
-        <div class="interactive-plot" on:mouseleave=move |_| hovered.set(Vec::new())>
-            <div class="plot" role="img" aria-label=format!("{}; {}. Hover a point or inspect exact values below.", metric.title(), metric.unit())
-                aria-describedby=move || (!hovered.get().is_empty()).then(|| description_id.clone())
-                on:scroll=move |_| hovered.set(Vec::new())>
-                <div class="plot-surface" node_ref=surface on:mousemove=on_move>
-                    <div inner_html=svg></div>
-                    {move || hovered.get().into_iter().map(|point| view! {
-                        <span class="hover-marker" aria-hidden="true" style=format!("left:{}%;top:{}%;border-color:{}", f64::from(point.position.0) / f64::from(charts::WIDTH) * 100.0, f64::from(point.position.1) / f64::from(charts::HEIGHT) * 100.0, charts::css_color(point.series))></span>
-                    }).collect_view()}
-                </div>
-            </div>
-            <Show when=move || !hovered.get().is_empty()>
-                <div class="plot-tooltip" id=tooltip_id.clone() role="tooltip">
-                    <ul>{let plot = plot.clone(); move || hovered.get().into_iter().map(|hit| {
-                        let series = &plot.series[hit.series];
-                        let point = &series.points[hit.point];
-                        view! {
-                            <li data-series=hit.series data-at=utc(point.at)>
-                                <span class="hover-series" style:color=charts::css_color(hit.series)>{format!("{}. {}", hit.series + 1, series.label)}</span>
-                                <time class="hover-time" datetime=utc(point.at)>{utc(point.at)}" UTC"</time>
-                                <strong class="hover-value">{point.value.map(MetricValue::display)}</strong>
-                            </li>
-                        }
-                    }).collect_view()}</ul>
-                </div>
-            </Show>
-        </div>
-    }.into_any()
 }
 
 #[component]
@@ -390,6 +329,7 @@ pub fn App() -> impl IntoView {
         Metric::MonthlySubscriptions,
     ];
     view! {
+        <style>{include_str!(concat!(env!("OUT_DIR"), "/style.css"))}</style>
         <main>
             {matches!(env!("MNM_STATS_DEMO"), "1").then(|| view! {
                 <p id="demo-notice" role="status">"Demonstration preview — all observations and server names are synthetic."</p>
@@ -479,7 +419,11 @@ pub fn App() -> impl IntoView {
                 <p>"The archive starts with successful collections. Earlier history and missed intervals are unavailable. These hourly snapshots are not an exhaustive record of every change within the hour."</p>
                 <p>"The download contains every observation in this dashboard build, across all servers and dates, regardless of the controls above."</p>
             </section>
-            <footer><p>"Independent community archive · All times UTC"</p><p>"Source: "<a href="https://account.monstersandmemories.com/metrics">"Monsters & Memories public metrics"</a></p></footer>
+            <footer>
+                <p>"Independent community archive · All times UTC"</p>
+                <p>"Source: "<a href="https://account.monstersandmemories.com/metrics">"Monsters & Memories public metrics"</a></p>
+                <p><a href="https://plotly.com/javascript/">"Charts by Plotly"</a></p>
+            </footer>
         </main>
     }
 }

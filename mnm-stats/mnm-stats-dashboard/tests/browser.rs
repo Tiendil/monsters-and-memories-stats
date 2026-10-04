@@ -250,7 +250,24 @@ impl Browser {
                 "args":[]
             }),
         );
-        self.move_pointer(selector, 0, 0);
+        // Adjacent observations can be less than a pixel apart. Aim at the
+        // outer edge of the first/last marker to select that boundary sample.
+        let position = self.request(Method::POST, "/execute/sync", json!({
+            "script":"const e=document.querySelector(arguments[0]); const r=e.getBoundingClientRect(); const offset=e.matches('.point') ? (e===e.parentElement.firstElementChild ? -1 : e===e.parentElement.lastElementChild ? 1 : 0) : 0; return [r.x+r.width/2+offset,r.y+r.height/2];",
+            "args":[selector]
+        }));
+        self.pointer_at(&position);
+    }
+
+    fn pointer_at(&self, position: &Value) {
+        self.request(
+            Method::POST,
+            "/goog/cdp/execute",
+            json!({
+                "cmd":"Input.dispatchMouseEvent",
+                "params":{"type":"mouseMoved","x":position[0],"y":position[1],"buttons":0}
+            }),
+        );
     }
 
     fn expect_count(&self, selector: &str, expected: usize) {
@@ -309,6 +326,14 @@ impl Browser {
         self.request(Method::POST, "/url", json!({"url":url}));
         let count = expected["snapshots"].as_array().unwrap().len();
         assert_eq!(self.text("#history-count"), format!("{count} observations"));
+        assert_eq!(
+            self.text("footer a[href='https://plotly.com/javascript/']"),
+            "Charts by Plotly"
+        );
+        self.expect_count(
+            ".plot-surface[data-ready='true']",
+            self.count(".plot-surface"),
+        );
         let status = self.text("#history-status");
         if count == 0 {
             assert!(status.contains("No observations"));
@@ -386,11 +411,7 @@ impl Browser {
                     &format!("[data-metric='{metric}'] .sample-count"),
                     &format!("{count} plotted observations"),
                 );
-                assert_eq!(
-                    self.count(&format!("[data-metric='{metric}'] svg")),
-                    1,
-                    "{metric} / {key}"
-                );
+                self.ready(metric);
             }
         }
         // Exact values and pagination use original observations, not source chart history.
@@ -462,24 +483,19 @@ impl Browser {
                 ),
             ),
         ] {
-            self.hover(&format!("[data-metric='{metric}'] svg circle"));
-            let tooltip = format!(
-                "[data-metric='{metric}'] [role='tooltip'] li[data-at='2026-05-25T12:00:00Z']"
-            );
-            self.expect_text(&format!("{tooltip} .hover-value"), &value);
-            self.expect_text(
-                &format!("{tooltip} .hover-time"),
-                "2026-05-25T12:00:00Z UTC",
-            );
-            assert!(self.text(&format!("{tooltip} .hover-series")).contains(
+            self.hover(&format!("[data-metric='{metric}'] .scatterlayer .point"));
+            self.expect_hover(
+                metric,
                 if metric == "subscriptions" {
                     "Global subscriptions"
                 } else {
                     "Alpha <island> & West"
-                }
-            ));
+                },
+                "2026-05-25T12:00:00Z",
+                &value,
+            );
             self.hover(&format!("[data-metric='{metric}'] .unit"));
-            self.expect_count("[role='tooltip']", 0);
+            self.expect_count(".hovertext", 0);
             self.click(&format!("[data-metric='{metric}'] summary"));
             self.expect_text(
                 &format!(
@@ -497,16 +513,19 @@ impl Browser {
             }
             self.click(&format!("[data-metric='{metric}'] summary"));
         }
-        self.hover("[data-metric='daily'] svg circle");
+        self.hover("[data-metric='daily'] .scatterlayer .point");
         self.select("#server-scope", "retired");
-        self.expect_count("[role='tooltip']", 0);
+        self.expect_count(".hovertext", 0);
         for metric in metrics.into_iter().filter(|m| *m != "subscriptions") {
             self.expect_text(
                 &format!("[data-metric='{metric}'] .empty-chart"),
                 "No available observations for this selection.",
             );
         }
-        assert_eq!(self.count("[data-metric='subscriptions'] svg"), 1);
+        assert_eq!(
+            self.count("[data-metric='subscriptions'] .plot-surface[data-ready='true']"),
+            1
+        );
         self.select("#server-scope", "a");
         assert!(self.text("#correlation-scope").contains("Alpha"));
         assert_eq!(self.count(".correlation-value"), 3);
@@ -518,11 +537,12 @@ impl Browser {
                 if metric == "subscriptions" { 1 } else { 3 }
             );
         }
-        self.hover("[data-metric='online'] svg circle:last-of-type");
-        self.expect_text("[data-metric='online'] .hover-value", "5");
-        assert!(
-            self.text("[data-metric='online'] .hover-series")
-                .contains("Beta")
+        self.hover("[data-metric='online'] .scatterlayer .trace:last-child .point:last-child");
+        self.expect_hover(
+            "online",
+            "Beta",
+            records.last().unwrap()["observed_at"].as_str().unwrap(),
+            "5",
         );
         // Three individual servers, then all servers alongside the three individuals.
         self.click("#entity-choices input[value='all']");
@@ -551,15 +571,11 @@ impl Browser {
                     3,
                     "{mode} / {metric}"
                 );
-                assert_eq!(
-                    self.count(&format!("[data-metric='{metric}'] svg")),
-                    1,
-                    "{mode} / {metric}"
-                );
+                self.ready(metric);
             }
             // Constant zone counts coincide across all three periods. Every
             // series must retain its actual observation date, not its aligned x.
-            self.hover("[data-metric='zone-w'] svg circle");
+            self.hover("[data-metric='zone-w'] .scatterlayer .point");
             let dates = if mode == "months" {
                 [
                     "2024-02-01T00:00:00Z",
@@ -573,13 +589,10 @@ impl Browser {
                     "2025-02-01T00:00:00Z",
                 ]
             };
-            for (index, at) in dates.into_iter().enumerate() {
-                let row = format!(
-                    "[data-metric='zone-w'] [role='tooltip'] li[data-series='{index}'][data-at='{at}']"
-                );
-                self.expect_text(&format!("{row} .hover-value"), "3");
-                self.expect_text(&format!("{row} .hover-time"), &format!("{at} UTC"));
+            for at in dates {
+                self.expect_hover("zone-w", "Alpha <island> & West", at, "3");
             }
+            self.expect_count("[data-metric='zone-w'] .hovertext", 3);
             self.click("[data-metric='daily'] summary");
             assert!(
                 self.text("[data-metric='daily'] table")
@@ -604,15 +617,15 @@ impl Browser {
                 self.count(&format!("[data-metric='{metric}'] .legend li")),
                 3
             );
-            assert_eq!(self.count(&format!("[data-metric='{metric}'] svg")), 1);
+            self.ready(metric);
         }
-        self.hover("[data-metric='zone-w'] svg circle");
+        self.hover("[data-metric='zone-w'] .scatterlayer .point");
         assert!(
-            self.text("[data-metric='zone-w'] [role='tooltip']")
+            self.text("[data-metric='zone-w'] .hoverlayer")
                 .contains("2024-02-01T00:00:00Z UTC")
         );
-        self.move_pointer("[data-metric='zone-w'] svg", 0, 0);
-        self.expect_count("[role='tooltip']", 0);
+        self.move_pointer("[data-metric='zone-w'] .plot-surface", 0, 0);
+        self.expect_count(".hovertext", 0);
         self.input("#interval-hours", "0");
         self.expect_text(
             "[data-metric='daily'] .error",
@@ -647,18 +660,16 @@ impl Browser {
         self.select("#time-range", "7");
         self.select("#server-scope", "a");
         // The rightmost marker requires scrolling the narrow plot horizontally.
-        self.hover("[data-metric='daily'] svg circle:last-of-type");
+        self.hover("[data-metric='daily'] .scatterlayer .trace:last-child .point:last-child");
         let last = records.last().unwrap();
-        self.expect_text(
-            "[data-metric='daily'] .hover-value",
+        self.expect_hover(
+            "daily",
+            "Alpha <island> & West",
+            last["observed_at"].as_str().unwrap(),
             &last["servers"][0]["daily_active"]
                 .as_u64()
                 .unwrap()
                 .to_string(),
-        );
-        self.expect_text(
-            "[data-metric='daily'] .hover-time",
-            &format!("{} UTC", last["observed_at"].as_str().unwrap()),
         );
         fs::write(
             scratch.join("dashboard-mobile.png.b64"),
@@ -672,9 +683,210 @@ impl Browser {
         );
     }
 
+    fn ready(&self, metric: &str) {
+        self.expect_count(
+            &format!("[data-metric='{metric}'] .plot-surface[data-ready='true']"),
+            1,
+        );
+    }
+
+    fn expect_hover(&self, metric: &str, series: &str, at: &str, value: &str) {
+        let selector = format!("[data-metric='{metric}'] .hovertext");
+        wait_until(
+            || {
+                let rows = self.request(Method::POST, "/execute/sync", json!({
+                "script":"return Array.from(document.querySelectorAll(arguments[0]), row => row.textContent);",
+                "args":[selector]
+            }));
+                rows.as_array().unwrap().iter().any(|row| {
+                    let text = row.as_str().unwrap();
+                    text.contains(series)
+                        && text.contains(&format!("{at} UTC"))
+                        && text.ends_with(value)
+                })
+            },
+            &format!("{metric}: hover must show {series}, {at}, {value}"),
+        );
+    }
+
+    fn computed(&self, selector: &str, property: &str) -> String {
+        let value = self
+            .request(
+                Method::GET,
+                &format!("/element/{}/css/{property}", self.element(selector)),
+                Value::Null,
+            )
+            .as_str()
+            .unwrap()
+            .to_owned();
+        // WebDriver normalizes some opaque CSS colors to rgba; SVG fill stays rgb.
+        if let Some(rgb) = value
+            .strip_prefix("rgba(")
+            .and_then(|v| v.strip_suffix(", 1)"))
+        {
+            format!("rgb({rgb})")
+        } else {
+            value
+        }
+    }
+
+    fn verify_token_styles(&self, changed: bool) {
+        self.select("#comparison-mode", "overview");
+        // Seven days keeps demo observations sparse enough to draw point markers.
+        self.select("#time-range", "7");
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
+        );
+        assert_eq!(
+            self.computed("html", "background-color"),
+            if changed {
+                "rgb(25, 30, 35)"
+            } else {
+                "rgb(17, 26, 32)"
+            }
+        );
+        assert_eq!(self.computed(".chart-card", "border-radius"), "10.4px");
+        assert_eq!(
+            self.computed(".metric-description", "font-size"),
+            if changed { "16px" } else { "14px" }
+        );
+        assert_eq!(
+            self.computed("#time-range", "padding-top"),
+            if changed { "8px" } else { "12px" }
+        );
+        assert_eq!(
+            self.computed(".chart-grid", "grid-template-columns")
+                .split_whitespace()
+                .count(),
+            2
+        );
+        let size = self.computed("[data-metric='daily'] .xtick text", "font-size");
+        let size: f64 = size.strip_suffix("px").unwrap().parse().unwrap();
+        assert!((size - if changed { 18.0 } else { 12.0 }).abs() < 0.001);
+        let color = if changed {
+            "rgba(204, 102, 51, 0.5)"
+        } else {
+            "rgb(139, 217, 198)"
+        };
+        assert_eq!(
+            self.computed("[data-metric='daily'] .swatch", "background-color"),
+            color
+        );
+        assert_eq!(
+            self.computed("[data-metric='daily'] .scatterlayer .point", "fill"),
+            if changed { "rgb(204, 102, 51)" } else { color }
+        );
+        assert_eq!(
+            self.computed("[data-metric='daily'] .scatterlayer .point", "fill-opacity"),
+            if changed { "0.5" } else { "1" }
+        );
+        self.hover("[data-metric='daily'] .scatterlayer .point");
+        assert_eq!(
+            self.computed("[data-metric='daily'] .hovertext path", "stroke"),
+            color
+        );
+        assert!(
+            self.text("[data-metric='daily'] .hoverlayer")
+                .contains("UTC")
+        );
+        // The changed breakpoint is 900px, so the same 1000px window changes layout.
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1000,"height":900}),
+        );
+        assert_eq!(
+            self.computed(".chart-grid", "grid-template-columns")
+                .split_whitespace()
+                .count(),
+            if changed { 2 } else { 1 }
+        );
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":375,"height":800}),
+        );
+        assert_eq!(
+            self.computed(".chart-grid", "grid-template-columns")
+                .split_whitespace()
+                .count(),
+            1
+        );
+        assert_eq!(self.computed(".page-header", "flex-direction"), "column");
+        assert_eq!(self.computed(".plot-surface", "min-width"), "480px");
+    }
+
+    fn verify_extended_palette(&self) {
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
+        );
+        self.select("#comparison-mode", "months");
+        while self.count(".remove-period") > 0 {
+            self.click(".remove-period");
+        }
+        for month in [
+            "2023-02", "2023-03", "2023-04", "2024-02", "2024-03", "2024-04", "2025-02",
+        ] {
+            self.input("#period-input", month);
+            self.click("#add-period");
+        }
+        self.expect_count("[data-metric='daily'] .legend li", 7);
+        for i in 0..7 {
+            let swatch = format!(
+                "[data-metric='daily'] .legend li:nth-child({}) .swatch",
+                i + 1
+            );
+            // Each selected fixture month has exactly three observations.
+            let circle = format!(
+                "[data-metric='daily'] .scatterlayer .trace:nth-child({}) .point",
+                i + 1
+            );
+            let color = self.computed(&swatch, "background-color");
+            assert_eq!(self.computed(&circle, "fill"), color);
+            self.hover(&circle);
+            wait_until(
+                || {
+                    self.request(Method::POST, "/execute/sync", json!({
+                    "script":"const row = Array.from(document.querySelectorAll(arguments[0])).find(e => e.textContent.startsWith(arguments[1])); return row ? getComputedStyle(row.querySelector('path')).stroke : null;",
+                    "args":["[data-metric='daily'] .hovertext", format!("{}. ", i + 1)]
+                })) == color
+                },
+                &format!("series {i} hover border matches its legend"),
+            );
+        }
+        let height = self.computed("[data-metric='daily'] .plot-surface", "height");
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":375,"height":800}),
+        );
+        wait_until(
+            || {
+                self.request(Method::POST, "/execute/sync", json!({
+            "script":"const e=document.querySelector(arguments[0]), svg=e.querySelector('svg.main-svg'); return Number(svg.getAttribute('width'))===e.clientWidth && Number(svg.getAttribute('height'))===e.clientHeight && getComputedStyle(e).height===arguments[1];",
+            "args":["[data-metric='daily'] .plot-surface", height]
+        })) == true
+            },
+            "resizing retains enough chart height for every comparison hover label",
+        );
+        self.hover("[data-metric='daily'] .scatterlayer .point");
+        self.expect_count("[data-metric='daily'] .hovertext", 7);
+        self.select("#comparison-mode", "overview");
+    }
+
     fn verify_requests(&self, url: &str, require_wasm: bool) {
+        let plotly_url = include_str!("../index.html")
+            .split("src=\"")
+            .filter_map(|part| part.split_once('"').map(|(url, _)| url))
+            .find(|url| url.starts_with("https://cdn.plot.ly/"))
+            .expect("Plotly CDN URL in frontend HTML");
         let log = self.request(Method::POST, "/log", json!({"type":"performance"}));
         let mut wasm_requested = false;
+        let mut plotly_requested = false;
         for entry in log.as_array().unwrap() {
             let message: Value = serde_json::from_str(entry["message"].as_str().unwrap()).unwrap();
             if message["message"]["method"] != "Network.requestWillBeSent" {
@@ -686,15 +898,16 @@ impl Browser {
             if request.starts_with("data:") || request.starts_with("blob:") {
                 continue;
             }
+            if request == plotly_url {
+                plotly_requested = true;
+                continue;
+            }
             assert!(
                 request.starts_with(url),
                 "unexpected runtime request: {request}"
             );
             assert!(
-                request == url
-                    || [".js", ".css", ".wasm"]
-                        .iter()
-                        .any(|ext| request.ends_with(ext)),
+                request == url || [".js", ".wasm"].iter().any(|ext| request.ends_with(ext)),
                 "separate data or unexpected asset request: {request}"
             );
             wasm_requested |= request.ends_with(".wasm");
@@ -702,6 +915,10 @@ impl Browser {
         assert!(
             !require_wasm || wasm_requested,
             "browser must run the actual compiled WASM"
+        );
+        assert!(
+            !require_wasm || plotly_requested,
+            "browser must load the chart engine from the configured CDN URL"
         );
         let log = self.request(Method::POST, "/log", json!({"type":"browser"}));
         assert!(
@@ -724,7 +941,22 @@ impl Drop for Browser {
 }
 
 fn build(root: &Path, history: &Path, dist: &Path, public_url: &str, success: bool) {
-    let output = Command::new(root.join("bin/build-dashboard.sh"))
+    build_with_tokens(root, history, dist, public_url, success, None);
+}
+
+fn build_with_tokens(
+    root: &Path,
+    history: &Path,
+    dist: &Path,
+    public_url: &str,
+    success: bool,
+    tokens: Option<&Path>,
+) {
+    let mut command = Command::new(root.join("bin/build-dashboard.sh"));
+    if let Some(tokens) = tokens {
+        command.env("MNM_STATS_TOKENS", tokens);
+    }
+    let output = command
         .env("MNM_STATS_HISTORY", history)
         .arg("--dist")
         .arg(dist)
@@ -745,7 +977,14 @@ fn build(root: &Path, history: &Path, dist: &Path, public_url: &str, success: bo
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
-        assert!(diagnostic.contains("invalid history"), "{diagnostic}");
+        assert!(
+            diagnostic.contains(if tokens.is_some() {
+                "invalid tokens"
+            } else {
+                "invalid history"
+            }),
+            "{diagnostic}"
+        );
     }
 }
 
@@ -832,6 +1071,13 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     let browser = Browser::new(&scratch);
 
     build(&root, &history, &scratch.join("site"), "/", true);
+    assert!(fs::read_dir(scratch.join("site")).unwrap().all(|entry| {
+        !entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with("plotly-")
+    }));
     browser.verify(
         &origin,
         &json!({"schema_version":1,"snapshots":[]}),
@@ -886,6 +1132,43 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     let url = format!("{origin}mnm/");
     browser.verify(&url, &expected, &scratch);
     browser.verify_features(&url, &expected, &scratch);
+    browser.verify_token_styles(false);
+    browser.verify_extended_palette();
+
+    let tokens = scratch.join("tokens.json");
+    let changed = changed_tokens(&root);
+    fs::write(&tokens, changed.to_string()).unwrap();
+    build_with_tokens(
+        &root,
+        &history,
+        &scratch.join("site/mnm"),
+        "/mnm/",
+        true,
+        Some(&tokens),
+    );
+    browser.verify(&url, &expected, &scratch);
+    browser.verify_token_styles(true);
+    let previous_tokens_site = fs::read(scratch.join("site/mnm/index.html")).unwrap();
+    let mut invalid = changed;
+    invalid["chart"]["series"]["palette"]["01"]["$value"]["alpha"] = json!(2);
+    fs::write(&tokens, invalid.to_string()).unwrap();
+    build_with_tokens(
+        &root,
+        &history,
+        &scratch.join("site/mnm"),
+        "/mnm/",
+        false,
+        Some(&tokens),
+    );
+    assert_eq!(
+        fs::read(scratch.join("site/mnm/index.html")).unwrap(),
+        previous_tokens_site
+    );
+    browser.verify(&url, &expected, &scratch);
+    browser.verify_token_styles(true);
+    println!(
+        "Token-only cached rebuild updates embedded CSS and chart/hover colors; invalid tokens preserve the last site."
+    );
 
     let previous = fs::read(scratch.join("site/mnm/index.html")).unwrap();
     fs::write(&history, "{\"schema_version\":1").unwrap();
@@ -903,7 +1186,27 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     verify_preview(&root, &scratch, &browser);
 }
 
+fn changed_tokens(root: &Path) -> Value {
+    let mut tokens: Value = serde_json::from_str(
+        &fs::read_to_string(root.join("specs/design-tokens.tokens.json")).unwrap(),
+    )
+    .unwrap();
+    tokens["color"]["surface"]["page"]["$value"]["components"] =
+        json!([25.0 / 255.0, 30.0 / 255.0, 35.0 / 255.0]);
+    tokens["chart"]["series"]["palette"]["01"]["$value"]["components"] = json!([0.8, 0.4, 0.2]);
+    tokens["chart"]["series"]["palette"]["01"]["$value"]["alpha"] = json!(0.5);
+    tokens["chart"]["axis"]["label"]["font-size"]["$value"]["value"] = json!(18);
+    tokens["breakpoint"]["medium"]["$value"]["value"] = json!(900);
+    // Shared primitives update their aliases; an input-only override stays local.
+    tokens["scale"]["spacing"]["3"]["$value"]["value"] = json!(1);
+    tokens["scale"]["font-size"]["2"]["$value"]["value"] = json!(1);
+    tokens["spacing"]["input"]["padding"]["$value"] = json!({"value":0.5,"unit":"rem"});
+    tokens
+}
+
 fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
+    let tokens = scratch.join("preview-tokens.json");
+    fs::copy(root.join("specs/design-tokens.tokens.json"), &tokens).unwrap();
     let history = scratch.join("preview history.jsonl");
     let at = "2026-06-01T12:00:00Z";
     let generate = || {
@@ -945,13 +1248,13 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
     browser.verify(&origin, &expected, scratch);
     assert!(browser.text("#demo-notice").contains("synthetic"));
-    assert_eq!(browser.count("svg"), 10);
+    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 10);
     drop(demo_preview);
     let preview = start_preview(root, scratch, Some(&history), "explicit", preview_port);
     let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
     browser.verify(&origin, &expected, scratch);
     assert_eq!(
-        browser.count("svg"),
+        browser.count(".plot-surface[data-ready='true']"),
         10,
         "recent demo values appear in the default range"
     );
@@ -960,6 +1263,48 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
         0,
         "explicit history is not labeled demo"
     );
+
+    browser.request(
+        Method::POST,
+        "/window/rect",
+        json!({"width":1280,"height":1000}),
+    );
+    browser.select("#time-range", "all");
+    browser.ready("daily");
+    assert_eq!(
+        browser.count("[data-metric='daily'] .scatterlayer .point"),
+        0
+    );
+    let point = browser.request(Method::POST, "/execute/async", json!({
+        "script":r#"const done = arguments[arguments.length-1]; const line = Array.from(document.querySelectorAll("[data-metric='daily'] .scatterlayer .js-line")).at(-1); line.scrollIntoView({block:'center',inline:'end'}); requestAnimationFrame(() => requestAnimationFrame(() => { const p = line.getPointAtLength(line.getTotalLength()).matrixTransform(line.getScreenCTM()); done([p.x+1,p.y]); }));"#,
+        "args":[]
+    }));
+    browser.pointer_at(&point);
+    let last = expected["snapshots"].as_array().unwrap().last().unwrap();
+    let total: u64 = last["servers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["daily_active"].as_u64().unwrap())
+        .sum();
+    browser.expect_hover("daily", "All servers", at, &total.to_string());
+    browser.verify_token_styles(false);
+    let index = scratch.join("preview-explicit-dist/index.html");
+    let original = fs::read(&index).unwrap();
+    let replacement = scratch.join("next-tokens.json");
+    fs::write(&replacement, changed_tokens(root).to_string()).unwrap();
+    fs::rename(&replacement, &tokens).unwrap();
+    wait_for_preview_rebuild(&index, &original);
+    browser.verify(&origin, &expected, scratch);
+    browser.verify_token_styles(true);
+    // Watchers must survive more than one atomic replacement.
+    let original = fs::read(&index).unwrap();
+    fs::copy(root.join("specs/design-tokens.tokens.json"), &replacement).unwrap();
+    fs::rename(&replacement, &tokens).unwrap();
+    wait_for_preview_rebuild(&index, &original);
+    browser.verify(&origin, &expected, scratch);
+    browser.verify_token_styles(false);
+    println!("Token-only atomic replacements rebuild both CSS and charts in the running preview.");
 
     // Replace the file atomically, as a collector/editor can do. Its parent is outside the crate.
     let retained = parsed.snapshots().last().unwrap();
@@ -972,7 +1317,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let expected = json!({"schema_version":1,"snapshots":[retained]});
     browser.verify(&origin, &expected, scratch);
     browser.select("#time-range", "all");
-    assert_eq!(browser.count("svg"), 10);
+    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 10);
     browser.verify_download(&expected, scratch);
     // A second replacement verifies that watching survives atomic file replacement.
     let original = fs::read(&index).unwrap();
@@ -1009,6 +1354,7 @@ fn start_preview(
     let log_path = scratch.join(format!("preview-{label}.log"));
     let log = fs::File::create(&log_path).unwrap();
     let mut command = Command::new(root.join("bin/serve-dashboard.sh"));
+    command.env("MNM_STATS_TOKENS", scratch.join("preview-tokens.json"));
     match history {
         Some(path) => {
             command.arg("--history").arg(path);
@@ -1058,7 +1404,7 @@ fn wait_for_preview_rebuild(index: &Path, previous: &[u8]) {
     while !fs::read(index).is_ok_and(|current| current != previous) {
         assert!(
             Instant::now() < deadline,
-            "history-only preview rebuild timed out"
+            "input-only preview rebuild timed out"
         );
         thread::sleep(Duration::from_millis(200));
     }

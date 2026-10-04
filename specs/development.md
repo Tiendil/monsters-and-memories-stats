@@ -61,7 +61,8 @@ Donna MUST discover project workflows under `workflows/` and keep runtime state 
 The polish workflow MUST run deterministic checks for artifacts that exist at the current delivery stage.
 Polish MUST run locally without project Git operations or invoking hosted workflows, deployments, or repository-management APIs.
 Normal builds MAY resolve and download package dependencies.
-Test execution MUST use only local inputs and services.
+Tests MUST use local fixtures or synthetic metric data and MUST NOT contact the original statistics service.
+Third-party runtime assets MAY be loaded from the internet.
 Each check MUST have a focused failure handler that exposes its diagnostics.
 Every repair MUST restart the check sequence so successful completion applies to the final artifact state.
 Checks MUST NOT report skipped or nonexistent application checks as passed.
@@ -91,7 +92,7 @@ Tests SHOULD cover failure-prone contracts such as source parsing, history prese
 This keeps regression coverage useful when implementation details change.
 Implementation-specific tests MAY be used when needed to reproduce a concrete defect.
 Application tests MUST follow [tests.md](tests.md) and be introduced with the behavior they verify.
-Tests run by local checks and CI MUST NOT make internet requests; source investigation and deployment verification MUST remain separate from test execution.
+Tests run by local checks and CI MUST NOT contact the original statistics service; source investigation and deployment verification MUST remain separate from test execution.
 The README MUST identify the current project state and provide navigation to the specifications.
 Once tests exist, it MUST document test commands and any required dependency setup.
 As working commands become available, it MUST document:

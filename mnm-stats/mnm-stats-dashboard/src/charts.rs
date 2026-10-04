@@ -1,50 +1,35 @@
-//! Plotters SVG rendering. Source labels and exact values are rendered by Leptos.
-use crate::analysis::{Alignment, Metric, Plot};
-use chrono::{Datelike, NaiveDate};
-use plotters::coord::{
-    CoordTranslate,
-    combinators::WithKeyPoints,
-    ranged1d::{DefaultFormatting, KeyPointHint},
-    types::RangedCoordf64,
+//! Plotly figure construction from Rust-owned observations and presentation tokens.
+use crate::{
+    analysis::{Alignment, Metric, Plot},
+    tokens,
 };
-use plotters::prelude::*;
-
-// Plotters 0.3.7 does not forward f64's formatter through WithKeyPoints.
-// Keep its coordinate mapping and ticks; labels are supplied by this renderer.
-struct TimeAxis(WithKeyPoints<RangedCoordf64>);
-impl Ranged for TimeAxis {
-    type ValueType = f64;
-    type FormatOption = DefaultFormatting;
-    fn range(&self) -> std::ops::Range<f64> {
-        self.0.range()
-    }
-    fn map(&self, value: &f64, limit: (i32, i32)) -> i32 {
-        self.0.map(value, limit)
-    }
-    fn key_points<H: KeyPointHint>(&self, hint: H) -> Vec<f64> {
-        self.0.key_points(hint)
-    }
-}
-
-pub fn color(index: usize) -> RGBColor {
-    const COLORS: [RGBColor; 6] = [
-        RGBColor(139, 217, 198),
-        RGBColor(255, 199, 120),
-        RGBColor(160, 185, 255),
-        RGBColor(239, 157, 193),
-        RGBColor(203, 220, 136),
-        RGBColor(144, 211, 242),
-    ];
-    if let Some(color) = COLORS.get(index) {
-        return *color;
-    }
-    let (r, g, b) = HSLColor((index as f64 * 0.61803398875).fract(), 0.65, 0.7).rgb();
-    RGBColor(r, g, b)
-}
+use chrono::{Datelike, NaiveDate};
+use plotly::{
+    Configuration, Layout, Plot as Figure, Scatter,
+    common::{Font, Label, Line, Marker, Mode},
+    configuration::DisplayModeBar,
+    layout::{Axis, AxisType, HoverMode, Margin},
+};
 
 pub fn css_color(index: usize) -> String {
-    let RGBColor(r, g, b) = color(index);
-    format!("rgb({r}, {g}, {b})")
+    if let Some(color) = tokens::CHART_PALETTE.get(index) {
+        return (*color).to_owned();
+    }
+    format!(
+        "hsla({}, {}%, {}%, {})",
+        (index as f64 * tokens::T_CHART_SERIES_FALLBACK_HUE_STEP).fract() * 360.0,
+        tokens::T_CHART_SERIES_FALLBACK_SATURATION * 100.0,
+        tokens::T_CHART_SERIES_FALLBACK_LIGHTNESS * 100.0,
+        tokens::T_CHART_SERIES_FALLBACK_ALPHA
+    )
+}
+
+fn escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\n', " ")
 }
 
 fn time_ticks(plot: &Plot) -> Vec<f64> {
@@ -79,138 +64,248 @@ fn time_ticks(plot: &Plot) -> Vec<f64> {
     }
 }
 
-pub const WIDTH: u32 = 640;
-pub const HEIGHT: u32 = 280;
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PlotPoint {
-    pub series: usize,
-    pub point: usize,
-    pub position: (i32, i32),
+fn height(plot: &Plot) -> usize {
+    (tokens::T_CHART_VIEWPORT_MIN_HEIGHT.pixels() as usize).max(
+        plot.series.len() * tokens::T_CHART_HOVER_SERIES_MIN_HEIGHT.pixels() as usize
+            + tokens::T_CHART_VIEWPORT_MARGIN.pixels() as usize * 2
+            + tokens::T_CHART_AXIS_X_LABEL_AREA.pixels() as usize,
+    )
 }
 
-pub struct RenderedPlot {
-    pub svg: String,
-    pub points: Vec<PlotPoint>,
-}
-
-impl RenderedPlot {
-    /// Hit-test in displayed CSS pixels, using the same mapping as the SVG.
-    /// Coincident observations remain inspectable across comparison series.
-    pub fn nearby(&self, x: f64, y: f64, width: f64, height: f64) -> Vec<PlotPoint> {
-        if width <= 0.0 || height <= 0.0 {
-            return Vec::new();
+pub fn render(plot: &Plot, metric: &Metric) -> Figure {
+    let mut figure = Figure::new();
+    let maximum = plot
+        .series
+        .iter()
+        .flat_map(|s| &s.points)
+        .filter_map(|p| p.value)
+        .map(|v| v.number())
+        .fold(0.0_f64, f64::max);
+    for (index, series) in plot.series.iter().enumerate() {
+        let mut x = Vec::new();
+        let mut y = Vec::new();
+        let mut text = Vec::new();
+        let mut marker_sizes = Vec::new();
+        let dense = series.points.len() > 200;
+        let mut previous: Option<&crate::analysis::Point> = None;
+        for (point_index, point) in series.points.iter().enumerate() {
+            if previous.is_some_and(|p| point.has_gap_from(p)) {
+                x.push(None);
+                y.push(None);
+                text.push(String::new());
+                marker_sizes.push(0);
+            }
+            x.push(Some(point.x));
+            y.push(point.value.map(|v| v.number()));
+            text.push(point.value.map_or_else(String::new, |value| {
+                format!(
+                    "<b>{}. {}</b><br>{} UTC<br>{}",
+                    index + 1,
+                    escape(&series.label),
+                    point
+                        .at
+                        .to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true),
+                    value.display()
+                )
+            }));
+            // Dense lines omit markers except where an observation has no connected neighbor.
+            let connected_before =
+                previous.is_some_and(|p| p.value.is_some() && !point.has_gap_from(p));
+            let connected_after = series
+                .points
+                .get(point_index + 1)
+                .is_some_and(|p| p.value.is_some() && !p.has_gap_from(point));
+            marker_sizes.push(
+                if point.value.is_some() && (!dense || (!connected_before && !connected_after)) {
+                    tokens::T_CHART_SERIES_POINT_RADIUS.pixels() as usize * 2
+                } else {
+                    0
+                },
+            );
+            previous = Some(point);
         }
-        let distance = |p: &&PlotPoint| {
-            let dx = f64::from(p.position.0) * width / f64::from(WIDTH) - x;
-            let dy = f64::from(p.position.1) * height / f64::from(HEIGHT) - y;
-            dx * dx + dy * dy
-        };
-        let nearest = self
-            .points
-            .iter()
-            .filter(|p| distance(p) <= 64.0)
-            .min_by(|a, b| distance(a).total_cmp(&distance(b)));
-        nearest.map_or_else(Vec::new, |nearest| {
-            self.points
-                .iter()
-                .filter(|p| p.position == nearest.position)
-                .copied()
-                .collect()
+        let markers = marker_sizes.iter().any(|size| *size > 0);
+        let color = css_color(index);
+        figure.add_trace(
+            Scatter::new(x, y)
+                .name(escape(&series.label))
+                .mode(if markers {
+                    Mode::LinesMarkers
+                } else {
+                    Mode::Lines
+                })
+                .connect_gaps(false)
+                .line(
+                    Line::new()
+                        .color(color.clone())
+                        .width(tokens::T_CHART_SERIES_LINE_WIDTH.px())
+                        .simplify(false),
+                )
+                .marker(Marker::new().color(color.clone()).size_array(marker_sizes))
+                .text_array(text)
+                .hover_template("%{text}<extra></extra>")
+                .hover_label(
+                    Label::new()
+                        .align("left")
+                        .background_color(tokens::T_COLOR_SURFACE_TOOLTIP)
+                        .border_color(color)
+                        .font(Font::new().color(tokens::T_COLOR_TEXT_PRIMARY)),
+                ),
+        );
+    }
+    let font = Font::new()
+        .family(tokens::T_CHART_AXIS_LABEL_FONT_FAMILY_CSS)
+        .size(tokens::T_CHART_AXIS_LABEL_FONT_SIZE.pixels() as usize)
+        .color(tokens::T_CHART_AXIS_LABEL_COLOR);
+    let axis = || {
+        Axis::new()
+            .type_(AxisType::Linear)
+            .fixed_range(true)
+            .zero_line(false)
+            .show_line(true)
+            .line_color(tokens::T_CHART_AXIS_LINE_COLOR)
+            .grid_color(tokens::T_CHART_GRID_LINE_COLOR)
+            .tick_font(font.clone())
+    };
+    let ticks = time_ticks(plot);
+    let labels = ticks
+        .iter()
+        .map(|x| {
+            if plot.alignment == Alignment::Utc {
+                let span = plot.x_bounds.1 - plot.x_bounds.0;
+                let format = if span > 180.0 * 86400.0 {
+                    "%b %Y"
+                } else if span > 2.0 * 86400.0 {
+                    "%d %b"
+                } else {
+                    "%d %b %H:%M"
+                };
+                chrono::DateTime::from_timestamp(*x as i64, 0)
+                    .map_or_else(String::new, |t| t.format(format).to_string())
+            } else {
+                plot.alignment.tick(*x)
+            }
         })
-    }
+        .collect();
+    // Leave a small gutter around boundary observations so their markers and
+    // native hover targets are inside the plotting area. Data filtering is unchanged.
+    let x_padding = (plot.x_bounds.1 - plot.x_bounds.0) * tokens::T_CHART_AXIS_X_RANGE_PADDING;
+    let margin = tokens::T_CHART_VIEWPORT_MARGIN.pixels() as usize;
+    figure.set_layout(
+        Layout::new()
+            .auto_size(true)
+            .height(height(plot))
+            .show_legend(false)
+            .font(font.clone())
+            .paper_background_color(tokens::T_COLOR_SURFACE_CHART)
+            .plot_background_color(tokens::T_COLOR_SURFACE_CHART)
+            .margin(
+                Margin::new()
+                    .left(margin + tokens::T_CHART_AXIS_Y_LABEL_AREA.pixels() as usize)
+                    .right(margin)
+                    .top(margin)
+                    .bottom(margin + tokens::T_CHART_AXIS_X_LABEL_AREA.pixels() as usize),
+            )
+            .x_axis(
+                axis()
+                    .range(vec![
+                        plot.x_bounds.0 - x_padding,
+                        plot.x_bounds.1 + x_padding,
+                    ])
+                    .tick_values(ticks)
+                    .tick_text(labels)
+                    .show_spikes(false),
+            )
+            .y_axis(
+                axis()
+                    .range(vec![0.0, (maximum * 1.12).max(1.0)])
+                    .n_ticks(5)
+                    .tick_format(".0f")
+                    .tick_suffix(if metric.is_ratio() { "%" } else { "" }),
+            )
+            .hover_mode(HoverMode::X)
+            .hover_distance(tokens::T_CHART_HOVER_HIT_RADIUS.pixels() as i32),
+    );
+    // Range selection is shared by all charts. Hover remains interactive.
+    figure.set_configuration(
+        Configuration::new()
+            .responsive(true)
+            .display_mode_bar(DisplayModeBar::False)
+            .display_logo(false)
+            .scroll_zoom(false),
+    );
+    figure
 }
 
-pub fn render(plot: &Plot, metric: &Metric) -> Result<RenderedPlot, String> {
-    let mut output = String::new();
-    let mut points = Vec::new();
-    {
-        let root = SVGBackend::with_string(&mut output, (WIDTH, HEIGHT)).into_drawing_area();
-        let maximum = plot
-            .series
-            .iter()
-            .flat_map(|s| &s.points)
-            .filter_map(|p| p.value)
-            .map(|v| v.number())
-            .fold(0.0_f64, f64::max);
-        let mut chart = ChartBuilder::on(&root)
-            .margin(12)
-            .x_label_area_size(52)
-            .y_label_area_size(64)
-            .build_cartesian_2d(
-                TimeAxis((plot.x_bounds.0..plot.x_bounds.1).with_key_points(time_ticks(plot))),
-                0.0..(maximum * 1.12).max(1.0),
-            )
-            .map_err(|e| e.to_string())?;
-        chart
-            .configure_mesh()
-            .x_labels(4)
-            .y_labels(5)
-            .x_label_formatter(&|x| {
-                if plot.alignment == Alignment::Utc {
-                    let span = plot.x_bounds.1 - plot.x_bounds.0;
-                    let format = if span > 180.0 * 86400.0 {
-                        "%b %Y"
-                    } else if span > 2.0 * 86400.0 {
-                        "%d %b"
-                    } else {
-                        "%d %b %H:%M"
-                    };
-                    chrono::DateTime::from_timestamp(*x as i64, 0)
-                        .map_or_else(String::new, |t| t.format(format).to_string())
-                } else {
-                    plot.alignment.tick(*x)
-                }
-            })
-            .y_label_formatter(&|y| {
-                if metric.is_ratio() {
-                    format!("{y:.0}%")
-                } else {
-                    format!("{y:.0}")
-                }
-            })
-            .label_style(
-                ("sans-serif", 14)
-                    .into_font()
-                    .color(&RGBColor(185, 201, 213)),
-            )
-            .axis_style(RGBColor(102, 123, 139))
-            .bold_line_style(RGBColor(59, 76, 88))
-            .light_line_style(TRANSPARENT)
-            .draw()
-            .map_err(|e| e.to_string())?;
-        for (index, series) in plot.series.iter().enumerate() {
-            let color = color(index);
-            // Keep every observation available for hovering, even when dense
-            // series omit visible circles. Exact values stay in the Plot.
-            for (point_index, point) in series.points.iter().enumerate() {
-                if let Some(value) = point.value {
-                    points.push(PlotPoint {
-                        series: index,
-                        point: point_index,
-                        position: chart.as_coord_spec().translate(&(point.x, value.number())),
-                    });
-                }
-            }
-            for segment in series.segments() {
-                chart
-                    .draw_series(LineSeries::new(
-                        segment.iter().copied(),
-                        color.stroke_width(2),
-                    ))
-                    .map_err(|e| e.to_string())?;
-                // Singleton observations remain visible even when every interval is a gap.
-                if series.points.len() <= 200 || segment.len() == 1 {
-                    chart
-                        .draw_series(segment.iter().map(|p| Circle::new(*p, 3, color.filled())))
-                        .map_err(|e| e.to_string())?;
-                }
-            }
-        }
-        root.present().map_err(|e| e.to_string())?;
+#[cfg(target_arch = "wasm32")]
+pub mod browser {
+    use super::*;
+    use leptos::prelude::*;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+    use wasm_bindgen::{JsCast, prelude::*};
+
+    #[wasm_bindgen]
+    extern "C" {
+        #[wasm_bindgen(catch, js_namespace = Plotly, js_name = newPlot)]
+        async fn new_plot(
+            node: &web_sys::HtmlElement,
+            figure: &JsValue,
+        ) -> Result<JsValue, JsValue>;
+        #[wasm_bindgen(catch, js_namespace = Plotly)]
+        fn purge(node: &web_sys::HtmlElement) -> Result<(), JsValue>;
     }
-    Ok(RenderedPlot {
-        svg: output,
-        points,
-    })
+
+    #[component]
+    pub fn InteractivePlot(plot: Arc<Plot>, metric: Metric) -> impl IntoView {
+        let height = format!("{}px", height(&plot));
+        let node = NodeRef::<leptos::html::Div>::new();
+        let error = RwSignal::new(None::<String>);
+        let mounted = StoredValue::new_local(None::<web_sys::HtmlElement>);
+        let disposed = Arc::new(AtomicBool::new(false));
+        let cleanup = disposed.clone();
+        on_cleanup(move || {
+            cleanup.store(true, Ordering::Relaxed);
+            if let Some(node) = mounted.get_value() {
+                let _ = purge(&node);
+            }
+        });
+        let label = format!(
+            "{}; {}. Hover a point or inspect exact values below.",
+            metric.title(),
+            metric.unit()
+        );
+        Effect::new(move |_| {
+            let Some(element) = node.get() else {
+                return;
+            };
+            let element: web_sys::HtmlElement = element.unchecked_into();
+            mounted.set_value(Some(element.clone()));
+            let figure = render(&plot, &metric).to_js_object();
+            let disposed = disposed.clone();
+            leptos::task::spawn_local(async move {
+                let result = new_plot(&element, &figure).await;
+                if disposed.load(Ordering::Relaxed) {
+                    let _ = purge(&element);
+                    return;
+                }
+                match result {
+                    Ok(_) => {
+                        let _ = element.set_attribute("data-ready", "true");
+                    }
+                    Err(reason) => error.set(Some(format!("Chart unavailable: {reason:?}"))),
+                }
+            });
+        });
+        view! {
+            <div class="interactive-plot">
+                <div class="plot" role="img" aria-label=label>
+                    <div class="plot-surface" node_ref=node style:height=height></div>
+                </div>
+                <p class="error" role="alert">{move || error.get()}</p>
+            </div>
+        }
+    }
 }

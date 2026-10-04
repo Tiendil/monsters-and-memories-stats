@@ -17,9 +17,10 @@ Detailed requirements for individual specifications are out of scope except for 
 ## Specification documents
 
 - [intro.md](intro.md) is this file and indexes all specification documents.
-- [dictionary.md](dictionary.md) defines metric and collection terms shared by multiple specifications.
+- [dictionary.md](dictionary.md) defines terms shared by multiple specifications.
 - [meta/general.md](meta/general.md) defines general rules for project specification documents.
 - [requirements.md](requirements.md) records the user requirements and behavioral contracts for current-state collection and historical reporting.
 - [architecture.md](architecture.md) defines the technical design and component boundaries.
+- [design-tokens.md](design-tokens.md) defines the shared presentation token source, format, and use in CSS and chart configuration.
 - [development.md](development.md) defines the agent development process and review checkpoints.
-- [tests.md](tests.md) defines application test coverage, test data conventions, and offline execution rules.
+- [tests.md](tests.md) defines application test coverage, test data conventions, and network access rules.

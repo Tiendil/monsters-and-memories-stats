@@ -2,11 +2,11 @@
 
 ## Goal of the document
 
-This document defines metric and collection terminology shared by project specifications.
+This document defines terminology shared by project specifications.
 
 ## Scope
 
-The dictionary covers domain terms used across the project's historical metrics contracts.
+The dictionary covers domain terms used across the project's collection and dashboard contracts.
 It does not define the upstream counting semantics that the public source leaves unspecified.
 
 ## Collection terms
@@ -25,3 +25,10 @@ It does not define the upstream counting semantics that the public source leaves
 - `WAU` — weekly active count; the project can report this metric only if the source provides a defensible weekly unique-activity count.
 - `active subscriptions` — the global subscription count reported by the source, which is not assumed to count distinct people.
 - `online population` — the concurrent population reported by the source within a stated scope.
+
+## Presentation terms
+
+- `design token` — a named presentation decision stored as data for use by specifications and implementation.
+- `semantic token` — a token named for a stable UI role, such as panel background or warning text.
+- `primitive token` — a palette or scale value that can supply semantic tokens.
+- `token artifact` — the machine-readable source of design token values.

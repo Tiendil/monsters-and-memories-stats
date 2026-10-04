@@ -9,7 +9,8 @@ Run the available deterministic repository checks in order.
 Each failure has a focused repair action; every repair restarts the check sequence so success describes the final files.
 Checks cover Donna and GitHub workflow syntax, Depmesh configuration, Compose and shell syntax, Rust formatting and linting, native behavior tests, browser/build integration, and the release WASM build.
 All checks run locally without project Git operations or hosted workflows.
-Normal build dependency resolution and downloads are allowed; tests use local inputs and services.
+Normal build dependency resolution and downloads are allowed; tests use local metric inputs and must not contact the original statistics service.
+Third-party runtime assets may load from the internet.
 
 ## Validate Donna workflows
 
@@ -279,7 +280,7 @@ kind = "donna.lib.request_action"
 {{ donna.lib.task_variable("test_browser_stderr") }}
 ```
 
-Repair the reported browser, embedded-history, download, or rebuild failure. Use only local test inputs; tool installation is a separate setup step.
+Repair the reported browser, embedded-history, download, or rebuild failure. Use local metric inputs and never contact the original statistics service; third-party runtime assets may load from the internet. Tool installation is a separate setup step.
 After the repair, {{ donna.lib.goto("validate_workflows") }}.
 If an external action is required, leave this request pending and report the concrete blocker.
 

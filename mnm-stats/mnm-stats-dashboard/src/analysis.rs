@@ -407,6 +407,12 @@ pub struct Point {
     pub value: Option<MetricValue>,
 }
 
+impl Point {
+    pub(crate) fn has_gap_from(&self, previous: &Self) -> bool {
+        self.at - previous.at > Duration::hours(2) || self.x - previous.x > 7200.0
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Series {
     pub label: String,
@@ -419,8 +425,7 @@ impl Series {
         let mut segment = Vec::new();
         let mut previous: Option<&Point> = None;
         for point in &self.points {
-            let gap = previous
-                .is_some_and(|p| point.at - p.at > Duration::hours(2) || point.x - p.x > 7200.0);
+            let gap = previous.is_some_and(|p| point.has_gap_from(p));
             if (point.value.is_none() || gap) && !segment.is_empty() {
                 segments.push(std::mem::take(&mut segment));
             }

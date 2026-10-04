@@ -31,6 +31,7 @@ The dashboard MUST be a static website hosted on GitHub Pages.
 ### R5: Application technology
 
 Collector and dashboard application logic MUST be implemented in Rust, using Leptos for the frontend if feasible.
+Third-party chart engines MAY use another language; a Rust API is useful for integration but is not required.
 
 ### R6: Metric coverage
 
@@ -120,11 +121,18 @@ Publishing newly collected observations MUST include rebuilding and deploying th
 The dashboard MUST provide a downloadable JSON file containing all historical data included in that dashboard build.
 The download MUST use the JSON export schema and preserve all observations, independently of the selected time range, entity scope, or comparisons.
 
-### R20: Offline tests
+### R20: Tests without source access
 
 The project MUST include automated tests for the collector, shared data contract, and dashboard as those components are implemented.
-Tests MUST NOT make internet requests, including requests to the public statistics page.
+Tests MUST NOT contact the original statistics service, including its public page and HTTP or WebSocket endpoints.
+Third-party runtime assets MAY be loaded from the internet.
 Tests MUST use local fixtures or synthetic data, with coverage and execution rules defined in [tests.md](tests.md).
+
+### R21: Design tokens
+
+The dashboard MUST use one machine-readable design token source for reusable styles, including CSS and chart presentation.
+Token naming, data format, and consumption MUST follow [design-tokens.md](design-tokens.md).
+Changing a token MUST update every consumer of that role through the supported build and preview commands.
 
 ## Metric interpretation
 
@@ -222,6 +230,8 @@ The last valid dashboard data MUST remain usable after collection failure.
 ## Dashboard behavior
 
 This section records the presentation contract for the collected current-state snapshots.
+
+The dashboard footer MUST credit Plotly with a link to its JavaScript charting library.
 
 The dashboard MUST have an all-servers view and derive its server selector from collected history, including entities present only in historical data.
 It MUST plot the following over time:
@@ -414,8 +424,15 @@ Review of dependencies and a subtraction pass over each component; no unnecessar
 - Downloads work for both populated and valid empty history.
 - Downloads work in local preview and under the GitHub Pages repository subpath without requesting metrics data separately.
 
-### Offline tests (R20)
+### Tests without source access (R20)
 
 - Passing automated suites for the components delivered in the current implementation step.
 - Local source fixtures and synthetic history cover success, failure, and boundary behavior.
-- No live requests or fixture downloads from test setup, execution, or teardown.
+- No requests to the original statistics service or fixture downloads from test setup, execution, or teardown.
+
+### Design tokens (R21)
+
+- CSS and chart presentation derive reusable visual values from the same token artifact.
+- Token-only changes update both outputs with reused build caches and in the running preview.
+- Invalid token data fails the build with a useful diagnostic.
+- Browser verification covers responsive layouts, control states, chart labels, series colors, and hover details after style changes.

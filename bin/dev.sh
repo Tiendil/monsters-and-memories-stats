@@ -9,6 +9,9 @@ mkdir -p .cache/docker/cargo .cache/docker/tools target/docker .session/playwrig
 history="$(realpath -e -- "${MNM_STATS_HISTORY:-data/history.jsonl}")"
 export MNM_STATS_HISTORY_DIR="$(dirname "$history")"
 export MNM_STATS_CONTAINER_HISTORY="/input-history/$(basename "$history")"
+tokens="$(realpath -e -- "${MNM_STATS_TOKENS:-specs/design-tokens.tokens.json}")"
+export MNM_STATS_TOKENS_DIR="$(dirname "$tokens")"
+export MNM_STATS_CONTAINER_TOKENS="/input-tokens/$(basename "$tokens")"
 
 case "${1:-}" in
     setup)

@@ -8,7 +8,7 @@ The workspace provides the Rust HTTP/WebSocket collector, shared history model, 
 - [Requirements](specs/requirements.md)
 - [Architecture](specs/architecture.md)
 - [Development workflow](specs/development.md)
-- [Tests and offline execution](specs/tests.md)
+- [Tests and network access](specs/tests.md)
 - [Source analysis](docs/source-analysis.md)
 - [Sanitized source fixtures](mnm-stats/mnm-stats-collector/tests/fixtures/README.md)
 - [Agent instructions](AGENTS.md)
@@ -48,7 +48,7 @@ To preview existing history:
 
 Pass any existing JSONL file, including one outside the repository. The launcher mounts its parent directory read-only, prints the selected container path and observation count, and watches history changes. `MNM_STATS_HISTORY` remains supported. Without an override, the input is `data/history.jsonl`, which starts empty. Old samples require **All time** if they fall outside the default last 30 days. Missing or invalid inputs fail with diagnostics.
 
-Source and history changes rebuild the preview and reload the browser. Preview output is under `.session/preview/dist/`, separate from release output. To validate history or build release assets:
+Source, history, and design-token changes rebuild the preview and reload the browser. Preview output is under `.session/preview/dist/`, separate from release output. To validate history or build release assets:
 
 ```bash
 ./bin/validate-history.sh
@@ -63,6 +63,18 @@ Release assets go to ignored `dist/`. `MNM_STATS_HISTORY` also selects a differe
 The checked-in `.codex/config.toml` configures Playwright MCP using `bin/playwright-mcp.sh`. After setup, restart the Codex client if necessary and check `/mcp` for `playwright`; project configuration requires a trusted project. The launcher starts a temporary stdio browser container on the same Compose network as the preview. It does not publish an MCP HTTP port or start the dashboard automatically.
 
 Start the preview, then navigate the MCP browser to `http://dashboard:8080/`. This serves the same application as the host URL, including when the host port is overridden. Use MCP to inspect controls, take desktop/mobile screenshots, inspect console errors and network requests, and download the embedded history. Evidence is mounted at `/workspace/.session/playwright` inside the browser and `.session/playwright/` on the host. Stop temporary previews after inspection.
+
+## Styling
+
+[Design tokens](specs/design-tokens.tokens.json) are the shared source for CSS and chart presentation, following the project's [DTCG format profile](specs/design-tokens.md). Edit semantic values there; keep selectors and layout rules in `mnm-stats/mnm-stats-dashboard/style.css`. CSS uses `var(--mnm-...)`; media-query conditions use `token(breakpoint.medium)` so the build can substitute a concrete dimension.
+
+The Rust build validates tokens and aliases, then generates CSS and typed chart values under Cargo's ignored build output. Generated CSS is compiled into WASM and inserted into the page when the application mounts, with no separate stylesheet request. The initial loading message uses browser-default styling until WASM starts. Token data is never fetched at runtime, and generated styles should not be edited. Plotly chart dimensions and font sizes use whole CSS pixels; other CSS dimensions retain their declared `px` or `rem` units.
+
+Rust constructs Plotly figures and exact hover text through Plotly.rs. The page loads Plotly.js basic 3.0.1 from [Plotly's official CDN](https://cdn.plot.ly/plotly-basic-3.0.1.min.js) and credits Plotly in the footer. The script URL in the dashboard's `index.html` pins the version compatible with Plotly.rs 0.14.1; update both together when upgrading. Ordinary previews and deployed charts require access to that CDN.
+
+Browser tests load the same CDN script as previews and deployed pages, so they require access to that CDN. All metric inputs remain local fixtures or synthetic data; tests never contact the original statistics service or refresh source fixtures. The Plotly bundle is not committed or packaged with the site.
+
+Both build and preview commands use the authored token file by default. For an isolated local copy, use `env MNM_STATS_TOKENS=/path/to/tokens.json ./bin/serve-dashboard.sh --demo` (works in Bash and Fish). The launcher mounts its parent directory read-only and watches atomic file replacements. The same variable works with `./bin/build-dashboard.sh`.
 
 ## Dashboard
 
@@ -128,7 +140,9 @@ Native tests cover JSONL validation and exports, collection and history preserva
 
 The notification-probe test uses a local malformed fixture. `check-actions.sh` uses actionlint to check workflow syntax, expressions, and action inputs without running a workflow.
 
-Donna runs these checks locally with focused repair actions, without project Git operations or hosted workflows. Normal build dependency resolution and downloads are allowed; tests use local inputs and services:
+Token tests cover structured values, aliases, invalid inputs, name collisions, and equivalent CSS/Rust output. Browser tests also check computed styles, breakpoints, matching chart/legend/hover colors beyond the explicit palette, cached token-only builds, and preview reloads after token-only atomic replacements. They use isolated token copies and never modify the authored token file.
+
+Donna runs these checks locally with focused repair actions, without project Git operations or hosted workflows. Normal build dependency resolution and downloads are allowed. Tests use local metric inputs and must not contact the original statistics service; third-party runtime assets may load from the internet:
 
 ```bash
 donna -p llm status

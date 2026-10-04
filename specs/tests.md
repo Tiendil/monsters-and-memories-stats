@@ -2,21 +2,22 @@
 
 ## Goal of the document
 
-This document defines required application test coverage, test data conventions, and offline execution rules.
+This document defines required application test coverage, test data conventions, and network access rules.
 
 ## Scope
 
 This specification covers project test code, test data, and test execution during development and CI.
 Production collection and operational verification are outside its scope except for their separation from test execution.
 
-## Offline execution
+## Test network access
 
-Tests MUST NOT make internet requests.
+Tests MUST NOT contact the original statistics service, including its public page and HTTP or WebSocket endpoints.
 This includes optional or ignored tests when explicitly invoked.
-Tests MUST NOT request the public statistics page or any other external service.
 Test setup and teardown MUST follow the same restriction and MUST NOT download or refresh fixtures.
+Metric inputs MUST come from local fixtures or synthetic data.
 
 Local loopback and project-local Compose network connections MAY be used for fixture servers and dashboard previews.
+Tests MAY load third-party runtime assets from the internet, including the dashboard's pinned Plotly script from its CDN.
 
 Installing toolchains, dependencies, and browser binaries MAY use the internet; this is separate from test execution and MUST NOT fetch source metrics or refresh fixtures.
 Missing local test inputs MUST produce an explicit failure instead of triggering a download.
@@ -96,11 +97,15 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 
 ### Dashboard integration
 
-Automated browser tests MUST run against a locally built dashboard with embedded test history and locally available assets.
-They MUST cover:
+Automated browser tests MUST run against a locally built dashboard with embedded test history.
+They MUST use the same chart-engine URL and asset-loading behavior as ordinary builds and previews.
+
+Browser coverage MUST include:
 
 - Rendering and exact-value inspection for the supported metric families.
-- Mouse hover details with exact counts, ratio numerators and denominators, series identity, and original UTC timestamps, including comparison plots, overlapping points, and scaled or horizontally scrolled charts.
+- Mouse hover details with exact counts, ratio numerators and denominators, series identity, and original UTC timestamps, including comparison plots, overlapping points, and resized or horizontally scrolled charts.
+- Native chart hover on dense series without visible point markers.
+- Chart-engine loading from the pinned CDN URL at both root and subpath URLs, and successful chart initialization after selection changes.
 - Clearing hover details when leaving a plot or changing selections, without showing values inside gaps or for unavailable observations.
 - Range selection and server selection, including historical servers.
 - Unavailable metrics and empty or invalid data states.
@@ -118,11 +123,31 @@ These tests MUST verify preserved observations without depending on a particular
 Invalid JSONL history MUST fail the build without silently omitting records.
 The downloaded `history.json` MUST be a valid JSON document matching the complete embedded history and preserving every observation from the build's JSONL input.
 
+### Design tokens
+
+Token tests MUST use local token fixtures and the project's authored artifact, following [design-tokens.md](design-tokens.md).
+They MUST cover:
+
+- Supported structured values and inherited token types.
+- Semantic aliases and chained resolution.
+- Missing references, cycles, type mismatches, unsupported format features, and invalid values.
+- CSS and Rust name collisions and diagnostics identifying the offending token path.
+- Deterministic generation and equivalent CSS and Rust values, including color alpha and dimension units.
+- Build-time breakpoint resolution into usable CSS media queries.
+- A token-only change updating CSS and chart values when build caches are reused.
+- Shared series colors across SVG charts, legend swatches, and hover-label borders, including comparisons beyond the explicit palette length.
+
+Build and preview integration tests MUST use isolated token inputs and MUST NOT edit the project's authored artifact.
+Browser coverage MUST verify representative computed styles, responsive behavior, and chart presentation from token values, alongside the existing dashboard interaction checks.
+It MUST verify that styling is available after application initialization without a separate stylesheet request.
+Invalid token input MUST fail the build rather than silently reuse previous generated values.
+
 ### Local preview
 
 Browser integration tests MUST exercise the supported preview launcher as well as release assets.
 They MUST verify explicit history selection, populated charts, and complete JSON downloads.
 A history-only change outside the dashboard crate MUST trigger a rebuild and update the running page without restarting the preview.
+A token-only change outside the dashboard crate MUST also rebuild the preview and update both CSS and chart presentation without restarting it.
 Coverage MUST include valid empty history, invalid input diagnostics, and changing between demo and ordinary history without retaining the previous dataset.
 Demo generation MUST be checked using a fixed timestamp; interactive demos MAY use the current time.
 Browser inspection through MCP MUST use local synthetic data or existing local history and MUST NOT refresh source fixtures.
@@ -139,7 +164,7 @@ Regression fixes to covered behavior MUST include a test that demonstrates the c
 Tests run locally and in CI MUST follow the same rules for local data and internet requests.
 Required suites MUST run through Donna polish once their implementation exists.
 Missing or skipped required tests MUST NOT be reported as passing coverage.
-Test reports MUST identify failed cases and the relevant local inputs without relying on live service responses.
+Test reports MUST identify failed cases and the relevant local inputs without relying on responses from the original statistics service.
 
 Live source investigation and GitHub deployment or notification verification MUST remain separate operational activities outside test commands and recurring test jobs.
 Those activities MAY contact live services when needed for an approved delivery step; they MUST NOT become test-suite prerequisites or automatic fixture-refresh hooks.

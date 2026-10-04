@@ -356,7 +356,7 @@ fn lines_break_on_missing_values_long_intervals_and_absent_calendar_dates() {
 }
 
 #[test]
-fn svg_plots_zero_and_singleton_observations_without_inventing_lines() {
+fn plotly_keeps_zero_and_singleton_observations() {
     let history = History::new(vec![snapshot("2024-01-01T00:00:00Z", 0, 0, 0)]).unwrap();
     let plot = plot(
         &history,
@@ -367,50 +367,67 @@ fn svg_plots_zero_and_singleton_observations_without_inventing_lines() {
         &Comparison::None,
     )
     .unwrap();
-    let svg = mnm_stats_dashboard::charts::render(&plot, &Metric::Daily)
-        .unwrap()
-        .svg;
-    assert!(svg.contains("<svg"));
-    assert!(svg.contains("<circle"));
-    assert!(!svg.contains("NaN"));
+    let figure: serde_json::Value =
+        serde_json::from_str(&mnm_stats_dashboard::charts::render(&plot, &Metric::Daily).to_json())
+            .unwrap();
+    assert_eq!(figure["data"][0]["y"], serde_json::json!([0.0]));
+    assert_eq!(figure["data"][0]["mode"], "lines+markers");
+    assert!(
+        figure["data"][0]["text"][0]
+            .as_str()
+            .unwrap()
+            .contains("2024-01-01T00:00:00Z UTC")
+    );
 }
 
 #[test]
-fn hovering_uses_displayed_distance_and_keeps_coincident_series() {
-    use mnm_stats_dashboard::charts::{PlotPoint, RenderedPlot};
-    let points = vec![
-        PlotPoint {
-            series: 0,
-            point: 2,
-            position: (100, 50),
-        },
-        PlotPoint {
-            series: 1,
-            point: 3,
-            position: (100, 50),
-        },
-        PlotPoint {
-            series: 2,
-            point: 4,
-            position: (104, 50),
-        },
-    ];
-    let chart = RenderedPlot {
-        svg: String::new(),
-        points: points.clone(),
+fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
+    let start = time("2024-02-01T00:00:00.123Z");
+    let plot = Plot {
+        series: vec![Series {
+            label: "Alpha <island> & West".into(),
+            points: vec![
+                Point {
+                    at: start,
+                    x: 0.0,
+                    value: Some(MetricValue::Count(9007199254740993)),
+                },
+                Point {
+                    at: start + Duration::hours(1),
+                    x: 3600.0,
+                    value: None,
+                },
+                Point {
+                    at: start + Duration::hours(5),
+                    x: 18000.0,
+                    value: Some(MetricValue::Count(7)),
+                },
+            ],
+        }],
+        alignment: Alignment::Month,
+        x_bounds: (0.0, 86400.0),
+        note: String::new(),
     };
-    // Two-times scaling: the third point is near the pointer, but not nearest.
-    assert_eq!(chart.nearby(201.0, 100.0, 1280.0, 560.0), points[..2]);
-    assert_eq!(chart.nearby(208.0, 100.0, 1280.0, 560.0), points[2..]);
-    // Half-size scaling still uses an eight CSS-pixel target.
-    assert_eq!(chart.nearby(50.0, 32.0, 320.0, 140.0), points[..2]);
-    assert!(chart.nearby(50.0, 34.0, 320.0, 140.0).is_empty());
-    assert!(chart.nearby(300.0, 100.0, 640.0, 280.0).is_empty());
-    assert!(chart.nearby(0.0, 0.0, 0.0, 0.0).is_empty());
+    let figure: serde_json::Value =
+        serde_json::from_str(&mnm_stats_dashboard::charts::render(&plot, &Metric::Daily).to_json())
+            .unwrap();
+    let series = &figure["data"][0];
+    assert_eq!(series["connectgaps"], false);
+    assert_eq!(series["x"], serde_json::json!([0.0, 3600.0, null, 18000.0]));
+    assert!(series["y"][1].is_null() && series["y"][2].is_null());
+    let text = series["text"][0].as_str().unwrap();
+    assert!(text.contains("Alpha &lt;island&gt; &amp; West"));
+    assert!(text.contains("2024-02-01T00:00:00.123Z UTC"));
+    assert!(
+        text.contains("9007199254740993"),
+        "exact hover text must survive JS numeric rounding"
+    );
+    assert_eq!(series["text"][1], "");
+    assert_eq!(series["text"][2], "");
 }
 
 #[test]
-fn dense_plots_keep_hover_targets_without_fabricating_unavailable_values() {
+fn dense_plots_keep_every_observation_for_hover() {
     let start = time("2024-01-01T00:00:00Z");
     let plot = Plot {
         series: vec![Series {
@@ -427,24 +444,65 @@ fn dense_plots_keep_hover_targets_without_fabricating_unavailable_values() {
         x_bounds: (0.0, 201.0 * 3600.0),
         note: String::new(),
     };
-    let chart = mnm_stats_dashboard::charts::render(&plot, &Metric::Daily).unwrap();
-    assert!(
-        !chart.svg.contains("<circle"),
-        "dense lines omit visible markers"
+    let figure: serde_json::Value =
+        serde_json::from_str(&mnm_stats_dashboard::charts::render(&plot, &Metric::Daily).to_json())
+            .unwrap();
+    let series = &figure["data"][0];
+    assert_eq!(series["mode"], "lines");
+    assert_eq!(series["x"].as_array().unwrap().len(), 201);
+    assert_eq!(
+        series["y"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|v| !v.is_null())
+            .count(),
+        200
     );
-    assert_eq!(chart.points.len(), 200);
-    assert!(chart.points.iter().all(|p| p.point != 100));
-    for index in [0, 99, 101, 200] {
-        let point = chart.points.iter().find(|p| p.point == index).unwrap();
-        assert!(
-            chart
-                .nearby(
-                    f64::from(point.position.0),
-                    f64::from(point.position.1),
-                    640.0,
-                    280.0
-                )
-                .contains(point)
-        );
-    }
+    assert!(series["y"][100].is_null());
+    assert!(
+        series["text"][200]
+            .as_str()
+            .unwrap()
+            .contains("2024-01-09T08:00:00Z UTC<br>200")
+    );
+}
+
+#[test]
+fn dense_history_keeps_isolated_observations_visible() {
+    let start = time("2024-01-01T00:00:00Z");
+    let plot = Plot {
+        series: vec![Series {
+            label: "Sparse history".into(),
+            points: (0..201)
+                .map(|i| Point {
+                    at: start + Duration::hours(i * 3),
+                    x: (i * 10800) as f64,
+                    value: Some(MetricValue::Count(i as u128)),
+                })
+                .collect(),
+        }],
+        alignment: Alignment::Elapsed,
+        x_bounds: (0.0, 201.0 * 10800.0),
+        note: String::new(),
+    };
+    let figure: serde_json::Value =
+        serde_json::from_str(&mnm_stats_dashboard::charts::render(&plot, &Metric::Daily).to_json())
+            .unwrap();
+    let series = &figure["data"][0];
+    assert_eq!(series["mode"], "lines+markers");
+    let sizes = series["marker"]["size"].as_array().unwrap();
+    assert_eq!(
+        sizes.iter().filter(|n| n.as_u64().unwrap() > 0).count(),
+        201
+    );
+    assert_eq!(
+        series["x"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|x| x.is_null())
+            .count(),
+        200
+    );
 }

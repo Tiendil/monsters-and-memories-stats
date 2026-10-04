@@ -2,6 +2,7 @@
 set -euo pipefail
 project_root="$(cd "$(dirname "$0")/.." && pwd)"
 history="${MNM_STATS_HISTORY:-$project_root/data/history.jsonl}"
+tokens="${MNM_STATS_TOKENS:-$project_root/specs/design-tokens.tokens.json}"
 demo=0
 explicit_history=0
 args=()
@@ -28,6 +29,7 @@ if [[ ! "${MNM_STATS_PORT:-8080}" =~ ^[1-9][0-9]{0,4}$ ]] || (( ${MNM_STATS_PORT
     echo "--port must be between 1 and 65535." >&2; exit 2
 fi
 history="$(realpath -e -- "$history")"
+tokens="$(realpath -e -- "$tokens")"
 cd "$project_root"
 if [[ "${MNM_STATS_CONTAINER:-}" != 1 ]]; then
     if ! docker image inspect mnm-stats-dev:local >/dev/null 2>&1; then
@@ -36,6 +38,8 @@ if [[ "${MNM_STATS_CONTAINER:-}" != 1 ]]; then
     export MNM_STATS_UID="$(id -u)" MNM_STATS_GID="$(id -g)"
     export MNM_STATS_HISTORY_DIR="$(dirname "$history")"
     export MNM_STATS_CONTAINER_HISTORY="/input-history/$(basename "$history")"
+    export MNM_STATS_TOKENS_DIR="$(dirname "$tokens")"
+    export MNM_STATS_CONTAINER_TOKENS="/input-tokens/$(basename "$tokens")"
     mkdir -p .cache/docker/cargo .cache/docker/tools target/docker .session/preview
     printf 'Preview: http://127.0.0.1:%s/\n' "${MNM_STATS_PORT:-8080}"
     echo "Browser MCP: http://dashboard:8080/"
@@ -59,6 +63,7 @@ if (( demo )); then
     mv "$history.tmp" "$history"
 fi
 export MNM_STATS_HISTORY="$history"
+export MNM_STATS_TOKENS="$tokens"
 printf 'History: %s\n' "$history"
 ./bin/validate-history.sh "$history"
 cd mnm-stats/mnm-stats-dashboard
@@ -69,4 +74,4 @@ exec env -u NO_COLOR TRUNK_BUILD_DIST="$project_root/.session/preview/dist" trun
     --address 0.0.0.0 --port "${MNM_STATS_PORT:-8080}" \
     --poll --poll-interval 1s \
     --watch "$project_root/mnm-stats" --watch "$project_root/Cargo.toml" \
-    --watch "$project_root/Cargo.lock" --watch "$history" "${args[@]}"
+    --watch "$project_root/Cargo.lock" --watch "$history" --watch "$tokens" "${args[@]}"
