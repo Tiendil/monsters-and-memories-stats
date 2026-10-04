@@ -944,12 +944,12 @@ impl Browser {
         assert_eq!(
             self.computed("html", "background-color"),
             if changed {
-                "rgb(25, 30, 35)"
+                "rgb(231, 229, 228)"
             } else {
-                "rgb(244, 240, 231)"
+                "rgb(245, 245, 244)"
             }
         );
-        assert_eq!(self.computed(".chart-card", "border-radius"), "10.4px");
+        assert_eq!(self.computed(".chart-card", "border-radius"), "12px");
         assert_eq!(
             self.computed(".metric-description", "font-size"),
             if changed { "16px" } else { "14px" }
@@ -968,17 +968,17 @@ impl Browser {
         let size: f64 = size.strip_suffix("px").unwrap().parse().unwrap();
         assert!((size - if changed { 18.0 } else { 14.0 }).abs() < 0.001);
         let color = if changed {
-            "rgba(204, 102, 51, 0.5)"
+            "rgb(159, 45, 0)"
         } else {
-            "rgb(23, 110, 112)"
+            "rgb(0, 120, 111)"
         };
         assert_eq!(
             self.computed("[data-metric='daily'] .scatterlayer .point", "fill"),
-            if changed { "rgb(204, 102, 51)" } else { color }
+            color
         );
         assert_eq!(
             self.computed("[data-metric='daily'] .scatterlayer .point", "fill-opacity"),
-            if changed { "0.5" } else { "1" }
+            "1"
         );
         self.hover("[data-metric='daily'] .scatterlayer .point");
         assert_eq!(
@@ -1359,7 +1359,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     browser.verify_token_styles(true);
     let previous_tokens_site = fs::read(scratch.join("site/mnm/index.html")).unwrap();
     let mut invalid = changed;
-    invalid["chart"]["series"]["palette"]["01"]["$value"]["alpha"] = json!(2);
+    invalid["chart"]["series"]["palette"]["01"]["$value"] = json!("{tailwind.color.absent.700}");
     fs::write(&tokens, invalid.to_string()).unwrap();
     build_with_tokens(
         &root,
@@ -1401,16 +1401,14 @@ fn changed_tokens(root: &Path) -> Value {
             .unwrap(),
     )
     .unwrap();
-    tokens["color"]["surface"]["page"]["$value"]["components"] =
-        json!([25.0 / 255.0, 30.0 / 255.0, 35.0 / 255.0]);
-    tokens["chart"]["series"]["palette"]["01"]["$value"]["components"] = json!([0.8, 0.4, 0.2]);
-    tokens["chart"]["series"]["palette"]["01"]["$value"]["alpha"] = json!(0.5);
+    tokens["color"]["surface"]["page"]["$value"] = json!("{tailwind.color.stone.200}");
+    tokens["chart"]["series"]["palette"]["01"]["$value"] = json!("{tailwind.color.orange.800}");
     tokens["chart"]["axis"]["label"]["font-size"]["$value"]["value"] = json!(18);
     tokens["breakpoint"]["medium"]["$value"]["value"] = json!(900);
     // Shared primitives update their aliases; an input-only override stays local.
-    tokens["scale"]["spacing"]["3"]["$value"]["value"] = json!(1);
-    tokens["scale"]["font-size"]["2"]["$value"]["value"] = json!(1);
-    tokens["spacing"]["input"]["padding"]["$value"] = json!({"value":0.5,"unit":"rem"});
+    tokens["scale"]["spacing"]["3"]["$value"] = json!("{tailwind.spacing.4}");
+    tokens["scale"]["font-size"]["2"]["$value"] = json!("{tailwind.text.base}");
+    tokens["spacing"]["input"]["padding"]["$value"] = json!("{tailwind.spacing.2}");
     tokens
 }
 

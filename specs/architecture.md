@@ -70,7 +70,8 @@ This keeps the displayed data and downloaded history tied to the same frontend b
 ### Design tokens
 
 The dashboard owns the presentation contract defined in [design-tokens.md](design-tokens.md), including the machine-readable token artifact in the dashboard crate.
-Rust build tooling MUST validate that artifact and generate both CSS custom properties and typed values for Plotly figure configuration from one resolved token set.
+The token artifact MUST select palette and shared style values from Tailwind's pinned default theme through the import convention in the token specification.
+Rust build tooling MUST resolve the theme references, validate the artifact, and generate CSS custom properties, typed values for Plotly figure configuration, and a self-contained DTCG document from one resolved token set.
 This keeps browser styles and chart presentation consistent without introducing a separate runtime styling service.
 Generation MUST use the project's supported DTCG profile and existing Cargo/Trunk build flow.
 Handwritten CSS MUST retain selectors and layout rules, with token references supplying reusable presentation values.
@@ -171,6 +172,8 @@ The application uses the following libraries and build tools:
 - `plotly` (Plotly.rs) — typed Rust figure configuration and serialization.
 - Plotly.js basic bundle — browser rendering and hover interaction, loaded from the CDN at a version supported by the Rust wrapper.
 - Trunk — Rust/WASM asset builds and local preview.
+- Tailwind CSS default theme — pinned upstream palette and shared style values, installed in the development image for build-time token resolution.
+- `cssparser` and `csscolorparser` — build-time CSS theme parsing and color conversion for the token adapter.
 
 The application MUST contain no handwritten JavaScript/TypeScript logic; generated WASM glue and third-party build/runtime internals are acceptable supporting artifacts.
 The following supporting formats are needed for packaging and orchestration:

@@ -14,9 +14,12 @@ Screen composition, metric semantics, and collection behavior are outside its sc
 Shared token terminology is defined in the [project dictionary](dictionary.md#presentation-terms).
 
 `mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json` MUST be the single authored source for reusable dashboard presentation values.
-It MUST use the [Design Tokens Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/), with the project profile defined below.
+It MUST use the structure and types of the [Design Tokens Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/), with the project profile and Tailwind theme import convention defined below.
 The dashboard MUST consume generated representations of that artifact in both CSS and chart configuration.
 Generated representations MUST NOT be edited by hand or committed as another source of token values.
+[Tailwind's published default theme](https://tailwindcss.com/docs/theme) MUST supply the palette and shared style scales; the authored artifact MUST select their use through semantic aliases rather than copy their numeric values.
+Tailwind MUST be a pinned build dependency, with its theme and license installed during development-environment setup.
+The build MUST use the installed theme without fetching it during token generation.
 Visual roles and their use in the dashboard MUST follow [dashboard-design.md](dashboard-design.md); the token artifact supplies their reusable values.
 
 Specifications SHOULD refer to semantic token names when they need to identify presentation roles, so changes to a value do not require repeating that value in prose.
@@ -55,7 +58,7 @@ Shared spacing and font-size scales MUST be organized under `scale`, with semant
 Consumers MUST use semantic roles rather than reference scale entries directly.
 Scales SHOULD use a small, ordered set of values to make spacing and typography consistent; a distinct value MAY be retained when its presentation role requires it.
 Text colors SHOULD express shared emphasis roles, with separate roles for interaction and data states when needed for clarity.
-Additional primitive palettes MAY be introduced for intentionally shared color decisions.
+Additional primitive palettes MAY be introduced for intentionally shared color decisions, with entries referring to Tailwind colors.
 Equal values with unrelated meanings MAY remain separate tokens; numerical equality alone MUST NOT make two roles share one token.
 Component-specific tokens MUST NOT be reused for unrelated components solely because their current values match.
 Independent roles that share a scale value MUST alias the common scale entry rather than alias one another.
@@ -79,6 +82,37 @@ Token categories MUST cover the reusable presentation decisions used by the dash
 Categories MUST describe dashboard roles rather than source server names or a fixed entity roster.
 Unused categories or tokens MUST NOT be added solely for hypothetical features.
 
+## Tailwind theme references
+
+The `tailwind` namespace MUST be reserved for values imported from the pinned upstream `theme.css`.
+The authored token document MUST NOT define that namespace or maintain a copied Tailwind palette.
+References MUST use these mappings:
+
+- `{tailwind.color.stone.50}` selects `--color-stone-50`; the same naming rule applies to other palette entries and unshaded colors such as `{tailwind.color.white}`.
+- `{tailwind.spacing.4}` selects four times the theme's `--spacing` base; spacing steps MUST be nonnegative integers.
+- `{tailwind.text.sm}` selects `--text-sm` as a font-size dimension.
+- `{tailwind.font.sans}` selects `--font-sans` as an ordered font-family list.
+- `{tailwind.font-weight.medium}` selects `--font-weight-medium` as a numeric weight.
+- `{tailwind.leading.normal}` selects `--leading-normal` as a unitless line height.
+- `{tailwind.radius.md}` selects `--radius-md` as a dimension.
+
+Authored palette entries MUST use Tailwind references, directly or through semantic aliases.
+Shared spacing, font sizes, weights, and radii SHOULD use Tailwind references to keep the design on common scales.
+Custom values MAY express roles not supplied by the theme, including the display font, responsive layout constraints, and chart geometry.
+A custom value MUST NOT duplicate a theme value merely to avoid referencing it.
+
+Ordinary semantic aliases MUST be able to resolve through Tailwind references.
+Imported values MUST retain their types, and missing references, unsupported values, and type mismatches MUST fail with the affected semantic token path.
+The importer MUST read theme declarations without treating animation keyframes or other CSS rules as theme values.
+Only referenced theme values need to be supported or emitted.
+
+**Example:** `color.text.accent` can use `{"$value":"{tailwind.color.orange.800}"}` while retaining its inherited `color` type and role description.
+Changing that reference selects another upstream color for every consumer of the semantic role.
+
+**Compatibility:** Importing Tailwind through the reserved namespace is a project source-composition convention, not a reference feature defined by DTCG.
+The build emits a self-contained resolved DTCG document alongside CSS and Rust output for exchange and inspection.
+Tailwind supplies values; authored CSS continues to own selectors and layout without a Tailwind utility-class compilation step.
+
 ## Format profile
 
 Each token MUST contain `$value` and `$description`, with its type supplied by an explicit token or inherited group `$type`.
@@ -86,7 +120,7 @@ Groups whose descendants share a type SHOULD declare that `$type` once so repeat
 Mixed groups MAY override an inherited type where needed.
 The supported value types MUST be:
 
-- `color`, using structured sRGB components and optional alpha under the [Color Module 2025.10](https://www.designtokens.org/tr/2025.10/color/).
+- `color`, resolved to structured sRGB components and optional alpha under the [Color Module 2025.10](https://www.designtokens.org/tr/2025.10/color/).
 - `dimension`, using numeric `value` and `unit`, limited to `px` or `rem`.
 - `fontFamily`, using an ordered array of family names.
 - `fontWeight`, using a numeric weight.
@@ -94,14 +128,14 @@ The supported value types MUST be:
 - `shadow`, using structured shadow values.
 
 Colors, dimensions, and shadows MUST NOT be encoded as CSS strings.
-Aliases MUST use complete, same-document token references such as `{color.surface.panel}`.
+Aliases MUST use complete token references such as `{color.surface.panel}`, targeting the authored document or imported `tailwind` namespace.
 The build MUST resolve chained aliases and reject missing targets, cycles, and type mismatches.
-The artifact MUST NOT use external references, group inheritance through `$extends`, or other reference forms outside this profile.
+The artifact MUST NOT use arbitrary external references, group inheritance through `$extends`, or other reference forms outside this profile.
 
 This profile limits the project's authored token documents; the build adapter is not required to be a general-purpose implementation of every DTCG feature.
 Unsupported format features MUST fail with a diagnostic rather than be silently omitted or emitted as invalid CSS.
 
-**Example:** A scale entry is written as `{"$type":"dimension","$value":{"value":1.5,"unit":"rem"},"$description":"Sixth step of the shared spacing scale."}`.
+**Example:** A scale entry is written as `{"$type":"dimension","$value":"{tailwind.spacing.6}","$description":"Sixth step of the shared spacing scale."}`.
 A semantic alias can use `{"$type":"dimension","$value":"{scale.spacing.6}","$description":"Inner padding of panels containing controls or explanatory content."}`.
 
 Unitless ratios MAY be combined with CSS units in consumer expressions when the intended CSS unit is outside the dimension profile.
@@ -136,6 +170,9 @@ It MUST NOT maintain a separate handwritten palette or copies of token values.
 Chart lines, legend swatches, and hover-label borders MUST use the same series-color selection for the same series.
 Chart font and dimension conversion MUST preserve the declared units; CSS-relative dimensions MUST NOT silently become fixed pixels.
 Plotly configuration MUST receive resolved colors and pixel dimensions from generated Rust values; it need not read CSS custom properties at runtime.
+The build MUST convert Tailwind's CSS colors, including OKLCH values, into the same bounded sRGB representation for both CSS and Plotly.
+This conversion SHOULD use a maintained color-parsing library so CSS color syntax and conversion behavior do not require a separate project implementation.
+Conversion to sRGB MUST remain a generated representation, not become the authored palette.
 Dimensions consumed through whole-pixel Plotly.rs APIs MUST reject fractional pixel values rather than truncate them.
 Native chart-library layout details without an authored override MUST NOT have unused tokens.
 
@@ -152,7 +189,8 @@ The frontend MUST NOT fetch the token artifact at runtime.
 
 Invalid tokens or values that cannot be represented by their consumers MUST fail the build with the affected token path and reason.
 Generation MUST reject unresolved aliases and output-name collisions before packaging dashboard assets.
-CSS and Rust outputs in one dashboard build MUST derive from the same token input.
+CSS, Rust, and resolved DTCG outputs in one dashboard build MUST derive from the same token input and pinned theme.
+The resolved DTCG document MUST contain concrete values without unresolved aliases or Tailwind references.
 
 ## Accessibility
 

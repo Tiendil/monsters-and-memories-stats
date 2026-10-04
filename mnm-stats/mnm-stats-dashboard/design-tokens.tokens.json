@@ -3,110 +3,65 @@
     "$type": "dimension",
     "spacing": {
       "1": {
-        "$value": {
-          "value": 0.25,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.1}",
         "$description": "Spacing scale step 1; semantic padding and separation roles select from this scale."
       },
       "2": {
-        "$value": {
-          "value": 0.5,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.2}",
         "$description": "Spacing scale step 2; semantic padding and separation roles select from this scale."
       },
       "3": {
-        "$value": {
-          "value": 0.75,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.3}",
         "$description": "Spacing scale step 3; semantic padding and separation roles select from this scale."
       },
       "4": {
-        "$value": {
-          "value": 1.0,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.4}",
         "$description": "Spacing scale step 4; semantic padding and separation roles select from this scale."
       },
       "5": {
-        "$value": {
-          "value": 1.25,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.5}",
         "$description": "Spacing scale step 5; semantic padding and separation roles select from this scale."
       },
       "6": {
-        "$value": {
-          "value": 1.5,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.6}",
         "$description": "Spacing scale step 6; semantic padding and separation roles select from this scale."
       },
       "8": {
-        "$value": {
-          "value": 2.0,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.8}",
         "$description": "Spacing scale step 8; semantic padding and separation roles select from this scale."
       },
       "10": {
-        "$value": {
-          "value": 2.5,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.10}",
         "$description": "Spacing scale step 10; semantic padding and separation roles select from this scale."
       },
       "12": {
-        "$value": {
-          "value": 3.0,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.12}",
         "$description": "Spacing scale step 12; semantic padding and separation roles select from this scale."
       }
     },
     "font-size": {
       "1": {
-        "$value": {
-          "value": 0.75,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.text.xs}",
         "$description": "Type scale step 1, ordered from captions to section headings; use through a semantic font-size role."
       },
       "2": {
-        "$value": {
-          "value": 0.875,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.text.sm}",
         "$description": "Type scale step 2, ordered from captions to section headings; use through a semantic font-size role."
       },
       "3": {
-        "$value": {
-          "value": 1,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.text.base}",
         "$description": "Type scale step 3, ordered from captions to section headings; use through a semantic font-size role."
       },
       "4": {
-        "$value": {
-          "value": 1.125,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.text.lg}",
         "$description": "Type scale step 4, ordered from captions to section headings; use through a semantic font-size role."
       },
       "5": {
-        "$value": {
-          "value": 1.25,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.text.xl}",
         "$description": "Type scale step 5, ordered from captions to section headings; use through a semantic font-size role."
       },
       "6": {
-        "$value": {
-          "value": 1.5,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.text.2xl}",
         "$description": "Type scale step 6, ordered from captions to section headings; use through a semantic font-size role."
       }
     }
@@ -115,39 +70,15 @@
     "$type": "color",
     "surface": {
       "page": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.956863,
-            0.941176,
-            0.905882
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.100}",
         "$description": "Canvas behind all dashboard content."
       },
       "input": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            1.0,
-            0.992157,
-            0.972549
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.50}",
         "$description": "Background of editable fields and selection controls."
       },
       "panel": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            1.0,
-            0.992157,
-            0.972549
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.50}",
         "$description": "Background of panels containing controls or explanatory content."
       },
       "chart": {
@@ -155,77 +86,29 @@
         "$description": "Background of chart cards, matching the shared panel surface."
       },
       "tooltip": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            1.0,
-            0.992157,
-            0.972549
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.50}",
         "$description": "Background of exact-value hover details, matching the input surface."
       }
     },
     "text": {
       "primary": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.160784,
-            0.160784,
-            0.137255
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.800}",
         "$description": "Default text on dashboard surfaces."
       },
       "secondary": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.333333,
-            0.333333,
-            0.294118
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.600}",
         "$description": "Supporting text and control labels with less emphasis than primary text."
       },
       "muted": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.384314,
-            0.384314,
-            0.345098
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.600}",
         "$description": "Low-emphasis notes, captions, and supplementary explanations."
       },
       "accent": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.541176,
-            0.262745,
-            0.117647
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.orange.800}",
         "$description": "Emphasized metric values, small headings, and units."
       },
       "link": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.521569,
-            0.239216,
-            0.090196
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.orange.800}",
         "$description": "Text of navigable links and expandable exact-value details."
       },
       "range-summary": {
@@ -233,27 +116,11 @@
         "$description": "Summary of the selected time interval and observation count, using supporting-text emphasis."
       },
       "stale": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.529412,
-            0.258824,
-            0.101961
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.orange.800}",
         "$description": "Text indicating that the newest collected observation is stale."
       },
       "error": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.678431,
-            0.160784,
-            0.160784
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.red.700}",
         "$description": "Validation errors and alert text on dashboard surfaces."
       },
       "unavailable": {
@@ -265,181 +132,69 @@
       "primary": {
         "background": {
           "default": {
-            "$value": {
-              "colorSpace": "srgb",
-              "components": [
-                0.529412,
-                0.25098,
-                0.109804
-              ],
-              "alpha": 1
-            },
+            "$value": "{tailwind.color.orange.800}",
             "$description": "Resting background of primary buttons and related controls."
           },
           "hover": {
-            "$value": {
-              "colorSpace": "srgb",
-              "components": [
-                0.411765,
-                0.188235,
-                0.078431
-              ],
-              "alpha": 1
-            },
+            "$value": "{tailwind.color.orange.900}",
             "$description": "Background of primary controls while hovered."
           }
         },
         "text": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              1.0,
-              1.0,
-              1.0
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.white}",
           "$description": "Foreground on primary control backgrounds."
         }
       },
       "secondary": {
         "background": {
           "default": {
-            "$value": {
-              "colorSpace": "srgb",
-              "components": [
-                1.0,
-                0.992157,
-                0.972549
-              ],
-              "alpha": 1
-            },
+            "$value": "{tailwind.color.stone.50}",
             "$description": "Resting background of secondary buttons and related controls."
           },
           "hover": {
-            "$value": {
-              "colorSpace": "srgb",
-              "components": [
-                0.92549,
-                0.898039,
-                0.843137
-              ],
-              "alpha": 1
-            },
+            "$value": "{tailwind.color.stone.200}",
             "$description": "Background of secondary controls while hovered."
           }
         },
         "text": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.219608,
-              0.223529,
-              0.184314
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.stone.700}",
           "$description": "Foreground on secondary control backgrounds."
         }
       }
     },
     "border": {
       "control": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.533333,
-            0.521569,
-            0.466667
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.500}",
         "$description": "Boundary of outlined buttons and selected comparison chips."
       },
       "input": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.533333,
-            0.521569,
-            0.466667
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.500}",
         "$description": "Boundary of editable fields and selection controls."
       },
       "section": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.788235,
-            0.760784,
-            0.698039
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.300}",
         "$description": "Separator between major page sections."
       },
       "panel": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.839216,
-            0.811765,
-            0.752941
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.300}",
         "$description": "Boundary of panel surfaces and subdivisions within them, including table rows."
       },
       "fieldset": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.788235,
-            0.760784,
-            0.698039
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.300}",
         "$description": "Boundary of grouped comparison choices."
       },
       "unavailable": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.533333,
-            0.521569,
-            0.466667
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.stone.500}",
         "$description": "Dashed boundary of an unavailable-chart notice."
       },
       "correlation": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.607843,
-            0.317647,
-            0.160784
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.orange.700}",
         "$description": "Accent rule beside a correlation result."
       }
     },
     "outline": {
       "focus": {
-        "$value": {
-          "colorSpace": "srgb",
-          "components": [
-            0.090196,
-            0.396078,
-            0.486275
-          ],
-          "alpha": 1
-        },
+        "$value": "{tailwind.color.sky.700}",
         "$description": "Keyboard-focus outline around interactive elements."
       }
     }
@@ -448,11 +203,7 @@
     "family": {
       "$type": "fontFamily",
       "body": {
-        "$value": [
-          "Arial",
-          "Liberation Sans",
-          "sans-serif"
-        ],
+        "$value": "{tailwind.font.sans}",
         "$description": "Ordered font fallback stack for body text and controls."
       },
       "title": {
@@ -467,22 +218,22 @@
     "weight": {
       "$type": "fontWeight",
       "title": {
-        "$value": 400,
+        "$value": "{tailwind.font-weight.normal}",
         "$description": "Weight of the page title."
       },
       "control": {
-        "$value": 500,
+        "$value": "{tailwind.font-weight.medium}",
         "$description": "Weight of control labels within buttons."
       },
       "emphasis": {
-        "$value": 650,
+        "$value": "{tailwind.font-weight.semibold}",
         "$description": "Weight of card headings and small emphasized labels."
       }
     },
     "line-height": {
       "$type": "number",
       "body": {
-        "$value": 1.45,
+        "$value": "{tailwind.leading.normal}",
         "$description": "Unitless line-height multiplier for body text and controls."
       },
       "title": {
@@ -554,10 +305,7 @@
       },
       "summary": {
         "$type": "dimension",
-        "$value": {
-          "value": 2,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.text.3xl}",
         "$description": "Exact headline counts, stronger than explanatory text and timestamps."
       },
       "coefficient": {
@@ -588,27 +336,18 @@
     "download": {
       "$type": "dimension",
       "max-width": {
-        "$value": {
-          "value": 20,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.80}",
         "$description": "Maximum width of the complete-history download button."
       }
     },
     "period-input": {
       "$type": "dimension",
       "max-width": {
-        "$value": {
-          "value": 25,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.100}",
         "$description": "Maximum width of a comparison-period input."
       },
       "preferred-width": {
-        "$value": {
-          "value": 12,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.48}",
         "$description": "Preferred width of a comparison-period input before wrapping; it may shrink on narrow screens."
       }
     },
@@ -632,28 +371,19 @@
     "control": {
       "min-height": {
         "$type": "dimension",
-        "$value": {
-          "value": 2.75,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.11}",
         "$description": "Preferred minimum height for buttons and field controls."
       },
       "compact-min-height": {
         "$type": "dimension",
-        "$value": {
-          "value": 1.75,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.7}",
         "$description": "Minimum height for compact disclosure and summary links, with surrounding space."
       }
     },
     "compact-grid": {
       "min-track-width": {
         "$type": "dimension",
-        "$value": {
-          "value": 10,
-          "unit": "rem"
-        },
+        "$value": "{tailwind.spacing.40}",
         "$description": "Minimum readable track width for paired controls and summary cards before they stack."
       }
     }
@@ -680,17 +410,11 @@
       "$type": "dimension",
       "swatch": {
         "width": {
-          "$value": {
-            "value": 3,
-            "unit": "rem"
-          },
+          "$value": "{scale.spacing.12}",
           "$description": "Width of a series-color swatch beside its legend label."
         },
         "height": {
-          "$value": {
-            "value": 0.5,
-            "unit": "rem"
-          },
+          "$value": "{scale.spacing.2}",
           "$description": "Height of a series-color swatch beside its legend label."
         }
       }
@@ -699,15 +423,7 @@
       "label": {
         "color": {
           "$type": "color",
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.333333,
-              0.333333,
-              0.294118
-            ],
-            "alpha": 1
-          },
+          "$value": "{color.text.secondary}",
           "$description": "Color of numeric and time tick labels inside the SVG chart."
         },
         "font-size": {
@@ -727,15 +443,7 @@
       "line": {
         "$type": "color",
         "color": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.533333,
-              0.521569,
-              0.466667
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.stone.500}",
           "$description": "Color of axis lines and tick marks."
         }
       },
@@ -769,15 +477,7 @@
       "$type": "color",
       "line": {
         "color": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.898039,
-              0.87451,
-              0.827451
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.stone.200}",
           "$description": "Color of major grid lines behind plotted observations."
         }
       }
@@ -842,75 +542,27 @@
       "palette": {
         "$type": "color",
         "01": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.090196,
-              0.431373,
-              0.439216
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.teal.700}",
           "$description": "Color for comparison series position 1; the position does not identify a particular server or metric."
         },
         "02": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.639216,
-              0.278431,
-              0.121569
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.orange.800}",
           "$description": "Color for comparison series position 2; the position does not identify a particular server or metric."
         },
         "03": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.439216,
-              0.317647,
-              0.607843
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.violet.700}",
           "$description": "Color for comparison series position 3; the position does not identify a particular server or metric."
         },
         "04": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.670588,
-              0.196078,
-              0.368627
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.rose.700}",
           "$description": "Color for comparison series position 4; the position does not identify a particular server or metric."
         },
         "05": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.329412,
-              0.431373,
-              0.156863
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.lime.700}",
           "$description": "Color for comparison series position 5; the position does not identify a particular server or metric."
         },
         "06": {
-          "$value": {
-            "colorSpace": "srgb",
-            "components": [
-              0.137255,
-              0.4,
-              0.627451
-            ],
-            "alpha": 1
-          },
+          "$value": "{tailwind.color.sky.700}",
           "$description": "Color for comparison series position 6; the position does not identify a particular server or metric."
         }
       }
@@ -957,31 +609,19 @@
   "radius": {
     "$type": "dimension",
     "control": {
-      "$value": {
-        "value": 0.35,
-        "unit": "rem"
-      },
+      "$value": "{tailwind.radius.md}",
       "$description": "Corner rounding of buttons."
     },
     "input": {
-      "$value": {
-        "value": 0.3,
-        "unit": "rem"
-      },
+      "$value": "{tailwind.radius.md}",
       "$description": "Corner rounding of input fields and unavailable-data notices."
     },
     "panel": {
-      "$value": {
-        "value": 0.65,
-        "unit": "rem"
-      },
+      "$value": "{tailwind.radius.xl}",
       "$description": "Corner rounding of content panels and chart cards."
     },
     "detail": {
-      "$value": {
-        "value": 0.4,
-        "unit": "rem"
-      },
+      "$value": "{tailwind.radius.md}",
       "$description": "Corner rounding of fieldsets and comparison chips."
     }
   },

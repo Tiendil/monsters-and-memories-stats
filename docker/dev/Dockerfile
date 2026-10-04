@@ -37,4 +37,11 @@ ADD --checksum=sha256:8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b3
 RUN tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint \
     && rm /tmp/actionlint.tar.gz
 
+# Use the published Tailwind theme as build input, without copying its palette into application code.
+ADD --checksum=sha256:f1493c5bcb29a80310da63d19282d233ba259479f36561a27146cd4747d1faef \
+    https://registry.npmjs.org/tailwindcss/-/tailwindcss-4.3.3.tgz /tmp/tailwindcss.tgz
+RUN mkdir -p /opt/tailwindcss \
+    && tar -xzf /tmp/tailwindcss.tgz -C /opt/tailwindcss --strip-components=1 package/theme.css package/LICENSE \
+    && rm /tmp/tailwindcss.tgz
+
 CMD ["bash"]

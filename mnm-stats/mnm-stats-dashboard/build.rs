@@ -6,6 +6,8 @@ mod tokens;
 
 fn main() {
     println!("cargo:rerun-if-changed=build_tokens.rs");
+    println!("cargo:rerun-if-changed=build_tailwind.rs");
+    println!("cargo:rerun-if-changed=/opt/tailwindcss/theme.css");
     println!("cargo:rerun-if-changed=style.css");
     println!("cargo:rerun-if-env-changed=MNM_STATS_TOKENS");
     let manifest = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
@@ -21,6 +23,7 @@ fn main() {
     let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
     fs::write(out.join("tokens.rs"), generated.rust).unwrap();
     fs::write(out.join("style.css"), generated.css).unwrap();
+    fs::write(out.join("tokens.resolved.json"), generated.resolved).unwrap();
 
     println!("cargo:rerun-if-env-changed=MNM_STATS_DEMO");
     println!(

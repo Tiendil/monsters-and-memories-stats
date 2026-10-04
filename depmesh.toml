@@ -112,6 +112,7 @@ relation = "governed_by"
 input = { type = "any", items = [
   { type = "glob", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
   { type = "glob", pattern = "@/bin/*dashboard.sh" },
+  { type = "one_of", artifacts = ["@/docker/dev/Dockerfile"] },
 ] }
 output = { type = "list", artifacts = ["@/specs/design-tokens.md"] }
 
@@ -121,6 +122,7 @@ input = { type = "one_of", artifacts = ["@/specs/design-tokens.md"] }
 output = { type = "union", items = [
   { type = "files", pattern = "@/mnm-stats/mnm-stats-dashboard/**" },
   { type = "files", pattern = "@/bin/*dashboard.sh" },
+  { type = "list", artifacts = ["@/docker/dev/Dockerfile"] },
 ] }
 
 # Dashboard composition and visual behavior.

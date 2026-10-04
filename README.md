@@ -74,9 +74,13 @@ Start the preview, then navigate the MCP browser to `http://dashboard:8080/`. Th
 
 ## Styling
 
-[Design tokens](mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json) are the shared source for CSS and chart presentation, following the project's [DTCG format profile](specs/design-tokens.md). Edit semantic values there; keep selectors and layout rules in `mnm-stats/mnm-stats-dashboard/style.css`. CSS uses `var(--mnm-...)`; media-query conditions use `token(breakpoint.medium)` so the build can substitute a concrete dimension.
+[Design tokens](mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json) are the shared source for CSS and chart presentation, following the project's [DTCG format profile](specs/design-tokens.md). Author semantic values with Tailwind references such as `{tailwind.color.orange.800}`, `{tailwind.spacing.4}`, and `{tailwind.radius.md}`; keep selectors and layout rules in `mnm-stats/mnm-stats-dashboard/style.css`. CSS uses `var(--mnm-...)`; media-query conditions use `token(breakpoint.medium)` so the build can substitute a concrete dimension.
 
-The Rust build validates tokens and aliases, then generates CSS and typed chart values under Cargo's ignored build output. Generated CSS is compiled into WASM and inserted into the page when the application mounts, with no separate stylesheet request. The initial loading message uses browser-default styling until WASM starts. Token data is never fetched at runtime, and generated styles should not be edited. Plotly chart dimensions and font sizes use whole CSS pixels; other CSS dimensions retain their declared `px` or `rem` units.
+The development image installs Tailwind CSS 4.3.3's official `theme.css` and license from a checksum-pinned npm archive; run `./bin/dev.sh setup` after the image changes. Tailwind supplies the values without a utility-class compiler or Node runtime.
+
+The Rust build reads that theme, resolves its references and semantic aliases, and generates CSS, typed chart values, and a self-contained `tokens.resolved.json` under Cargo's ignored build output. Its OKLCH colors are converted once to sRGB for matching CSS and Plotly output; do not copy those generated numbers back into the authored palette.
+
+Generated CSS is compiled into WASM and inserted into the page when the application mounts, with no separate stylesheet request. The initial loading message uses browser-default styling until WASM starts. Token data is never fetched at runtime, and generated styles should not be edited. Plotly chart dimensions and font sizes use whole CSS pixels; other CSS dimensions retain their declared `px` or `rem` units.
 
 Rust constructs Plotly figures and exact hover text through Plotly.rs. The page loads Plotly.js basic 3.0.1 from [Plotly's official CDN](https://cdn.plot.ly/plotly-basic-3.0.1.min.js) and credits Plotly in the footer. The script URL in the dashboard's `index.html` pins the version compatible with Plotly.rs 0.14.1; update both together when upgrading. Ordinary previews and deployed charts require access to that CDN.
 
@@ -150,7 +154,7 @@ Native tests cover JSONL validation and exports, collection and history preserva
 
 The notification-probe test uses a local malformed fixture. `check-actions.sh` uses actionlint to check workflow syntax, expressions, and action inputs without running a workflow.
 
-Token tests cover structured values, aliases, invalid inputs, name collisions, and equivalent CSS/Rust output. Browser tests also check computed styles, breakpoints, matching chart/legend/hover colors beyond the explicit palette, cached token-only builds, and preview reloads after token-only atomic replacements. They use isolated token copies and never modify the authored token file.
+Token tests cover Tailwind theme imports, reference changes, structured values, aliases, invalid inputs, name collisions, self-contained DTCG output, and equivalent CSS/Rust output. Browser tests also check computed styles, breakpoints, matching chart/legend/hover colors beyond the explicit palette, cached token-only builds, and preview reloads after token-only atomic replacements. They use isolated token copies and never modify the authored token file.
 
 Donna runs these checks locally with focused repair actions, without project Git operations or hosted workflows. Normal build dependency resolution and downloads are allowed. Tests use local metric inputs and must not contact the original statistics service; third-party runtime assets may load from the internet:
 

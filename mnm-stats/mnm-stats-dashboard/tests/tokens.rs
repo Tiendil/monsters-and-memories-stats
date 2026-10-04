@@ -37,6 +37,7 @@ fn structured_values_inheritance_aliases_and_deterministic_outputs() {
     let b = adapter::generate(&serde_json::to_string_pretty(&fixture).unwrap(), styles).unwrap();
     assert_eq!(a.css, b.css);
     assert_eq!(a.rust, b.rust);
+    assert_eq!(a.resolved, b.resolved);
     for expected in [
         "--mnm-chart: rgba(51, 102, 153, 0.5)",
         "--mnm-spacing: 1.25rem",
@@ -190,7 +191,7 @@ fn authored_tokens_generate_styles_and_typed_chart_values() {
     assert!(!result.css.contains("token("));
     assert_eq!(
         mnm_stats_dashboard::charts::css_color(0),
-        "rgba(23, 110, 112, 1)"
+        "rgba(0, 120, 111, 1)"
     );
     assert_eq!(
         mnm_stats_dashboard::tokens::T_SPACING_PANEL_PADDING,
@@ -202,21 +203,21 @@ fn authored_tokens_generate_styles_and_typed_chart_values() {
         mnm_stats_dashboard::charts::css_color(7)
     );
     let mut changed: Value = serde_json::from_str(source).unwrap();
-    changed["chart"]["series"]["palette"]["01"]["$value"]["alpha"] = json!(0.25);
+    changed["chart"]["series"]["palette"]["01"]["$value"] = json!("{tailwind.color.white}");
     let changed = generate(&changed);
     assert!(
         changed
             .css
-            .contains("--mnm-chart-series-palette-01: rgba(23, 110, 112, 0.25)")
+            .contains("--mnm-chart-series-palette-01: rgba(255, 255, 255, 1)")
     );
-    assert!(changed.rust.contains("rgba(23, 110, 112, 0.25)"));
+    assert!(changed.rust.contains("rgba(255, 255, 255, 1)"));
 }
 
 #[test]
 fn shared_scales_propagate_without_coupling_component_overrides() {
     let mut tokens: Value =
         serde_json::from_str(include_str!("../design-tokens.tokens.json")).unwrap();
-    tokens["scale"]["spacing"]["3"]["$value"]["value"] = json!(1);
+    tokens["scale"]["spacing"]["3"]["$value"] = json!("{tailwind.spacing.4}");
     let shared = generate(&tokens);
     for role in [
         "input-padding",
@@ -276,5 +277,104 @@ fn invalid_chart_consumer_types_and_geometry_report_semantic_paths() {
         &invalid,
         "chart.axis.label.font-family",
         "requires a fontFamily",
+    );
+}
+
+#[test]
+fn tailwind_imports_keep_theme_values_and_semantic_consumers_in_sync() {
+    let fixture = json!({
+        "ink":token("color",json!("{tailwind.color.example.700}")),
+        "accent":token("color",json!("{ink}")),
+        "space":token("dimension",json!("{tailwind.spacing.4}")),
+        "size":token("dimension",json!("{tailwind.text.sm}")),
+        "rounding":token("dimension",json!("{tailwind.radius.md}")),
+        "font":token("fontFamily",json!("{tailwind.font.sans}")),
+        "weight":token("fontWeight",json!("{tailwind.font-weight.medium}")),
+        "leading":token("number",json!("{tailwind.leading.normal}"))
+    });
+    let theme = r#"
+        :root { --color-example-700: red; }
+        @theme default {
+            --color-example-700: oklch(50% 0 0 / 0.5);
+            --spacing: 0.25rem;
+            --text-sm: 0.875rem;
+            --radius-md: 0.375rem;
+            --font-sans: 'Example Face',
+                Arial, sans-serif;
+            --font-weight-medium: 500;
+            --leading-normal: 1.5;
+            @keyframes pulse { to { --color-example-700: red; } }
+        }
+        @theme default inline reference { --unused: unsupported(1); }
+        .other { --spacing: 10rem; }
+    "#;
+    let a = adapter::generate_with_theme(&fixture.to_string(), "", theme).unwrap();
+    for expected in [
+        "--mnm-accent: rgba(99, 99, 99, 0.5);",
+        "--mnm-space: 1rem;",
+        "--mnm-size: 0.875rem;",
+        "--mnm-rounding: 0.375rem;",
+        "--mnm-font: \"Example Face\", \"Arial\", sans-serif;",
+        "--mnm-weight: 500;",
+        "--mnm-leading: 1.5;",
+    ] {
+        assert!(a.css.contains(expected), "missing {expected} in {}", a.css);
+    }
+    assert!(a.rust.contains("rgba(99, 99, 99, 0.5)"));
+    let resolved: Value = serde_json::from_str(&a.resolved).unwrap();
+    assert_eq!(resolved["accent"]["$value"], resolved["ink"]["$value"]);
+    assert!(!a.resolved.contains("{tailwind.") && !a.resolved.contains("{ink}"));
+    let roundtrip = adapter::generate_with_theme(&a.resolved, "", "").unwrap();
+    assert_eq!(roundtrip.css, a.css);
+    assert_eq!(roundtrip.rust, a.rust);
+    assert_eq!(roundtrip.resolved, a.resolved);
+    let changed = theme
+        .replace("oklch(50% 0 0 / 0.5)", "#fff")
+        .replace("0.25rem", "0.5rem");
+    let b = adapter::generate_with_theme(&fixture.to_string(), "", &changed).unwrap();
+    assert!(b.css.contains("--mnm-accent: rgba(255, 255, 255, 1);"));
+    assert!(b.rust.contains("rgba(255, 255, 255, 1)"));
+    assert!(b.css.contains("--mnm-space: 2rem;"));
+    assert!(b.rust.contains("T_SPACE: Dimension = Dimension::Rem(2.0)"));
+}
+
+#[test]
+fn invalid_tailwind_imports_report_the_semantic_role() {
+    for (kind, reference, reason) in [
+        (
+            "color",
+            "tailwind.color.missing.700",
+            "missing Tailwind reference",
+        ),
+        ("color", "tailwind.spacing.4", "expected color"),
+        ("dimension", "tailwind.spacing.small", "spacing step"),
+        (
+            "number",
+            "tailwind.unknown.value",
+            "unsupported Tailwind family",
+        ),
+    ] {
+        rejected(
+            &json!({"accent":token(kind,json!(format!("{{{reference}}}")))}),
+            "accent",
+            reason,
+        );
+    }
+    rejected(
+        &json!({"tailwind":{"color":token("number",json!(1))}}),
+        "tailwind",
+        "reserved",
+    );
+    let fixture = json!({"accent":token("color",json!("{tailwind.color.invalid}"))});
+    let error = adapter::generate_with_theme(
+        &fixture.to_string(),
+        "",
+        "@theme { --color-invalid: var(--missing); }",
+    )
+    .err()
+    .unwrap();
+    assert!(
+        error.contains("accent") && error.contains("unsupported Tailwind value"),
+        "{error}"
     );
 }

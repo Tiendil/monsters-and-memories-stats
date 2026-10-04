@@ -165,6 +165,11 @@ Passing preexisting browser checks MUST NOT be reported as coverage of presentat
 Token tests MUST use local token fixtures and the project's authored artifact, following [design-tokens.md](design-tokens.md).
 They MUST cover:
 
+- Imports for every supported Tailwind reference family, using the installed theme and isolated CSS fixtures.
+- Changes to theme references or upstream fixture values reaching CSS and Rust output together.
+- Rejection of missing references, unsupported imports, type mismatches, and shadowing the reserved namespace, with the affected semantic path.
+- Parsing theme declarations without importing values from animation keyframes or unrelated CSS rules.
+- A deterministic, self-contained resolved DTCG document.
 - Supported structured values and inherited token types.
 - Semantic aliases and chained resolution.
 - Missing references, cycles, type mismatches, unsupported format features, and invalid values.

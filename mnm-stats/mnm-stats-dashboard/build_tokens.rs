@@ -1,4 +1,7 @@
 //! Adapter for the project's authored DTCG profile, shared by the build and offline tests.
+#[path = "build_tailwind.rs"]
+mod tailwind;
+
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write;
@@ -8,6 +11,7 @@ type Result<T> = std::result::Result<T, String>;
 pub struct Generated {
     pub css: String,
     pub rust: String,
+    pub resolved: String,
 }
 
 #[derive(Clone)]
@@ -122,6 +126,7 @@ fn resolve(
     path: &str,
     tokens: &BTreeMap<String, Token>,
     visiting: &mut BTreeSet<String>,
+    theme: &tailwind::Theme,
 ) -> Result<Value> {
     if let Some(reference) = value.as_str() {
         let target = reference
@@ -133,6 +138,10 @@ fn resolve(
                     "expected a structured value or complete {token.path} alias",
                 )
             })?;
+        if target.starts_with("tailwind.") {
+            let imported = theme.resolve(target, kind).map_err(|e| error(path, &e))?;
+            return resolve(&imported, kind, path, tokens, visiting, theme);
+        }
         let token = tokens
             .get(target)
             .ok_or_else(|| error(path, &format!("missing alias target {target}")))?;
@@ -145,8 +154,8 @@ fn resolve(
         if !visiting.insert(target.into()) {
             return Err(error(path, &format!("alias cycle through {target}")));
         }
-        let result =
-            resolve(&token.value, kind, target, tokens, visiting).map_err(|e| error(path, &e));
+        let result = resolve(&token.value, kind, target, tokens, visiting, theme)
+            .map_err(|e| error(path, &e));
         visiting.remove(target);
         return result;
     }
@@ -212,7 +221,7 @@ fn resolve(
             let mut resolved = Vec::new();
             for shadow in shadows {
                 if shadow.is_string() {
-                    let alias = resolve(&shadow, kind, path, tokens, visiting)?;
+                    let alias = resolve(&shadow, kind, path, tokens, visiting, theme)?;
                     resolved.extend(alias.as_array().unwrap().iter().cloned());
                     continue;
                 }
@@ -232,7 +241,7 @@ fn resolve(
                     let raw = fields
                         .get(field)
                         .ok_or_else(|| error(path, &format!("shadow missing {field}")))?;
-                    let result = resolve(raw, field_kind, path, tokens, visiting)?;
+                    let result = resolve(raw, field_kind, path, tokens, visiting, theme)?;
                     if field == "blur" && number(&result["value"], path)? < 0.0 {
                         return Err(error(path, "shadow blur must be nonnegative"));
                     }
@@ -330,8 +339,19 @@ fn rust_value(kind: &str, value: &Value) -> (&'static str, String) {
 }
 
 pub fn generate(source: &str, styles: &str) -> Result<Generated> {
-    let document: Value =
+    generate_with_theme(source, styles, tailwind::SOURCE)
+}
+
+pub fn generate_with_theme(source: &str, styles: &str, theme: &str) -> Result<Generated> {
+    let theme = tailwind::Theme::parse(theme)?;
+    let mut document: Value =
         serde_json::from_str(source).map_err(|e| error("tokens", &e.to_string()))?;
+    if document.get("tailwind").is_some() {
+        return Err(error(
+            "tailwind",
+            "namespace is reserved for the imported Tailwind theme",
+        ));
+    }
     let mut tokens = BTreeMap::new();
     collect(&document, "", None, &mut tokens)?;
     let mut names = BTreeMap::new();
@@ -352,6 +372,7 @@ pub fn generate(source: &str, styles: &str) -> Result<Generated> {
                 path,
                 &tokens,
                 &mut BTreeSet::from([path.clone()]),
+                &theme,
             )?,
         );
     }
@@ -534,5 +555,17 @@ pub fn generate(source: &str, styles: &str) -> Result<Generated> {
         }
     }
     css.push_str(&styles);
-    Ok(Generated { css, rust })
+    // A self-contained DTCG artifact for inspection/export, without provider references.
+    for (path, value) in resolved {
+        let mut token = &mut document;
+        for name in path.split('.') {
+            token = &mut token[name];
+        }
+        token["$value"] = value;
+    }
+    Ok(Generated {
+        css,
+        rust,
+        resolved: serde_json::to_string_pretty(&document).unwrap(),
+    })
 }
