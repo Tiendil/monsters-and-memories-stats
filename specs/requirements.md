@@ -148,7 +148,7 @@ Starting-zone counts MAY be summed by zone ID across servers, and across zones w
 An individual zone absent from a server's observation MUST remain unavailable, not zero.
 An all-server count for an individual zone MUST be unavailable when any observed server omits that zone; a partial sum MUST NOT be presented as a complete total.
 Starting-zone totals MUST sum each server's reported zone rows, including a zero total for a validated empty list.
-Daily/monthly activity MAY be summed across servers only when clearly labeled as a sum without deduplication.
+Daily/monthly activity MAY be summed across servers; the README and accessible chart descriptions MUST explain that these are sums without deduplication.
 Such sums MUST NOT be described as game-wide unique active users, since one account may use multiple servers.
 Global subscriptions MUST remain global in a per-server view; per-server subscription numbers MUST NOT be invented.
 

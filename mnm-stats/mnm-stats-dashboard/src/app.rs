@@ -115,11 +115,9 @@ fn Summary(
     now: RwSignal<DateTime<Utc>>,
     section: RwSignal<Section>,
 ) -> impl IntoView {
-    let names = servers(&history);
     let selected = Memo::new(move |_| latest_in_range(&history, range.get(), now.get()).cloned());
     view! {
-        <div class="summary-heading"><h2>"At a glance"</h2><p id="summary-time">{move || selected.get().map_or_else(|| "No observations in this interval".into(), |s| format!("Last in range · {}", readable(s.observed_at)))}</p></div>
-        <p class="scope-caption">{move || if scope.get() == Scope::All { "Sum across servers; not deduplicated.".to_string() } else { scope.get().label(&names) }}</p>
+        <h2 class="summary-heading">"At a glance"</h2>
         <div class="headline-grid">{[(Metric::Online, "Online population", Section::Population), (Metric::Daily, "Daily active", Section::Activity), (Metric::Monthly, "Monthly active", Section::Activity), (Metric::Subscriptions, "Global subscriptions", Section::Activity)].into_iter().map(|(metric, label, target)| {
             let key = metric.key();
             view! { <article class="headline" data-summary=key>
@@ -179,7 +177,6 @@ fn ChartCard(
 ) -> impl IntoView {
     let key = metric.key();
     let title = metric.title();
-    let unit = metric.unit();
     let chart_metric = metric.clone();
     let styles = expect_context::<Arc<Mutex<charts::SeriesStyles>>>();
     let plotted = Memo::new(move |_| {
@@ -200,26 +197,21 @@ fn ChartCard(
     });
     view! {
         <article class="chart-card" data-metric=key>
-            <div class="chart-heading"><h3>{title.clone()}</h3><span class="unit">{unit}</span></div>
+            <h3 class="chart-heading">{title.clone()}</h3>
             {move || match plotted.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(plot) => {
                     let has_values = plot.series.iter().any(|s| s.points.iter().any(|p| p.value.is_some()));
-                    let count = plot.series.iter().map(|s| s.points.iter().filter(|p| p.value.is_some()).count()).sum::<usize>();
                     view! {
-                        {if plot.series.len() > 1 { view! {
-                            <ul class="legend">{plot.series.iter().enumerate().map(|(index, series)| view! {
-                                <li><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style) stroke-dasharray=charts::dash_array(series.style)/></svg>{format!("{}. {}", index + 1, series.label)}</li>
-                            }).collect_view()}</ul>
-                        }.into_any() } else { view! { <p class="chart-scope">{plot.series.first().map(|s| s.label.clone())}</p> }.into_any() }}
+                        <ul class="legend" aria-label="Chart series">{plot.series.iter().map(|series| view! {
+                            <li><span>{series.label.clone()}</span><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style) stroke-dasharray=charts::dash_array(series.style)/></svg></li>
+                        }).collect_view()}</ul>
                         <p class="chart-note">{plot.note.clone()}</p>
                         {if has_values {
                             view! { <InteractivePlot plot=plot.clone() metric=chart_metric.clone()/> }.into_any()
                         } else {
                             view! { <p class="empty-chart">"No available observations for this selection."</p> }.into_any()
                         }}
-                        <p class="axis-label">{plot.alignment.description()}</p>
-                        <p class="sample-count">{format!("{count} plotted observations")}</p>
                     }.into_any()
                 }
             }}
@@ -471,7 +463,6 @@ pub fn App() -> impl IntoView {
                     let zone_labels = zone_names.clone();
                     view! {
                         <h2 class="section-title">{match selected { Section::Overview => "Online over time", Section::Activity => "Activity over time", Section::Population => "Population over time", Section::Relationships => "Ratios of reported counts" }}</h2>
-                        {(selected != Section::Overview).then(|| view! { <p class="scope-caption">{move || if scope.get() == Scope::All && mode.get() != Mode::Entities { "Sum across servers; activity is not deduplicated. Subscriptions are global." } else { "Daily/monthly activity retains the source’s counting units. Subscriptions are global." }}</p> })}
                         <div class="chart-grid" class:overview-chart=selected == Section::Overview>{metrics.into_iter().map(|metric| view! { <ChartCard history=chart_history.clone() metric scope range now comparison/> }).collect_view()}</div>
                         {(selected == Section::Population).then(move || view! {
                             <section class="zone-detail" aria-label="Individual starting zone"><h2>"Explore a starting zone"</h2>

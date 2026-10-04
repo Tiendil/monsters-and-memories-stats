@@ -445,7 +445,9 @@ impl Browser {
         let coverage = self.text("#history-status");
         self.expect_count(".headline", 4);
         self.expect_count(".chart-card", 1);
-        self.expect_count(".legend li", 0);
+        self.expect_count(".legend li", 1);
+        self.expect_text(".legend li", "All Servers");
+        self.expect_count(".legend li > span + .swatch", 1);
         let last = expected["snapshots"].as_array().unwrap().last().unwrap();
         let daily: u128 = last["servers"]
             .as_array()
@@ -615,11 +617,23 @@ impl Browser {
                         !(metric.ends_with("-subscriptions") && r["active_subscriptions"] == 0)
                     })
                     .count();
-                self.expect_text(
-                    &format!("[data-metric='{metric}'] .sample-count"),
-                    &format!("{count} plotted observations"),
-                );
                 self.ready(metric);
+                let plotted_count = self.request(Method::POST, "/execute/sync", json!({
+                    "script":"return document.querySelector(arguments[0]).data.reduce((n, trace) => n + trace.y.filter(value => value !== null).length, 0);",
+                    "args":[format!("[data-metric='{metric}'] .plot-surface")]
+                }));
+                assert_eq!(plotted_count, count, "{metric} in range {key}");
+                self.expect_text(
+                    &format!("[data-metric='{metric}'] .ytitle"),
+                    if matches!(
+                        metric,
+                        "daily-monthly" | "daily-subscriptions" | "monthly-subscriptions"
+                    ) {
+                        "Percent (%)"
+                    } else {
+                        "Count"
+                    },
+                );
             }
         }
         // Hover details retain exact values and original observation timestamps.
@@ -696,7 +710,7 @@ impl Browser {
                 "2026-05-25T12:00:00Z",
                 &value,
             );
-            self.hover(&format!("[data-metric='{metric}'] .unit"));
+            self.hover(&format!("[data-metric='{metric}'] .chart-heading"));
             self.expect_count(".hovertext", 0);
             if metric.ends_with("-subscriptions") {
                 assert_eq!(
@@ -728,7 +742,7 @@ impl Browser {
         for metric in metrics {
             self.expect_count(
                 &format!("[data-metric='{metric}'] .legend li"),
-                if metric == "subscriptions" { 0 } else { 3 },
+                if metric == "subscriptions" { 1 } else { 3 },
             );
         }
         self.hover("[data-metric='online'] .scatterlayer .trace:last-child .point:last-child");
@@ -968,7 +982,7 @@ impl Browser {
         );
         assert_eq!(self.computed(".chart-card", "border-radius"), "12px");
         assert_eq!(
-            self.computed(".axis-label", "font-size"),
+            self.computed(".legend", "font-size"),
             if changed { "16px" } else { "14px" }
         );
         assert_eq!(
@@ -1070,12 +1084,16 @@ impl Browser {
                 self.computed(&swatch, "stroke-dasharray"),
                 self.computed(&line, "stroke-dasharray")
             );
+            let label = self.text(&format!(
+                "[data-metric='daily'] .legend li:nth-child({})",
+                i + 1
+            ));
             self.hover(&circle);
             wait_until(
                 || {
                     self.request(Method::POST, "/execute/sync", json!({
                     "script":"const row = Array.from(document.querySelectorAll(arguments[0])).find(e => e.textContent.startsWith(arguments[1])); return row ? getComputedStyle(row.querySelector('path')).stroke : null;",
-                    "args":["[data-metric='daily'] .hovertext", format!("{}. ", i + 1)]
+                    "args":["[data-metric='daily'] .hovertext", label]
                 })) == color
                 },
                 &format!("series {i} hover border matches its legend"),

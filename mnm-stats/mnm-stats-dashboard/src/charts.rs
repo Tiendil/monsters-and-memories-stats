@@ -6,7 +6,7 @@ use crate::{
 use chrono::{Datelike, NaiveDate};
 use plotly::{
     Configuration, Layout, Plot as Figure, Scatter,
-    common::{DashType, Font, Label, Line, Marker, Mode},
+    common::{DashType, Font, Label, Line, Marker, Mode, Title},
     configuration::DisplayModeBar,
     layout::{Axis, AxisType, HoverMode, Margin},
 };
@@ -127,7 +127,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
         .filter_map(|p| p.value)
         .map(|v| v.number())
         .fold(0.0_f64, f64::max);
-    for (index, series) in plot.series.iter().enumerate() {
+    for series in &plot.series {
         let mut x = Vec::new();
         let mut y = Vec::new();
         let mut text = Vec::new();
@@ -145,8 +145,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             y.push(point.value.map(|v| v.number()));
             text.push(point.value.map_or_else(String::new, |value| {
                 format!(
-                    "<b>{}. {}</b><br>{} UTC<br>{}",
-                    index + 1,
+                    "<b>{}</b><br>{} UTC<br>{}",
                     escape(&series.label),
                     point
                         .at
@@ -239,6 +238,17 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
     // native hover targets are inside the plotting area. Data filtering is unchanged.
     let x_padding = (plot.x_bounds.1 - plot.x_bounds.0) * tokens::T_CHART_AXIS_X_RANGE_PADDING;
     let margin = tokens::T_CHART_VIEWPORT_MARGIN.pixels() as usize;
+    let mut x_axis = axis()
+        .range(vec![
+            plot.x_bounds.0 - x_padding,
+            plot.x_bounds.1 + x_padding,
+        ])
+        .tick_values(ticks)
+        .tick_text(labels)
+        .show_spikes(false);
+    if plot.alignment != Alignment::Utc {
+        x_axis = x_axis.title(Title::with_text(plot.alignment.description()).font(font.clone()));
+    }
     figure.set_layout(
         Layout::new()
             .auto_size(true)
@@ -254,18 +264,10 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
                     .top(margin)
                     .bottom(margin + tokens::T_CHART_AXIS_X_LABEL_AREA.pixels() as usize),
             )
-            .x_axis(
-                axis()
-                    .range(vec![
-                        plot.x_bounds.0 - x_padding,
-                        plot.x_bounds.1 + x_padding,
-                    ])
-                    .tick_values(ticks)
-                    .tick_text(labels)
-                    .show_spikes(false),
-            )
+            .x_axis(x_axis)
             .y_axis(
                 axis()
+                    .title(Title::with_text(metric.unit()).font(font.clone()))
                     .range(vec![0.0, (maximum * 1.12).max(1.0)])
                     .n_ticks(5)
                     .tick_format(",.0f")

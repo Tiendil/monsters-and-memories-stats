@@ -92,7 +92,7 @@ impl Metric {
         if self.is_ratio() {
             "Percent (%)"
         } else {
-            "Reported count"
+            "Count"
         }
     }
 

@@ -59,7 +59,7 @@ A shared control area MUST precede the active content and expose the server scop
 The selected server and time range MUST remain apparent when a control is closed.
 The all-servers scope MUST be labeled “All Servers” in controls, chart labels, and value details.
 The six existing time ranges MUST remain available, with the default defined by [requirements.md](requirements.md#dashboard-behavior).
-The control area MUST NOT repeat the selected interval and observation count in a separate summary row; charts MUST retain their range labels and observation counts.
+The control area MUST NOT repeat the selected interval and observation count in a separate summary row; the selected range MUST remain apparent from the controls and chart ticks.
 
 On wide screens, controls SHOULD share a compact row to bring the first chart into view sooner.
 At narrow widths they MUST wrap or stack with visible labels rather than require horizontal page scrolling.
@@ -93,17 +93,18 @@ In ordinary mode, Overview MUST show four headline counts:
 - Monthly active count.
 - Active subscriptions.
 
-The counts MUST use the last snapshot within the shared interval, with its observation time visible.
+The counts MUST use the last snapshot within the shared interval.
 Server-scoped values MUST come from that same snapshot; if the chosen server is absent, its counts MUST show “Not available.”
 The UI MUST NOT silently retrieve an earlier server observation or sum successive daily/monthly observations to fill these counts.
-All-server activity MUST be labeled as a sum without deduplication, and subscriptions MUST be labeled global even when a server is selected.
+Subscriptions MUST be labeled global even when a server is selected.
+The summary MUST NOT repeat the observation timestamp or an all-server aggregation explanation above the counts.
 An empty selected interval MUST produce an explicit empty state rather than display the latest values from outside it.
 
 **Example:** The last snapshot in the selected range contains Servers A and B, but the user selects historical Server C.
 The activity and online summary values are unavailable for C; the global subscription count still comes from that snapshot and retains its global label.
 
 Headline counts MUST be exact, readable integers with digit grouping, rather than abbreviated values or unexplained growth percentages.
-They MUST be visually stronger than timestamps, sample counts, and helper text.
+They MUST be visually stronger than supporting text.
 An online-population chart MUST follow the summary and occupy the full content width.
 The summary MUST offer clear links to the relevant detailed sections without making hover the only way to discover navigation.
 
@@ -127,8 +128,9 @@ When chart comparisons use other entities or periods, the correlation block MUST
 
 ### Data explanations
 
-Short interpretation labels MUST remain close to affected values, including “Global subscriptions” and “Sum across servers; not deduplicated.”
-Detailed methodology, source limitations, and archive coverage MUST be documented in the README.
+Short interpretation labels MUST remain close to affected values, including “Global subscriptions.”
+Detailed methodology, source limitations, all-server aggregation semantics, and archive coverage MUST be documented in the README.
+The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Stale-data warnings, active selections, and qualifications needed to interpret a displayed number MUST remain visible.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.
 
@@ -165,14 +167,16 @@ Its caption identifies the selected months; a separate correlation block identif
 
 ### Hierarchy and labeling
 
-Each chart MUST present a short metric title, a concise scope or unit label, and the visualization before secondary implementation or sampling detail.
+Each chart MUST present a short metric title, a series legend, and the visualization.
 The same chart anatomy MUST be used across sections.
-Observation counts and detailed qualifications SHOULD appear in captions to reduce repeated visual clutter, except when a qualification is necessary beside the title.
+The value-axis title MUST sit beside its axis and read “Count” for counts or “Percent (%)” for ratios.
+Charts MUST NOT repeat units beside the metric heading or display plotted-observation counts or a separate “Observation time (UTC)” caption.
+Qualifications necessary to interpret a chart MUST remain close to the affected values.
 Axis labels MUST remain readable at narrow widths; reduce tick density before reducing text size.
 Counts MAY use compact axis labels when their scale is clear, while hover details MUST retain exact values.
 
-Normal time axes MUST run chronologically from left to right and identify UTC.
-Comparison axes MUST describe their alignment in human terms, retaining original timestamps in details.
+Normal time axes MUST run chronologically from left to right; the page's collection summary and point details MUST identify UTC.
+Period-comparison axes MUST describe their alignment in human terms beside the horizontal axis, retaining original timestamps in details.
 Gridlines MUST be visually subordinate to series and use a small number of labeled, meaningful intervals.
 Charts MUST use a linear value scale and MUST NOT combine unrelated units with dual axes.
 Count and ratio charts SHOULD begin at zero to make magnitude comparisons straightforward.
@@ -185,8 +189,9 @@ Time series MUST use unsmoothed lines so interpolation does not imply measured p
 Missing observations and gaps MUST retain the behavior defined in [requirements.md](requirements.md#dashboard-behavior).
 Markers SHOULD be reserved for isolated or sparse observations so dense hourly series remain readable.
 
-A single-series chart MUST identify its scope without a redundant numbered legend.
-Multiple-series legends MUST appear consistently near the chart and wrap readable labels rather than truncate identities.
+Every chart MUST have a legend, including single-series charts.
+Each legend entry MUST show the entity or period name followed by a colored line sample, without a numeric prefix.
+Legends MUST appear consistently near the chart and wrap readable labels rather than truncate identities.
 Line samples, labels, and chart hover styling MUST use matching series encodings.
 Color MUST NOT be the only series distinction; comparison series MUST also have stable labels and distinguishable line styles or marker shapes.
 An entity or period MUST retain its visual encoding across the active charts and when other selections are added or removed during the session.

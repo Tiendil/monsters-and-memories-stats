@@ -136,7 +136,7 @@ Automated tests MUST cover:
 - A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
 - Navigation to every content section while retaining the selected scope, range, and comparisons.
 - Headline counts from the same last snapshot inside the selected interval, including an absent historical server, a published zero, and an empty interval.
-- Explicit global subscription scope and all-server activity aggregation labels in the headline summary.
+- Explicit global subscription scope in the headline summary.
 - Replacement of the ordinary summary when a comparison is active.
 - Dynamic individual-zone selection, including historical and unavailable zones, without losing other selections.
 - Comparison controls that expose only relevant inputs and identify the separate scope of correlations.
@@ -150,7 +150,7 @@ Rendered review MUST cover:
 
 - The initial-view hierarchy at 1440 by 900 and 375 by 812 CSS pixels, including the synthetic-data notice and long source names.
 - Page reflow at 320 CSS pixels, intermediate widths, and 200-percent text enlargement.
-- Readable axis labels and legends, including dense comparisons and any confined horizontal scrolling.
+- Readable value-axis titles and legends on single-series and comparison charts, with each name followed by its matching line sample; include dense comparisons and any confined horizontal scrolling.
 - Text and essential-graphic contrast from the actual token colors and rendered backgrounds.
 - Distinctions between series without relying solely on color, and matching line, legend, and hover encodings.
 - Visible focus, touch target sizes, control states, and unobscured content when controls are sticky.

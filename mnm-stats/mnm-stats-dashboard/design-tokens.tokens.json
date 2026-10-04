@@ -302,11 +302,6 @@
         "$value": "{scale.font-size.2}",
         "$description": "Compact supporting text, control labels, and legends."
       },
-      "caption": {
-        "$type": "dimension",
-        "$value": "{scale.font-size.2}",
-        "$description": "Short metric units and observation-count captions."
-      },
       "eyebrow": {
         "$type": "dimension",
         "$value": "{scale.font-size.1}",
@@ -426,7 +421,7 @@
         "color": {
           "$type": "color",
           "$value": "{color.text.secondary}",
-          "$description": "Color of numeric and time tick labels inside the SVG chart."
+          "$description": "Color of axis titles and numeric and time tick labels inside the SVG chart."
         },
         "font-size": {
           "$type": "dimension",
@@ -434,12 +429,12 @@
             "value": 14,
             "unit": "px"
           },
-          "$description": "Tick-label font size in CSS pixels."
+          "$description": "Axis-title and tick-label font size in CSS pixels."
         },
         "font-family": {
           "$type": "fontFamily",
           "$value": "{font.family.body}",
-          "$description": "Ordered font fallback stack for SVG axis tick labels."
+          "$description": "Ordered font fallback stack for SVG axis titles and tick labels."
         }
       },
       "line": {
