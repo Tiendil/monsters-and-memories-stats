@@ -38,14 +38,17 @@ The actions MUST wrap when needed for narrow widths or enlarged text.
 The repository action required by [requirements.md](requirements.md#dashboard-behavior) MUST retain link navigation and pair its text with a decorative scalable star icon.
 All masthead actions MUST remain available from every content section.
 
-The latest collection time and freshness MUST appear near the masthead.
-The status MUST distinguish the age of the loaded dataset from the selected historical period.
-The UI MUST describe collection as hourly observations and MUST NOT label the data “live.”
-Stale and synthetic-data notices MUST remain visible without opening another view or disclosure.
+One visible summary near the masthead MUST show the first observation's date and the latest observation's date and time in UTC.
+It MUST also show the total number of records and describe updates as approximately hourly, without labeling the data “live.”
+The dates and record count MUST represent the complete loaded history, independently of selected filters or comparisons; one record means one collected observation.
+The summary MUST wrap naturally on narrow screens without requiring an archive-details disclosure.
+Empty history MUST show a clear no-statistics message and zero records without inventing dates.
 
-The available history interval and observation count MUST be accessible through a labeled archive-details disclosure near this status.
-These details MUST NOT occupy a large, separate introductory panel.
-Human-readable UTC dates SHOULD be used in summaries to reduce scanning effort; exact original timestamps MUST remain available in point details and downloads.
+**Example:** “Statistics from 2 Oct 2026 to 4 Oct 2026, 20:00 UTC · 42 records · updated roughly hourly.”
+
+Stale-data warnings MUST remain visible near the summary according to [requirements.md](requirements.md#dashboard-behavior); fresh data MUST NOT require a separate positive-status message.
+Synthetic-data notices MUST remain visible without opening another view or disclosure.
+Human-readable UTC dates SHOULD be used in the summary to reduce scanning effort; exact original timestamps MUST remain available in point details and downloads.
 
 ### Exploration controls
 

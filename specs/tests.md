@@ -133,6 +133,7 @@ The downloaded `history.json` MUST be a valid JSON document matching the complet
 Presentation coverage MUST verify [dashboard-design.md](dashboard-design.md) alongside the metric and comparison contracts.
 Automated tests MUST cover:
 
+- A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
 - Navigation to every content section while retaining the selected scope, range, and comparisons.
 - Headline counts from the same last snapshot inside the selected interval, including an absent historical server, a published zero, and an empty interval.
 - Explicit global subscription scope and all-server activity aggregation labels in the headline summary.

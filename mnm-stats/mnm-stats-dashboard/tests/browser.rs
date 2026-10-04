@@ -369,9 +369,16 @@ impl Browser {
         self.request(Method::POST, "/log", json!({"type":"performance"}));
         self.request(Method::POST, "/log", json!({"type":"browser"}));
         self.request(Method::POST, "/url", json!({"url":url}));
-        let count = expected["snapshots"].as_array().unwrap().len();
-        self.click("#archive-details summary");
-        assert_eq!(self.text("#history-count"), format!("{count} observations"));
+        let records = expected["snapshots"].as_array().unwrap();
+        let count = records.len();
+        self.expect_text(
+            "#history-count",
+            &format!(
+                "{} {}",
+                mnm_stats_dashboard::analysis::grouped_count(count as u128),
+                if count == 1 { "record" } else { "records" }
+            ),
+        );
         assert_eq!(
             self.text("footer a[href='https://plotly.com/javascript/']"),
             "Charts by Plotly"
@@ -381,12 +388,34 @@ impl Browser {
             self.count(".plot-surface"),
         );
         let status = self.text("#history-status");
+        assert!(status.contains("updated roughly hourly"));
         if count == 0 {
-            assert!(status.contains("No observations"));
+            assert!(status.contains("No statistics collected yet"));
+            self.expect_count("#history-status time", 0);
+            self.expect_text("#freshness", "");
         } else {
-            assert!(status.contains("UTC"));
+            let first: chrono::DateTime<chrono::Utc> =
+                records[0]["observed_at"].as_str().unwrap().parse().unwrap();
+            let latest: chrono::DateTime<chrono::Utc> = records[count - 1]["observed_at"]
+                .as_str()
+                .unwrap()
+                .parse()
+                .unwrap();
+            self.expect_text("#first-collection", &first.format("%d %b %Y").to_string());
+            self.expect_text(
+                "#latest-collection",
+                &latest.format("%d %b %Y, %H:%M UTC").to_string(),
+            );
+            let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
+            self.expect_text(
+                "#freshness",
+                if now - latest > chrono::Duration::hours(3) {
+                    "Stale data: the latest record is more than three hours old."
+                } else {
+                    ""
+                },
+            );
         }
-        self.click("#archive-details summary");
         self.request(
             Method::POST,
             "/window/rect",
@@ -409,6 +438,7 @@ impl Browser {
     }
 
     fn verify_presentation(&self, expected: &Value, scratch: &Path) {
+        let coverage = self.text("#history-status");
         self.expect_count(".headline", 4);
         self.expect_count(".chart-card", 1);
         self.expect_count(".legend li", 0);
@@ -433,6 +463,7 @@ impl Browser {
         );
         self.select("#server-scope", "a");
         self.select("#time-range", "7");
+        assert_eq!(self.text("#history-status"), coverage);
         self.click("#nav-population");
         self.expect_count(".chart-card", 3);
         self.select("#zone-scope", "zz-archived");
@@ -464,6 +495,7 @@ impl Browser {
         self.click("#nav-overview");
         self.expect_count(".headline", 0);
         self.expect_count(".comparison-summary", 1);
+        assert_eq!(self.text("#history-status"), coverage);
         self.select("#comparison-mode", "overview");
         self.expect_count(".headline", 4);
         // Test chart-engine failure without a network request: data and download survive.

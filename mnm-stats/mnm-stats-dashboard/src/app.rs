@@ -377,10 +377,14 @@ pub fn App() -> impl IntoView {
                 </div>
             </header>
             <p class="error" role="alert">{move || download_error.get()}</p>
-            <section class="history-summary" aria-label="Collection status">
-                <p>"Hourly observations · Latest: "<time id="latest-collection" datetime=latest.map(utc)>{latest.map_or_else(|| "not available yet".into(), readable)}</time></p>
-                <p id="freshness" role="status" class:stale=move || latest.is_some_and(|t| crate::is_stale(t, now.get()))>{move || latest.map_or("Awaiting the first successful collection.", |t| if crate::is_stale(t, now.get()) { "Stale data: the latest collection is more than three hours old." } else { "Collected within 3 hours." })}</p>
-                <details id="archive-details"><summary>"Archive details"</summary><p id="history-count">{format!("{count} observations")}</p><p id="history-status">{first.zip(latest).map_or_else(|| "No observations have been collected yet.".into(), |(first, last)| format!("Available history: {} to {} UTC", utc(first), utc(last)))}</p></details>
+            <section class="history-summary" aria-label="Statistics coverage">
+                <p id="history-status">
+                    {first.zip(latest).map_or_else(|| "No statistics collected yet".into_any(), |(first, last)| view! {
+                        "Statistics from "<time id="first-collection" datetime=utc(first)>{first.format("%d %b %Y").to_string()}</time>" to "<time id="latest-collection" datetime=utc(last)>{readable(last)}</time>
+                    }.into_any())}
+                    " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · updated roughly hourly"
+                </p>
+                <p id="freshness" role="status" class="stale">{move || latest.filter(|t| crate::is_stale(*t, now.get())).map(|_| "Stale data: the latest record is more than three hours old.")}</p>
             </section>
             <section class="controls" aria-labelledby="controls-heading">
                 <h2 id="controls-heading" class="visually-hidden">"Explore the archive"</h2>
