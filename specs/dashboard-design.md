@@ -39,13 +39,15 @@ The repository action required by [requirements.md](requirements.md#dashboard-be
 All masthead actions MUST remain available from every content section.
 
 One visible summary near the masthead MUST show the first observation's date and the latest observation's date and time in UTC.
-It MUST also show the total number of records and describe updates as approximately hourly, without labeling the data “live.”
+It MUST also show the total number of records and describe collection as approximately hourly, without labeling the data “live.”
+The collection phrase MUST link “M&M’s public statistics” to `https://account.monstersandmemories.com/metrics` using the normal link styling.
+This link MUST open in a new tab or window.
 The dates and record count MUST represent the complete loaded history, independently of selected filters or comparisons; one record means one collected observation.
-The dates and record count MUST use a medium font weight in the normal dark text color; the surrounding text and update frequency MUST retain normal weight and muted color.
+The dates and record count MUST use a medium font weight in the normal dark text color; the surrounding text and collection frequency MUST retain normal weight and muted color.
 The summary MUST wrap naturally on narrow screens without requiring an archive-details disclosure.
 Empty history MUST show a clear no-statistics message and zero records without inventing dates.
 
-**Example:** “Statistics from 2 Oct 2026 to 4 Oct 2026, 20:00 UTC · 42 records · updated roughly hourly.”
+**Example:** “Statistics from 2 Oct 2026 to 4 Oct 2026, 20:00 UTC · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
 
 Stale-data warnings MUST remain visible near the summary according to [requirements.md](requirements.md#dashboard-behavior); fresh data MUST NOT require a separate positive-status message.
 Synthetic-data notices MUST remain visible without opening another view or disclosure.

@@ -109,7 +109,7 @@ Hover a plotted point to see its series, exact value, and original UTC collectio
 
 Correlations use Pearson's r on the last jointly available observation per UTC day, show the paired-day count, and require at least three days with variation in both metrics. Correlation does not establish causation, and overlapping source activity windows limit interpretation.
 
-**Download JSON** always includes every observation in the loaded build, regardless of filters or comparisons. The header summarizes the complete history's first date, latest UTC date and time, and record count, with updates described as roughly hourly. A warning appears when the latest record is more than three hours old. An empty repository history produces an empty dashboard until observations are collected.
+**Download JSON** always includes every observation in the loaded build, regardless of filters or comparisons. The header summarizes the complete history's first date, latest UTC date and time, and record count, with a link to M&M’s public statistics and collection described as roughly hourly. A warning appears when the latest record is more than three hours old. An empty repository history produces an empty dashboard until observations are collected.
 
 ## Collection
 

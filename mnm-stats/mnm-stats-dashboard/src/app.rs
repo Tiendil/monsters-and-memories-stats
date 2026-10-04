@@ -379,7 +379,7 @@ pub fn App() -> impl IntoView {
                     {first.zip(latest).map_or_else(|| "No statistics collected yet".into_any(), |(first, last)| view! {
                         "Statistics from "<time id="first-collection" datetime=utc(first)>{first.format("%d %b %Y").to_string()}</time>" to "<time id="latest-collection" datetime=utc(last)>{readable(last)}</time>
                     }.into_any())}
-                    " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · updated roughly hourly"
+                    " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly from "<a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a>
                 </p>
                 <p id="freshness" role="status" class="stale">{move || latest.filter(|t| crate::is_stale(*t, now.get())).map(|_| "Stale data: the latest record is more than three hours old.")}</p>
             </section>

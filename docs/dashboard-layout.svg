@@ -21,7 +21,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="56" y="176" class="display" font-size="32">Monsters &amp; Memories</text>
 <rect x="870" y="134" width="218" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
 <text x="887" y="161" class="body">Download history (JSON)</text>
-<text x="57" y="220" class="small muted">Statistics from 4 Sep 2026 to 4 Oct 2026, 10:00 UTC · 712 records · updated roughly hourly</text>
+<text x="57" y="220" class="small muted">Statistics from 4 Sep 2026 to 4 Oct 2026, 10:00 UTC · 712 records · collected roughly hourly from <a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener" class="accent" text-decoration="underline">M&amp;M’s public statistics</a></text>
 <line x1="56" y1="240" x2="1088" y2="240" stroke="#d8d2c5" stroke-width="1"/>
 <text x="56" y="271" class="label muted">SERVER SCOPE</text>
 <text x="408" y="271" class="label muted">TIME RANGE</text>
@@ -89,9 +89,9 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1180" y="137" class="small muted">Made with love and curiosity by <a href="https://tiendil.org" target="_blank" rel="noopener" text-decoration="underline">Tiendil</a></text>
 <text x="1180" y="174" class="display" font-size="28">Monsters &amp; Memories</text>
 <text x="1180" y="210" class="small muted">Statistics from 4 Sep 2026 to 4 Oct 2026, 10:00 UTC</text>
-<text x="1180" y="239" class="small muted">712 records · updated roughly hourly</text>
+<text x="1180" y="239" class="small muted">712 records · collected roughly hourly<tspan x="1180" dy="18">from <a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener" class="accent" text-decoration="underline">M&amp;M’s public statistics</a></tspan></text>
 <text x="1453" y="239" class="small accent">Download JSON</text>
-<line x1="1180" y1="255" x2="1552" y2="255" stroke="#d8d2c5" stroke-width="1"/>
+<line x1="1180" y1="270" x2="1552" y2="270" stroke="#d8d2c5" stroke-width="1"/>
 <text x="1180" y="284" class="label muted">SERVER SCOPE</text>
 <text x="1377" y="284" class="label muted">TIME RANGE</text>
 <rect x="1180" y="295" width="181" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>

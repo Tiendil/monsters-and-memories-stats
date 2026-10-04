@@ -388,7 +388,11 @@ impl Browser {
             self.count(".plot-surface"),
         );
         let status = self.text("#history-status");
-        assert!(status.contains("updated roughly hourly"));
+        assert!(status.contains("collected roughly hourly from M&M’s public statistics"));
+        self.expect_text(
+            "#history-status a[href='https://account.monstersandmemories.com/metrics'][target='_blank'][rel~='noopener']",
+            "M&M’s public statistics",
+        );
         if count == 0 {
             assert!(status.contains("No statistics collected yet"));
             self.expect_count("#history-status time", 0);
