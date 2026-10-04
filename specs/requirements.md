@@ -247,6 +247,7 @@ The dashboard's information hierarchy, layout, and visual interaction MUST follo
 
 The dashboard footer MUST credit Plotly with a link to its JavaScript charting library.
 The dashboard MUST provide a visible link labeled “Star on GitHub” to the [project repository](https://github.com/Tiendil/monsters-and-memories-stats), inviting visitors to star it on GitHub.
+The dashboard MUST provide a visible link labeled “Request a feature” to the repository's new-issue page so visitors can suggest dashboard improvements.
 
 The dashboard MUST have an all-servers view and derive its server selector from collected history, including entities present only in historical data.
 It MUST plot the following over time:

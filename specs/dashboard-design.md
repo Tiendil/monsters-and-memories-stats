@@ -27,13 +27,16 @@ The [layout illustration](../docs/dashboard-layout.svg) demonstrates the hierarc
 
 ### Masthead and collection status
 
-The masthead MUST contain the game name, the dashboard's community identity, and grouped secondary actions labeled “Download JSON” and “Star on GitHub.”
+The masthead MUST contain the game name and the dashboard's community identity.
+Its action group MUST provide “Download JSON,” “Star on GitHub,” and “Request a feature.”
 It MUST remain compact rather than use a promotional hero layout.
 On wide screens, the action group MUST sit beside the title; on narrow screens, the title MUST precede a compact action row.
-The actions MUST share a control height, neutral surfaces, and subtle borders, and MUST wrap when needed for narrow widths or enlarged text.
+On wide screens, the actions MUST share a control height, neutral surfaces, and subtle borders.
+On narrow screens, “Request a feature” MUST use a compact text link below “Star on GitHub” to preserve space for the metrics.
+The actions MUST wrap when needed for narrow widths or enlarged text.
 The download action MUST explain that it contains the complete archive, independently of the current selection.
 The repository action required by [requirements.md](requirements.md#dashboard-behavior) MUST retain link navigation and pair its text with a decorative scalable star icon.
-Both actions MUST remain available from every content section.
+All masthead actions MUST remain available from every content section.
 
 The latest collection time and freshness MUST appear near the masthead.
 The status MUST distinguish the age of the loaded dataset from the selected historical period.
