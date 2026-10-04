@@ -55,6 +55,7 @@ Human-readable UTC dates SHOULD be used in the summary to reduce scanning effort
 
 A shared control area MUST precede the active content and expose the server scope, time range, and comparison entry point.
 The selected server and time range MUST remain apparent when a control is closed.
+The all-servers scope MUST be labeled “All Servers” in controls, chart labels, and value details.
 The six existing time ranges MUST remain available, with the default defined by [requirements.md](requirements.md#dashboard-behavior).
 The control area MUST NOT repeat the selected interval and observation count in a separate summary row; charts MUST retain their range labels and observation counts.
 

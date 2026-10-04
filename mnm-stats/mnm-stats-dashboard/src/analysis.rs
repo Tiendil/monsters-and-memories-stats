@@ -12,7 +12,7 @@ pub enum Scope {
 impl Scope {
     pub fn label(&self, names: &BTreeMap<String, String>) -> String {
         match self {
-            Self::All => "All servers (sum)".into(),
+            Self::All => "All Servers".into(),
             Self::Server(id) => format!("{} [{id}]", names.get(id).unwrap_or(id)),
         }
     }

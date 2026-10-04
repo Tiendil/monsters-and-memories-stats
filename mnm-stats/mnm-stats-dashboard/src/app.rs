@@ -388,7 +388,7 @@ pub fn App() -> impl IntoView {
                 <div class="control-grid">
                     <label class:hidden=move || mode.get() == Mode::Entities && section.get() != Section::Relationships>{move || if mode.get() == Mode::Entities { "Correlation scope" } else { "Server scope" }}<select id="server-scope" prop:value=move || match scope.get() { Scope::All => String::new(), Scope::Server(id) => id } on:change=move |ev| {
                         let value = event_target_value(&ev); scope.set(if value.is_empty() { Scope::All } else { Scope::Server(value) });
-                    }><option value="">"All servers (sum)"</option>{names.into_iter().map(|(id, name)| view! { <option value=id.clone()>{format!("{name} [{id}]")}</option> }).collect_view()}</select></label>
+                    }><option value="">"All Servers"</option>{names.into_iter().map(|(id, name)| view! { <option value=id.clone()>{format!("{name} [{id}]")}</option> }).collect_view()}</select></label>
                     <label class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships>{move || if mode.get() == Mode::Overview || mode.get() == Mode::Entities { "Time range" } else { "Correlation range" }}<select id="time-range" prop:value=move || range.get().key() on:change=move |ev| {
                         let value = event_target_value(&ev);
                         if let Some(selected) = TimeRange::ALL.into_iter().find(|r| r.key() == value) { range.set(selected); }

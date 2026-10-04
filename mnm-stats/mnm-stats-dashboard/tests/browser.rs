@@ -1542,7 +1542,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
         .iter()
         .map(|s| s["daily_active"].as_u64().unwrap())
         .sum();
-    browser.expect_hover("daily", "All servers", at, &total.to_string());
+    browser.expect_hover("daily", "All Servers", at, &total.to_string());
     browser.verify_token_styles(false);
     let index = scratch.join("preview-explicit-dist/index.html");
     let original = fs::read(&index).unwrap();
