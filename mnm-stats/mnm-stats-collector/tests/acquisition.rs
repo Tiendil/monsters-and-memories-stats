@@ -48,6 +48,98 @@ fn replay_waits_for_every_server_and_retains_only_current_state() {
 }
 
 #[test]
+fn completed_zone_membership_is_discovered_per_server() {
+    let mut added = NUNAVOTH_ZONES.to_vec();
+    added.push(("new-zone", "A newly discovered zone", "17"));
+    added.push(("another-zone", "Another new zone", "2"));
+    let mut reordered = added.clone();
+    reordered.reverse();
+    for (zones, total) in [
+        (NUNAVOTH_ZONES.to_vec(), "71"),
+        (added, "90"),
+        (reordered, "90"),
+        (vec![("zero-zone", "Published zero", "0")], "0"),
+        (vec![], "0"),
+    ] {
+        let snapshot = replay(&with_nunavoth_zones(&zones, total), time()).unwrap();
+        let server = snapshot
+            .servers
+            .iter()
+            .find(|s| s.id == "nunavoth")
+            .unwrap();
+        let mut expected = zones.clone();
+        expected.sort_by_key(|zone| zone.0);
+        assert_eq!(
+            server
+                .starting_zones
+                .iter()
+                .map(|z| (z.id.as_str(), z.name.as_str(), z.online))
+                .collect::<Vec<_>>(),
+            expected
+                .iter()
+                .map(|(id, name, count)| (*id, *name, count.parse::<u64>().unwrap()))
+                .collect::<Vec<_>>()
+        );
+        assert!(server.starting_zones.iter().all(|z| z.id != "ailvorith"));
+        assert!(
+            snapshot
+                .servers
+                .iter()
+                .filter(|s| s.id != "nunavoth")
+                .all(|s| s.starting_zones.len() == 5)
+        );
+        assert_eq!(
+            (server.daily_active, server.monthly_active, server.online),
+            (745, 797, 271)
+        );
+    }
+}
+
+#[test]
+fn invalid_dynamic_zones_explain_the_problem() {
+    for (zones, total, diagnostic) in [
+        (
+            vec![("same", "First", "0"), ("same", "Second", "0")],
+            "0",
+            "duplicate zone identity \"same\"",
+        ),
+        (
+            vec![("", "Missing identity", "0")],
+            "0",
+            "missing or invalid zone identity",
+        ),
+        (vec![("zone", "", "0")], "0", "zone name must not be empty"),
+        (
+            vec![("zone", "Zone", "-1")],
+            "0",
+            "expected an unsigned decimal integer",
+        ),
+        (
+            NUNAVOTH_ZONES.to_vec(),
+            "72",
+            "published total 72 does not equal zone sum 71",
+        ),
+        (vec![], "1", "published total 1 does not equal zone sum 0"),
+    ] {
+        let error = replay(&with_nunavoth_zones(&zones, total), time())
+            .unwrap_err()
+            .to_string();
+        for expected in [
+            "server \"nunavoth\"",
+            "#starting-zone-list-nunavoth",
+            diagnostic,
+        ] {
+            assert!(error.contains(expected), "missing {expected:?}: {error}");
+        }
+        if total == "72" {
+            for (id, _, _) in NUNAVOTH_ZONES {
+                assert!(error.contains(id), "missing observed zone {id}: {error}");
+            }
+        }
+    }
+}
+
+#[test]
 fn temporary_zone_elements_wait_for_completed_metrics() {
     let mut frames = frames();
     let last = frames.len() - 1;

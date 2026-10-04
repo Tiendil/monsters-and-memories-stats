@@ -85,6 +85,70 @@ fn aggregation_ratios_and_missing_entities_preserve_their_semantics() {
 }
 
 #[test]
+fn changing_zone_membership_preserves_gaps_totals_and_exported_rows() {
+    let first = snapshot("2024-01-01T00:00:00Z", 1, 2, 3);
+    let mut missing = snapshot("2024-01-01T01:00:00Z", 1, 2, 3);
+    missing.servers[0].starting_zones.clear();
+    let mut latest = snapshot("2024-01-01T02:00:00Z", 1, 2, 3);
+    latest.servers[0].starting_zones.push(StartingZone {
+        id: "new-zone".into(),
+        name: "New zone".into(),
+        online: 7,
+    });
+    let zone = Metric::Zone("z".into(), "Zone".into());
+    let a = Scope::Server("a".into());
+    assert_eq!(zone.value(&missing, &a), None);
+    assert_eq!(zone.value(&missing, &Scope::All), None);
+    assert_eq!(
+        zone.value(&missing, &Scope::Server("b".into())),
+        Some(MetricValue::Count(1))
+    );
+    assert_eq!(
+        Metric::StartingZones.value(&missing, &a),
+        Some(MetricValue::Count(0))
+    );
+    assert_eq!(
+        Metric::StartingZones.value(&missing, &Scope::All),
+        Some(MetricValue::Count(1))
+    );
+    assert_eq!(
+        Metric::StartingZones.value(&latest, &Scope::All),
+        Some(MetricValue::Count(11))
+    );
+    let history = History::new(vec![first, missing, latest]).unwrap();
+    assert_eq!(
+        zones(&history)
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["new-zone", "z"]
+    );
+    let chart = plot(
+        &history,
+        &zone,
+        &a,
+        TimeRange::All,
+        time("2024-01-01T03:00:00Z"),
+        &Comparison::Entities(vec![Scope::All, a.clone(), Scope::Server("b".into())]),
+    )
+    .unwrap();
+    for series in &chart.series[..2] {
+        assert_eq!(series.points[1].value, None);
+        assert_eq!(series.segments().len(), 2);
+    }
+    assert_eq!(chart.series[2].segments().len(), 1);
+    let exported: serde_json::Value = serde_json::from_str(&history.to_json().unwrap()).unwrap();
+    assert_eq!(
+        exported["snapshots"][1]["servers"][0]["starting_zones"],
+        serde_json::json!([])
+    );
+    assert_eq!(
+        exported["snapshots"][2]["servers"][0]["starting_zones"][1]["id"],
+        "new-zone"
+    );
+}
+
+#[test]
 fn ranges_end_at_now_and_include_their_exact_utc_boundaries() {
     let now = time("2024-03-01T12:30:00Z");
     for (range, days) in TimeRange::ALL

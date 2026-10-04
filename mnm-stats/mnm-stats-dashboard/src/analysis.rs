@@ -152,15 +152,11 @@ impl Metric {
                 Self::Daily => u128::from(server.daily_active),
                 Self::Monthly => u128::from(server.monthly_active),
                 Self::Online => u128::from(server.online),
-                Self::StartingZones => {
-                    if server.starting_zones.is_empty() {
-                        return None;
-                    }
-                    server
-                        .starting_zones
-                        .iter()
-                        .try_fold(0_u128, |sum, z| sum.checked_add(z.online.into()))?
-                }
+                // Collection validates an empty list against a published zero total.
+                Self::StartingZones => server
+                    .starting_zones
+                    .iter()
+                    .try_fold(0_u128, |sum, z| sum.checked_add(z.online.into()))?,
                 Self::Zone(id, _) => server
                     .starting_zones
                     .iter()

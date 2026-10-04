@@ -88,7 +88,8 @@ This uses the existing GitHub infrastructure for alerts; delivery depends on the
 
 The collector and dashboard follow the metric interpretation and collection contracts in [requirements.md](requirements.md).
 These detect source-contract changes while accepting harmless styling changes and changes to the dynamically discovered server set.
-Changes to required metric labels or the approved zone roster require a reviewed parser/fixture update.
+Starting-zone membership is discovered separately for each server and may change between observations.
+Changes to required metric labels or row structure require a reviewed parser/fixture update.
 
 ### Development
 
@@ -319,8 +320,8 @@ A fetch or parse failure MUST leave the original file byte-for-byte intact.
 The collector MUST support a fixture input or equivalent offline test entry point so parser failures can be verified without depending on the live page.
 Collector HTTP, WebSocket, and readiness behavior MUST be testable using local responses or simulated failures, with no fallback to the public source during tests.
 The source contract MUST be covered by sanitized representative fixtures, including valid changes in the discovered server set.
-Server membership MUST NOT be fixed by parser configuration or the storage schema.
-Changing required metric labels or the approved zone roster requires review and regression tests.
+Server membership and per-server starting-zone membership MUST NOT be fixed by parser configuration or the storage schema.
+Changing required metric labels or row structure requires review and regression tests.
 
 ## Testing
 

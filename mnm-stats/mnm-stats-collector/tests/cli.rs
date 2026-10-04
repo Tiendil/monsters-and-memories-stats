@@ -2,6 +2,70 @@ use std::{fs, path::PathBuf, process::Command};
 mod common;
 
 #[test]
+fn changing_zone_lists_preserve_history_and_invalid_rows_never_append() {
+    let scratch = common::Scratch::new();
+    let history = scratch.0.join("history.jsonl");
+    let fixture = scratch.0.join("frames.json");
+    let run = |frames: Vec<serde_json::Value>, at: &str| {
+        fs::write(&fixture, serde_json::to_string(&frames).unwrap()).unwrap();
+        Command::new(env!("CARGO_BIN_EXE_mnm-stats-collector"))
+            .arg("collect")
+            .arg("--history")
+            .arg(&history)
+            .arg("--replay")
+            .arg(&fixture)
+            .arg("--observed-at")
+            .arg(at)
+            .output()
+            .unwrap()
+    };
+    assert!(
+        run(common::frames(), "2026-10-02T15:20:00Z")
+            .status
+            .success()
+    );
+    let original = fs::read_to_string(&history).unwrap();
+    let output = run(
+        common::with_nunavoth_zones(&common::NUNAVOTH_ZONES, "71"),
+        "2026-10-02T16:20:00Z",
+    );
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let before = fs::read_to_string(&history).unwrap();
+    assert!(before.starts_with(&original));
+    let stored = mnm_stats_model::History::from_jsonl(&before).unwrap();
+    assert_eq!(stored.snapshots().len(), 2);
+    let zones: Vec<_> = stored
+        .snapshots()
+        .iter()
+        .map(|s| {
+            &s.servers
+                .iter()
+                .find(|s| s.id == "nunavoth")
+                .unwrap()
+                .starting_zones
+        })
+        .collect();
+    assert_eq!((zones[0].len(), zones[1].len()), (5, 4));
+    assert!(zones[1].iter().all(|z| z.id != "ailvorith"));
+    for frames in [
+        common::with_nunavoth_zones(&[("duplicate", "One", "0"), ("duplicate", "Two", "0")], "0"),
+        common::with_nunavoth_zones(&[("", "Empty identity", "0")], "0"),
+        common::with_nunavoth_zones(&[("zone", "Zone", "broken")], "0"),
+        common::with_nunavoth_zones(&common::NUNAVOTH_ZONES, "72"),
+        common::with_nunavoth_zones(&[], "1"),
+    ] {
+        let output = run(frames, "2026-10-02T17:20:00Z");
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("server \"nunavoth\""));
+        assert_eq!(fs::read_to_string(&history).unwrap(), before);
+    }
+}
+
+#[test]
 fn notification_probe_fails_with_local_fixture_without_changing_repository_history() {
     let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     let history = project.join("data/history.jsonl");

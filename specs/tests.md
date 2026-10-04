@@ -67,6 +67,9 @@ Tests for `mnm-stats-collector` MUST cover:
 - Extraction of current-state values without storing the source's historical series or backfilling earlier observations.
 - Selection of a final historical point only when the source contract establishes last-known-state semantics, and rejection of an unverified historical bucket as a current value.
 - Dynamic discovery of added, removed, and reordered server cards.
+- Dynamic discovery of added, omitted, and reordered starting zones independently for each server, including fewer zones on one server than on others.
+- Preservation of explicit zone zeros without inventing rows for omitted zones, and acceptance of an empty list only with a published zero total.
+- Rejection of missing zone lists, duplicate or empty zone identities, malformed rows, and inconsistent totals with useful diagnostics and unchanged history.
 - Preservation of source display names.
 - Rejection of missing or duplicate identities and incompatible required fields.
 - Rejection of malformed counts and inconsistent published totals.
@@ -87,6 +90,8 @@ Collection includes that server without a parser change; removing a required cou
 Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 
 - Server and starting-zone aggregation without claiming deduplicated global activity.
+- Unavailable individual-zone values and chart gaps when a server omits a zone, including all-server views that would otherwise show a partial sum.
+- Zero starting-zone totals for validated empty lists, historical zone discovery, and complete JSON exports preserving differing per-server zone membership.
 - Ratio values, including zero denominators and values above 100 percent.
 - Correlation with known expected results and selection of the last jointly available sample per UTC day.
 - Unavailable correlation for insufficient paired days or zero variance.

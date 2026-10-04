@@ -18,6 +18,30 @@ pub fn frames() -> Vec<Value> {
     serde_json::from_str(include_str!("../fixtures/liveview.json")).unwrap()
 }
 
+// Synthetic completed rows reproducing the four-zone shape seen in the incident.
+// These counts are local test inputs, not a refresh of the captured fixture.
+pub const NUNAVOTH_ZONES: [(&str, &str, &str); 4] = [
+    ("evergrove", "Evershade Weald", "10"),
+    ("nightharbore", "Night Harbor (East)", "18"),
+    ("nightharborw", "Night Harbor (West)", "27"),
+    ("underdocks", "Underdocks", "16"),
+];
+
+pub fn with_nunavoth_zones(zones: &[(&str, &str, &str)], total: &str) -> Vec<Value> {
+    let mut frames = frames();
+    let rows = frames.last_mut().unwrap()[4]["0"]["1"]["0"]["1"]["0"]["d"]
+        .as_array_mut()
+        .unwrap();
+    let server = rows.iter_mut().find(|row| row[0] == "nunavoth").unwrap();
+    server[12] = Value::from(total);
+    server[14] = Value::from(
+        zones.iter().map(|(id, name, count)| {
+            format!("<div id=\"starting-zone-nunavoth-{id}\"><span>{name}</span><span>{count}</span></div>")
+        }).collect::<String>(),
+    );
+    frames
+}
+
 pub struct Scratch(pub PathBuf);
 impl Scratch {
     pub fn new() -> Self {

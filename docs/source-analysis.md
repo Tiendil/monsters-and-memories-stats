@@ -138,6 +138,26 @@ A synthetic variant of the existing protocol fixture reproduces that failure and
 Completed invalid fields still fail without replacing missing data with zeros, and unexpected zone elements include their tag, identity, and bounded text in the diagnostic.
 This addresses the reproduced premature-validation case; the original incident's exact trigger remains unverified.
 
+### Nunavoth zone omission
+
+The [scheduled collection at 11:58 UTC on 2026-10-04](https://github.com/Tiendil/monsters-and-memories-stats/actions/runs/37200438247) failed with `server "nunavoth": starting-zone roster changed or contains duplicates` after readiness validation.
+The parser required the same five starting-zone identities for every server.
+The run skipped history publication; its source response was not retained, so the exact zone list in that response is unknown.
+
+A separate inspection of the public page's initial HTML on the same date showed only four zones for Nunavoth:
+
+- Evershade Weald: 10.
+- Night Harbor (East): 18.
+- Night Harbor (West): 27.
+- Underdocks: 16.
+
+These counts summed to its published starting-zone total of 71; Ail'vorith was absent while other servers still listed it.
+This later response is consistent with the failure, but does not prove the failed response's contents or explain why the source omitted the zone.
+An omitted row does not establish a zero population.
+
+Collection discovers each server's reported zone list and validates row identities, names, counts, and totals under the [collection contract](../specs/requirements.md#history-and-collection).
+Synthetic variants of the existing local fixture cover the four-zone shape, newly introduced zones, reordering, explicit zeros, empty lists with zero totals, and invalid rows without refreshing source data during tests.
+
 ## Remaining verification
 
 The counting semantics of DAILY ACTIVE and MONTHLY ACTIVE remain unverified.

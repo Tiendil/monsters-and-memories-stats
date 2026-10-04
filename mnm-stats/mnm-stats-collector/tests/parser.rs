@@ -72,10 +72,8 @@ fn missing_malformed_duplicated_or_renamed_fields_fail() {
         ("1172", ""),
         ("4488 Total Online", "4489 Total Online"),
         ("starting-zone-total-kravvin", "missing-zone-total"),
-        (
-            "starting-zone-kravvin-ailvorith",
-            "starting-zone-kravvin-unknown",
-        ),
+        ("starting-zone-kravvin-ailvorith", "starting-zone-kravvin-"),
+        ("starting-zone-list-kravvin", "missing-zone-list"),
         ("server-metrics-kravvin", "server-metrics-"),
         ("server-metrics-kravvin", "missing-server-identity"),
         ("server-stats-kravvin", "missing-stats"),

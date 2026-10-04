@@ -144,6 +144,9 @@ Missing fields MUST NOT become zero; a literal published zero MUST remain zero, 
 The dashboard MUST NOT infer MAU by summing observations.
 
 Starting-zone counts MAY be summed by zone ID across servers, and across zones within a server.
+An individual zone absent from a server's observation MUST remain unavailable, not zero.
+An all-server count for an individual zone MUST be unavailable when any observed server omits that zone; a partial sum MUST NOT be presented as a complete total.
+Starting-zone totals MUST sum each server's reported zone rows, including a zero total for a validated empty list.
 Daily/monthly activity MAY be summed across servers only when clearly labeled as a sum without deduplication.
 Such sums MUST NOT be described as game-wide unique active users, since one account may use multiple servers.
 Global subscriptions MUST remain global in a per-server view; per-server subscription numbers MUST NOT be invented.
@@ -199,7 +202,16 @@ The parser MUST check:
 - metric labels.
 - unique identities.
 - numeric formats.
-- the approved zone roster for each discovered server.
+- the structure and unique identities of reported starting-zone rows within each discovered server.
+
+The collector MUST discover starting-zone identities and names from each server's completed list without a hardcoded zone roster.
+Zone additions, removals, and reordering MUST be accepted without code or configuration changes when the source contract is otherwise satisfied.
+Each snapshot MUST retain exactly the zones reported for each server, without filling omitted zones from earlier observations or assigning them zero counts.
+An empty list MUST be accepted only when the required published starting-zone total is zero.
+An absent list, malformed row, or inconsistent total MUST still fail collection.
+
+**Example:** One server reports four valid zones whose counts sum to its published total while another reports five.
+Both are collected with their respective zone lists; the omitted zone remains available in earlier observations but has no value for that server in this snapshot.
 
 Collection MUST fail with a useful diagnostic when required metric fields or structural elements are:
 
@@ -221,6 +233,9 @@ Diagnostics for unexpected elements in a starting-zone list MUST include:
 - element tag.
 - ID when present.
 - a bounded excerpt of visible text.
+
+Duplicate-zone diagnostics MUST identify the duplicated zone and server.
+Starting-zone total mismatches MUST report the published total, computed sum, and observed zone identities.
 
 Maintainer notification setup and a demonstrated failure notification MUST be part of deployment acceptance.
 The last valid dashboard data MUST remain usable after collection failure.

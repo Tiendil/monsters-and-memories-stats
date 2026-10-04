@@ -5,14 +5,6 @@ use scraper::{Element, ElementRef, Html, Selector};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
-const ZONES: [&str; 5] = [
-    "ailvorith",
-    "evergrove",
-    "nightharbore",
-    "nightharborw",
-    "underdocks",
-];
-
 fn select<'a>(root: ElementRef<'a>, selector: &str) -> Vec<ElementRef<'a>> {
     root.select(&Selector::parse(selector).expect("constant CSS selector"))
         .collect()
@@ -197,37 +189,44 @@ pub fn parse_snapshot(html: &str, observed_at: DateTime<Utc>) -> Result<Snapshot
             let total = count(&text(total), "starting-zone total")?;
             let list = id(section, &format!("starting-zone-list-{server_id}"))?;
             let mut starting_zones = Vec::new();
+            let mut identities = BTreeSet::new();
             for zone in list.child_elements() {
-                let prefix = format!("starting-zone-{server_id}-");
-                let zone_id = zone
-                    .value()
-                    .id()
-                    .and_then(|s| s.strip_prefix(&prefix))
-                    .filter(|id| ZONES.contains(id))
-                    .ok_or_else(|| format!(
-                        "#starting-zone-list-{server_id}: missing or unexpected zone identity; expected prefix {prefix:?} and an approved zone ID, found <{}> with id {:?} and text {:?}",
+                let result = (|| -> Result<StartingZone> {
+                    let prefix = format!("starting-zone-{server_id}-");
+                    let zone_id = zone
+                        .value()
+                        .id()
+                        .and_then(|s| s.strip_prefix(&prefix))
+                        .filter(|id| !id.trim().is_empty())
+                        .ok_or_else(|| format!("missing or invalid zone identity; expected prefix {prefix:?} and a nonempty zone ID"))?;
+                    if !identities.insert(zone_id) {
+                        return Err(format!("duplicate zone identity {zone_id:?}").into());
+                    }
+                    let fields = select(zone, "span");
+                    if fields.len() != 2 {
+                        return Err("zone must contain its name and count".into());
+                    }
+                    let name = text(fields[0]);
+                    if name.is_empty() {
+                        return Err("zone name must not be empty".into());
+                    }
+                    let online = count(&text(fields[1]), "zone count")?;
+                    Ok(StartingZone {
+                        id: zone_id.into(),
+                        name,
+                        online,
+                    })
+                })();
+                starting_zones.push(result.map_err(|error| format!(
+                        "#starting-zone-list-{server_id}: {error}; found <{}> with id {:?} and text {:?}",
                         zone.value().name(),
                         zone.value().id(),
                         text(zone).chars().take(160).collect::<String>()
-                    ))?;
-                let fields = select(zone, "span");
-                if fields.len() != 2 {
-                    return Err("zone must contain its name and count".into());
-                }
-                let name = text(fields[0]);
-                let online = count(&text(fields[1]), "zone count")?;
-                starting_zones.push(StartingZone {
-                    id: zone_id.into(),
-                    name,
-                    online,
-                });
+                    ))?);
             }
-            let roster: BTreeSet<_> = starting_zones.iter().map(|z| z.id.as_str()).collect();
-            if roster != BTreeSet::from(ZONES) || starting_zones.len() != ZONES.len() {
-                return Err("starting-zone roster changed or contains duplicates".into());
-            }
-            if sum(starting_zones.iter().map(|z| z.online), "starting zones")? != total {
-                return Err("starting-zone total does not equal zone counts".into());
+            let zone_sum = sum(starting_zones.iter().map(|z| z.online), "starting zones")?;
+            if zone_sum != total {
+                return Err(format!("#starting-zone-list-{server_id}: published total {total} does not equal zone sum {zone_sum}; observed zone identities: {identities:?}").into());
             }
             starting_zones.sort_by(|a, b| a.id.cmp(&b.id));
             chart_data(card, server_id)?;
