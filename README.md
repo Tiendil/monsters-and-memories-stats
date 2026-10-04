@@ -29,6 +29,14 @@ Build caches live in ignored `.cache/docker/` and `target/docker/`. Container ou
 
 GitHub jobs reuse `.github/actions/setup/` to build this image with a Docker layer cache and restore Cargo caches. `./bin/dev.sh setup --image-ready` fetches dependencies after that image has been loaded; it skips rebuilding the image and pulling the interactive MCP service. Application commands are the same locally and in CI.
 
+## Dashboard views
+
+Overview shows the last counts in the selected interval and the online trend. Activity, Population, and Relationships expose the detailed charts while preserving the selected server, range, and comparison. Population includes a zone selector drawn from the full archive.
+
+Use Compare for multiple servers, calendar months/years, or equal-duration intervals. Chart colors and line patterns stay attached to the selected series during the session. “View data” provides exact timestamps and values; “Download history (JSON)” always includes the complete archive.
+
+Presentation follows [the dashboard design](specs/dashboard-design.md) and [design tokens](specs/design-tokens.md). IM Fell English is distributed locally with its [SIL Open Font License](mnm-stats/mnm-stats-dashboard/fonts/OFL.txt) and [source attribution](mnm-stats/mnm-stats-dashboard/fonts/README.txt).
+
 ## Local use
 
 For a populated preview, from bash or fish:

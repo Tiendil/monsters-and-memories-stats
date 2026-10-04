@@ -154,7 +154,43 @@ impl Browser {
         value["value"].clone()
     }
 
+    // Cross-metric assertions follow the same section and zone navigation as a visitor.
+    // Presentation assertions use the navigation controls directly.
+    fn show_metric(&self, metric: &str) {
+        let section = match metric {
+            "daily" | "monthly" | "subscriptions" => "activity",
+            "online" | "starting-zones" => "population",
+            m if m.starts_with("zone-") => "population",
+            _ => "relationships",
+        };
+        let present = self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({
+                "script":"return !!document.querySelector(arguments[0]);",
+                "args":[format!("[data-metric='{metric}']")]
+            }),
+        );
+        if present == true {
+            return;
+        }
+        self.click(&format!("#nav-{section}"));
+        if let Some(zone) = metric.strip_prefix("zone-") {
+            self.select("#zone-scope", zone);
+        }
+    }
+
+    fn visit_chart_selector(&self, selector: &str) {
+        if let Some(metric) = selector
+            .strip_prefix("[data-metric='")
+            .and_then(|s| s.split_once("']").map(|p| p.0))
+        {
+            self.show_metric(metric);
+        }
+    }
+
     fn element(&self, selector: &str) -> String {
+        self.visit_chart_selector(selector);
         let mut found = None;
         wait_until(
             || {
@@ -188,6 +224,7 @@ impl Browser {
     }
 
     fn count(&self, selector: &str) -> usize {
+        self.visit_chart_selector(selector);
         self.request(
             Method::POST,
             "/elements",
@@ -203,6 +240,14 @@ impl Browser {
             Method::POST,
             &format!("/element/{}/click", self.element(selector)),
             json!({}),
+        );
+    }
+
+    fn activate(&self, selector: &str) {
+        self.request(
+            Method::POST,
+            &format!("/element/{}/value", self.element(selector)),
+            json!({"text":"\u{e007}","value":["\u{e007}"]}),
         );
     }
 
@@ -304,7 +349,7 @@ impl Browser {
 
     fn verify_download(&self, expected: &Value, scratch: &Path) {
         let download = scratch.join("downloads/history.json");
-        self.click("#download-history");
+        self.activate("#download-history");
         let mut actual = None;
         wait_until(
             || {
@@ -325,6 +370,7 @@ impl Browser {
         self.request(Method::POST, "/log", json!({"type":"browser"}));
         self.request(Method::POST, "/url", json!({"url":url}));
         let count = expected["snapshots"].as_array().unwrap().len();
+        self.click("#archive-details summary");
         assert_eq!(self.text("#history-count"), format!("{count} observations"));
         assert_eq!(
             self.text("footer a[href='https://plotly.com/javascript/']"),
@@ -340,6 +386,7 @@ impl Browser {
         } else {
             assert!(status.contains("UTC"));
         }
+        self.click("#archive-details summary");
         self.request(
             Method::POST,
             "/window/rect",
@@ -351,11 +398,140 @@ impl Browser {
             Value::Null,
         );
         assert!(rect["width"].as_f64().unwrap() <= 375.0);
+        if count > 0 && self.count(".empty-selection") > 0 {
+            self.expect_text("[data-summary='online'] .headline-value", "Not available");
+            self.click(".empty-selection button");
+            self.ready("online");
+            self.expect_count(".empty-selection", 0);
+        }
         self.verify_download(expected, scratch);
         self.verify_requests(url, true);
     }
 
+    fn verify_presentation(&self, expected: &Value, scratch: &Path) {
+        self.expect_count(".headline", 4);
+        self.expect_count(".chart-card", 1);
+        self.expect_count(".legend li", 0);
+        let last = expected["snapshots"].as_array().unwrap().last().unwrap();
+        let daily: u128 = last["servers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| u128::from(s["daily_active"].as_u64().unwrap()))
+            .sum();
+        self.expect_text(
+            "[data-summary='daily'] .headline-value",
+            &mnm_stats_dashboard::analysis::grouped_count(daily),
+        );
+        self.select("#server-scope", "retired");
+        self.expect_text("[data-summary='daily'] .headline-value", "Not available");
+        self.expect_text(
+            "[data-summary='subscriptions'] .headline-value",
+            &mnm_stats_dashboard::analysis::grouped_count(
+                last["active_subscriptions"].as_u64().unwrap().into(),
+            ),
+        );
+        self.select("#server-scope", "a");
+        self.select("#time-range", "7");
+        self.click("#nav-population");
+        self.expect_count(".chart-card", 3);
+        self.select("#zone-scope", "zz-archived");
+        self.expect_text(
+            "[data-metric='zone-zz-archived'] .empty-chart",
+            "No available observations for this selection.",
+        );
+        self.select("#time-range", "all");
+        self.ready("zone-zz-archived");
+        self.select("#time-range", "7");
+        self.select("#zone-scope", "w");
+        self.activate("#nav-activity");
+        self.expect_count(".chart-card", 3);
+        self.click("#nav-population");
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#server-scope').value,document.querySelector('#time-range').value,document.querySelector('#zone-scope').value];","args":[]})), json!(["a","7","w"]));
+        self.select("#comparison-mode", "entities");
+        self.expect_count(".entity-selections li", 3);
+        self.activate(".entity-selections li:last-child .remove-entity");
+        self.expect_count(".entity-selections li", 2);
+        assert_eq!(
+            self.request(
+                Method::POST,
+                "/execute/sync",
+                json!({"script":"return document.activeElement.id;","args":[]})
+            ),
+            "comparison-mode"
+        );
+        self.click("#entity-choices input[value='server:b']");
+        self.click("#nav-overview");
+        self.expect_count(".headline", 0);
+        self.expect_count(".comparison-summary", 1);
+        self.select("#comparison-mode", "overview");
+        self.expect_count(".headline", 4);
+        // Test chart-engine failure without a network request: data and download survive.
+        self.request(Method::POST, "/execute/sync", json!({"script":"window.savedPlot = Plotly.newPlot; Plotly.newPlot = () => Promise.reject(new Error('test failure'));","args":[]}));
+        self.click("#nav-activity");
+        self.expect_text("[data-metric='daily'] .interactive-plot .error", "Chart unavailable. View data below or download the history; reload to retry the chart engine.");
+        self.activate("[data-metric='daily'] summary");
+        wait_until(
+            || self.count("[data-metric='daily'] tbody tr") > 0,
+            "exact rows remain available after chart failure",
+        );
+        self.verify_download(expected, scratch);
+        self.request(Method::POST, "/execute/sync", json!({"script":"Plotly.newPlot = window.savedPlot; delete window.savedPlot;","args":[]}));
+        self.click("#nav-overview");
+        self.ready("online");
+        // Keyboard skip link and section controls preserve a useful focus target.
+        self.request(Method::POST, "/execute/sync", json!({"script":"window.scrollTo(0,0); document.querySelector('.skip-link').focus();","args":[]}));
+        self.request(Method::POST, "/actions", json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e007}"},{"type":"keyUp","value":"\u{e007}"}]}]}));
+        assert_eq!(
+            self.request(
+                Method::POST,
+                "/execute/sync",
+                json!({"script":"return document.activeElement.id;","args":[]})
+            ),
+            "content"
+        );
+        for width in [320, 375] {
+            self.request(
+                Method::POST,
+                "/window/rect",
+                json!({"width":width,"height":812}),
+            );
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.documentElement.scrollWidth <= innerWidth;","args":[]})), true);
+        }
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
+        );
+        self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({"script":"document.documentElement.style.fontSize='200%';","args":[]}),
+        );
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.documentElement.scrollWidth <= innerWidth;","args":[]})), true);
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":320,"height":812}),
+        );
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.documentElement.scrollWidth <= innerWidth;","args":[]})), true);
+        assert_eq!(
+            self.computed(".headline-grid", "grid-template-columns")
+                .split_whitespace()
+                .count(),
+            1
+        );
+        self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({"script":"document.documentElement.style.fontSize='';","args":[]}),
+        );
+        self.select("#server-scope", "");
+        self.select("#time-range", "30");
+    }
+
     fn verify_features(&self, url: &str, expected: &Value, scratch: &Path) {
+        self.verify_presentation(expected, scratch);
         let metrics = [
             "daily",
             "monthly",
@@ -375,15 +551,19 @@ impl Browser {
             "/window/rect",
             json!({"width":1280,"height":1000}),
         );
+        self.click(".range-details summary");
         assert!(
             self.text("#selected-interval")
                 .contains("2026-06-01T12:00:00Z")
         );
+        self.click(".range-details summary");
         assert!(self.text("#freshness").contains("Stale data"));
+        self.click(".source-notes summary");
         assert!(self.text(".source-notes").contains(
             "Per-server subscriptions and deduplicated global activity are unavailable."
         ));
-        assert_eq!(self.count(".chart-card"), metrics.len());
+        self.click(".source-notes summary");
+        self.expect_count(".chart-card", 1);
         assert!(self.text("#server-scope").contains("Retired server"));
         for (key, days) in [
             ("7", Some(7)),
@@ -524,19 +704,17 @@ impl Browser {
                 "No available observations for this selection.",
             );
         }
-        assert_eq!(
-            self.count("[data-metric='subscriptions'] .plot-surface[data-ready='true']"),
-            1
-        );
+        self.ready("subscriptions");
         self.select("#server-scope", "a");
+        self.click("#nav-relationships");
         assert!(self.text("#correlation-scope").contains("Alpha"));
-        assert_eq!(self.count(".correlation-value"), 3);
+        self.expect_count(".correlation-value", 3);
         assert!(self.text(".correlations").contains("r ="));
         self.select("#comparison-mode", "entities");
         for metric in metrics {
-            assert_eq!(
-                self.count(&format!("[data-metric='{metric}'] .legend li")),
-                if metric == "subscriptions" { 1 } else { 3 }
+            self.expect_count(
+                &format!("[data-metric='{metric}'] .legend li"),
+                if metric == "subscriptions" { 0 } else { 3 },
             );
         }
         self.hover("[data-metric='online'] .scatterlayer .trace:last-child .point:last-child");
@@ -549,12 +727,12 @@ impl Browser {
         // Three individual servers, then all servers alongside the three individuals.
         self.click("#entity-choices input[value='all']");
         self.click("#entity-choices input[value='server:c']");
-        assert_eq!(self.count("[data-metric='daily'] .legend li"), 3);
+        self.expect_count("[data-metric='daily'] .legend li", 3);
         self.click("#entity-choices input[value='all']");
-        assert_eq!(self.count("[data-metric='daily'] .legend li"), 4);
+        self.expect_count("[data-metric='daily'] .legend li", 4);
         self.verify_download(expected, scratch);
         self.click("#entity-choices input[value='server:b']");
-        assert_eq!(self.count("[data-metric='daily'] .legend li"), 3);
+        self.expect_count("[data-metric='daily'] .legend li", 3);
         for (mode, periods) in [
             ("months", ["2024-02", "2024-03", "2024-04"]),
             ("years", ["2023", "2024", "2025"]),
@@ -565,14 +743,10 @@ impl Browser {
             }
             for period in periods {
                 self.input("#period-input", period);
-                self.click("#add-period");
+                self.activate("#add-period");
             }
             for metric in metrics {
-                assert_eq!(
-                    self.count(&format!("[data-metric='{metric}'] .legend li")),
-                    3,
-                    "{mode} / {metric}"
-                );
+                self.expect_count(&format!("[data-metric='{metric}'] .legend li"), 3);
                 self.ready(metric);
             }
             // Constant zone counts coincide across all three periods. Every
@@ -603,10 +777,32 @@ impl Browser {
             self.click("[data-metric='daily'] summary");
             self.verify_download(expected, scratch);
             self.click(".remove-period");
-            assert_eq!(self.count("[data-metric='daily'] .legend li"), 2);
+            self.expect_count("[data-metric='daily'] .legend li", 2);
             self.input("#period-input", "invalid");
-            self.click("#add-period");
+            self.activate("#add-period");
             assert!(!self.text(".period-picker [role='alert']").is_empty());
+            assert_eq!(
+                self.request(
+                    Method::GET,
+                    &format!(
+                        "/element/{}/attribute/aria-invalid",
+                        self.element("#period-input")
+                    ),
+                    Value::Null
+                ),
+                "true"
+            );
+            assert_eq!(
+                self.request(
+                    Method::GET,
+                    &format!(
+                        "/element/{}/attribute/aria-describedby",
+                        self.element("#period-input")
+                    ),
+                    Value::Null
+                ),
+                "period-error"
+            );
         }
         self.select("#comparison-mode", "intervals");
         self.input("#interval-hours", "24");
@@ -615,10 +811,7 @@ impl Browser {
             self.click("#add-interval");
         }
         for metric in metrics {
-            assert_eq!(
-                self.count(&format!("[data-metric='{metric}'] .legend li")),
-                3
-            );
+            self.expect_count(&format!("[data-metric='{metric}'] .legend li"), 3);
             self.ready(metric);
         }
         self.hover("[data-metric='zone-w'] .scatterlayer .point");
@@ -661,7 +854,7 @@ impl Browser {
         assert!(rect["width"].as_f64().unwrap() <= 375.0);
         self.select("#time-range", "7");
         self.select("#server-scope", "a");
-        // The rightmost marker requires scrolling the narrow plot horizontally.
+        // Boundary markers remain reachable in a plot sized to the narrow container.
         self.hover("[data-metric='daily'] .scatterlayer .trace:last-child .point:last-child");
         let last = records.last().unwrap();
         self.expect_hover(
@@ -712,15 +905,19 @@ impl Browser {
     }
 
     fn computed(&self, selector: &str, property: &str) -> String {
-        let value = self
-            .request(
-                Method::GET,
-                &format!("/element/{}/css/{property}", self.element(selector)),
-                Value::Null,
-            )
-            .as_str()
-            .unwrap()
-            .to_owned();
+        self.visit_chart_selector(selector);
+        let mut value = None;
+        wait_until(
+            || {
+                value = self.request(Method::POST, "/execute/sync", json!({
+                "script":"const e=document.querySelector(arguments[0]);return e ? getComputedStyle(e).getPropertyValue(arguments[1]) : null;",
+                "args":[selector,property]
+            })).as_str().map(str::to_owned);
+                value.is_some()
+            },
+            &format!("computed {property} of {selector}"),
+        );
+        let value = value.unwrap();
         // WebDriver normalizes some opaque CSS colors to rgba; SVG fill stays rgb.
         if let Some(rgb) = value
             .strip_prefix("rgba(")
@@ -736,6 +933,9 @@ impl Browser {
         self.select("#comparison-mode", "overview");
         // Seven days keeps demo observations sparse enough to draw point markers.
         self.select("#time-range", "7");
+        self.select("#server-scope", "");
+        self.show_metric("daily");
+        self.ready("daily");
         self.request(
             Method::POST,
             "/window/rect",
@@ -746,7 +946,7 @@ impl Browser {
             if changed {
                 "rgb(25, 30, 35)"
             } else {
-                "rgb(17, 26, 32)"
+                "rgb(244, 240, 231)"
             }
         );
         assert_eq!(self.computed(".chart-card", "border-radius"), "10.4px");
@@ -766,16 +966,12 @@ impl Browser {
         );
         let size = self.computed("[data-metric='daily'] .xtick text", "font-size");
         let size: f64 = size.strip_suffix("px").unwrap().parse().unwrap();
-        assert!((size - if changed { 18.0 } else { 12.0 }).abs() < 0.001);
+        assert!((size - if changed { 18.0 } else { 14.0 }).abs() < 0.001);
         let color = if changed {
             "rgba(204, 102, 51, 0.5)"
         } else {
-            "rgb(139, 217, 198)"
+            "rgb(23, 110, 112)"
         };
-        assert_eq!(
-            self.computed("[data-metric='daily'] .swatch", "background-color"),
-            color
-        );
         assert_eq!(
             self.computed("[data-metric='daily'] .scatterlayer .point", "fill"),
             if changed { "rgb(204, 102, 51)" } else { color }
@@ -817,7 +1013,7 @@ impl Browser {
             1
         );
         assert_eq!(self.computed(".page-header", "flex-direction"), "column");
-        assert_eq!(self.computed(".plot-surface", "min-width"), "480px");
+        assert_eq!(self.computed(".plot-surface", "min-width"), "0px");
     }
 
     fn verify_extended_palette(&self) {
@@ -834,12 +1030,12 @@ impl Browser {
             "2023-02", "2023-03", "2023-04", "2024-02", "2024-03", "2024-04", "2025-02",
         ] {
             self.input("#period-input", month);
-            self.click("#add-period");
+            self.activate("#add-period");
         }
         self.expect_count("[data-metric='daily'] .legend li", 7);
         for i in 0..7 {
             let swatch = format!(
-                "[data-metric='daily'] .legend li:nth-child({}) .swatch",
+                "[data-metric='daily'] .legend li:nth-child({}) .swatch line",
                 i + 1
             );
             // Each selected fixture month has exactly three observations.
@@ -847,8 +1043,16 @@ impl Browser {
                 "[data-metric='daily'] .scatterlayer .trace:nth-child({}) .point",
                 i + 1
             );
-            let color = self.computed(&swatch, "background-color");
+            let color = self.computed(&swatch, "stroke");
             assert_eq!(self.computed(&circle, "fill"), color);
+            let line = format!(
+                "[data-metric='daily'] .scatterlayer .trace:nth-child({}) .js-line",
+                i + 1
+            );
+            assert_eq!(
+                self.computed(&swatch, "stroke-dasharray"),
+                self.computed(&line, "stroke-dasharray")
+            );
             self.hover(&circle);
             wait_until(
                 || {
@@ -909,7 +1113,9 @@ impl Browser {
                 "unexpected runtime request: {request}"
             );
             assert!(
-                request == url || [".js", ".wasm"].iter().any(|ext| request.ends_with(ext)),
+                request == url
+                    || request.ends_with("/fonts/IMFellEnglish-Regular.ttf")
+                    || [".js", ".wasm"].iter().any(|ext| request.ends_with(ext)),
                 "separate data or unexpected asset request: {request}"
             );
             wasm_requested |= request.ends_with(".wasm");
@@ -1024,6 +1230,7 @@ fn comparison_history() -> Vec<Value> {
             server("a", "Alpha <island> & West", 20 + i * 3, 10 + i, 100 + i, 7 + i, 3),
             server("b", "Beta", 5, 10, 5, 2, 1), server("c", "Gamma", 8, 16, 8, 3, 2),
         ];
+        if i == 0 { servers[0]["starting_zones"].as_array_mut().unwrap().push(json!({"id":"zz-archived","name":"An old starting zone retained only in the archive","online":1})); }
         if at.year() == 2023 { servers.push(server("retired", "Retired server", 17, 25, 3, 1, 1)); }
         let subscriptions = if at.to_rfc3339() == "2026-05-30T13:00:00+00:00" { 0 } else { 10 + i };
         json!({"observed_at":at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),"active_subscriptions":subscriptions,"servers":servers})
@@ -1250,14 +1457,39 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
     browser.verify(&origin, &expected, scratch);
     assert!(browser.text("#demo-notice").contains("synthetic"));
-    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 10);
+    browser.request(Method::POST, "/execute/async", json!({"script":"const done=arguments[0]; document.fonts.ready.then(() => {window.scrollTo(0,0); done(null);});","args":[]}));
+    let first_view = browser.request(Method::POST, "/execute/sync", json!({"script":"return {cards:document.querySelector('.headline-grid').getBoundingClientRect().bottom, chart:document.querySelector('.plot-surface').getBoundingClientRect().top, width:document.documentElement.scrollWidth, viewport:innerWidth};","args":[]}));
+    assert!(
+        first_view["cards"].as_f64().unwrap() < 812.0
+            && first_view["chart"].as_f64().unwrap() < 812.0,
+        "mobile first view: {first_view}"
+    );
+    assert!(first_view["width"].as_u64().unwrap() <= first_view["viewport"].as_u64().unwrap());
+    browser.select("#server-scope", "demo-0");
+    browser.request(
+        Method::POST,
+        "/execute/sync",
+        json!({"script":"window.scrollTo(0,0);","args":[]}),
+    );
+    assert_eq!(browser.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('.plot-surface').getBoundingClientRect().top < 812 && document.documentElement.scrollWidth <= innerWidth;","args":[]})), true, "long source names fit the populated mobile overview");
+    browser.select("#server-scope", "");
+
+    browser.request(
+        Method::POST,
+        "/window/rect",
+        json!({"width":1440,"height":900}),
+    );
+    browser.ready("online");
+    assert_eq!(browser.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('.scatterlayer').getBoundingClientRect().top < 900;","args":[]})), true);
+
+    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 1);
     drop(demo_preview);
     let preview = start_preview(root, scratch, Some(&history), "explicit", preview_port);
     let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
     browser.verify(&origin, &expected, scratch);
     assert_eq!(
         browser.count(".plot-surface[data-ready='true']"),
-        10,
+        1,
         "recent demo values appear in the default range"
     );
     assert_eq!(
@@ -1319,7 +1551,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let expected = json!({"schema_version":1,"snapshots":[retained]});
     browser.verify(&origin, &expected, scratch);
     browser.select("#time-range", "all");
-    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 10);
+    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 1);
     browser.verify_download(&expected, scratch);
     // A second replacement verifies that watching survives atomic file replacement.
     let original = fs::read(&index).unwrap();

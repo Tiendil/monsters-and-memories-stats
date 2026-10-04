@@ -118,10 +118,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.06666666666666667,
-            0.10196078431372549,
-            0.12549019607843137
-          ]
+            0.956863,
+            0.941176,
+            0.905882
+          ],
+          "alpha": 1
         },
         "$description": "Canvas behind all dashboard content."
       },
@@ -129,10 +130,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.06274509803921569,
-            0.11372549019607843,
-            0.1450980392156863
-          ]
+            1.0,
+            0.992157,
+            0.972549
+          ],
+          "alpha": 1
         },
         "$description": "Background of editable fields and selection controls."
       },
@@ -140,10 +142,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.10588235294117647,
-            0.16470588235294117,
-            0.20392156862745098
-          ]
+            1.0,
+            0.992157,
+            0.972549
+          ],
+          "alpha": 1
         },
         "$description": "Background of panels containing controls or explanatory content."
       },
@@ -152,7 +155,15 @@
         "$description": "Background of chart cards, matching the shared panel surface."
       },
       "tooltip": {
-        "$value": "{color.surface.input}",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1.0,
+            0.992157,
+            0.972549
+          ],
+          "alpha": 1
+        },
         "$description": "Background of exact-value hover details, matching the input surface."
       }
     },
@@ -161,10 +172,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.9137254901960784,
-            0.9372549019607843,
-            0.9490196078431372
-          ]
+            0.160784,
+            0.160784,
+            0.137255
+          ],
+          "alpha": 1
         },
         "$description": "Default text on dashboard surfaces."
       },
@@ -172,10 +184,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.7647058823529411,
-            0.8156862745098039,
-            0.8509803921568627
-          ]
+            0.333333,
+            0.333333,
+            0.294118
+          ],
+          "alpha": 1
         },
         "$description": "Supporting text and control labels with less emphasis than primary text."
       },
@@ -183,10 +196,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.6784313725490196,
-            0.7568627450980392,
-            0.807843137254902
-          ]
+            0.384314,
+            0.384314,
+            0.345098
+          ],
+          "alpha": 1
         },
         "$description": "Low-emphasis notes, captions, and supplementary explanations."
       },
@@ -194,10 +208,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.6078431372549019,
-            0.8352941176470589,
-            0.7764705882352941
-          ]
+            0.541176,
+            0.262745,
+            0.117647
+          ],
+          "alpha": 1
         },
         "$description": "Emphasized metric values, small headings, and units."
       },
@@ -205,10 +220,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.6509803921568628,
-            0.8666666666666667,
-            0.8196078431372549
-          ]
+            0.521569,
+            0.239216,
+            0.090196
+          ],
+          "alpha": 1
         },
         "$description": "Text of navigable links and expandable exact-value details."
       },
@@ -220,10 +236,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            1.0,
-            0.792156862745098,
-            0.5647058823529412
-          ]
+            0.529412,
+            0.258824,
+            0.101961
+          ],
+          "alpha": 1
         },
         "$description": "Text indicating that the newest collected observation is stale."
       },
@@ -231,10 +248,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            1.0,
-            0.7725490196078432,
-            0.6784313725490196
-          ]
+            0.678431,
+            0.160784,
+            0.160784
+          ],
+          "alpha": 1
         },
         "$description": "Validation errors and alert text on dashboard surfaces."
       },
@@ -250,10 +268,11 @@
             "$value": {
               "colorSpace": "srgb",
               "components": [
-                0.6588235294117647,
-                0.8509803921568627,
-                0.803921568627451
-              ]
+                0.529412,
+                0.25098,
+                0.109804
+              ],
+              "alpha": 1
             },
             "$description": "Resting background of primary buttons and related controls."
           },
@@ -261,10 +280,11 @@
             "$value": {
               "colorSpace": "srgb",
               "components": [
-                0.7803921568627451,
-                0.9215686274509803,
-                0.8862745098039215
-              ]
+                0.411765,
+                0.188235,
+                0.078431
+              ],
+              "alpha": 1
             },
             "$description": "Background of primary controls while hovered."
           }
@@ -273,10 +293,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.07058823529411765,
-              0.1568627450980392,
-              0.13333333333333333
-            ]
+              1.0,
+              1.0,
+              1.0
+            ],
+            "alpha": 1
           },
           "$description": "Foreground on primary control backgrounds."
         }
@@ -287,10 +308,11 @@
             "$value": {
               "colorSpace": "srgb",
               "components": [
-                0.1411764705882353,
-                0.21176470588235294,
-                0.25098039215686274
-              ]
+                1.0,
+                0.992157,
+                0.972549
+              ],
+              "alpha": 1
             },
             "$description": "Resting background of secondary buttons and related controls."
           },
@@ -298,10 +320,11 @@
             "$value": {
               "colorSpace": "srgb",
               "components": [
-                0.20784313725490197,
-                0.2980392156862745,
-                0.34901960784313724
-              ]
+                0.92549,
+                0.898039,
+                0.843137
+              ],
+              "alpha": 1
             },
             "$description": "Background of secondary controls while hovered."
           }
@@ -310,10 +333,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.8823529411764706,
-              0.9176470588235294,
-              0.9411764705882353
-            ]
+              0.219608,
+              0.223529,
+              0.184314
+            ],
+            "alpha": 1
           },
           "$description": "Foreground on secondary control backgrounds."
         }
@@ -324,10 +348,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.3215686274509804,
-            0.4117647058823529,
-            0.4627450980392157
-          ]
+            0.533333,
+            0.521569,
+            0.466667
+          ],
+          "alpha": 1
         },
         "$description": "Boundary of outlined buttons and selected comparison chips."
       },
@@ -335,10 +360,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.3254901960784314,
-            0.42745098039215684,
-            0.49019607843137253
-          ]
+            0.533333,
+            0.521569,
+            0.466667
+          ],
+          "alpha": 1
         },
         "$description": "Boundary of editable fields and selection controls."
       },
@@ -346,10 +372,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.2196078431372549,
-            0.3137254901960784,
-            0.37254901960784315
-          ]
+            0.788235,
+            0.760784,
+            0.698039
+          ],
+          "alpha": 1
         },
         "$description": "Separator between major page sections."
       },
@@ -357,10 +384,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.23137254901960785,
-            0.3254901960784314,
-            0.37254901960784315
-          ]
+            0.839216,
+            0.811765,
+            0.752941
+          ],
+          "alpha": 1
         },
         "$description": "Boundary of panel surfaces and subdivisions within them, including table rows."
       },
@@ -368,10 +396,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.2823529411764706,
-            0.3764705882352941,
-            0.43137254901960786
-          ]
+            0.788235,
+            0.760784,
+            0.698039
+          ],
+          "alpha": 1
         },
         "$description": "Boundary of grouped comparison choices."
       },
@@ -379,10 +408,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.28627450980392155,
-            0.38823529411764707,
-            0.44313725490196076
-          ]
+            0.533333,
+            0.521569,
+            0.466667
+          ],
+          "alpha": 1
         },
         "$description": "Dashed boundary of an unavailable-chart notice."
       },
@@ -390,10 +420,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            0.4745098039215686,
-            0.6039215686274509,
-            0.6588235294117647
-          ]
+            0.607843,
+            0.317647,
+            0.160784
+          ],
+          "alpha": 1
         },
         "$description": "Accent rule beside a correlation result."
       }
@@ -403,10 +434,11 @@
         "$value": {
           "colorSpace": "srgb",
           "components": [
-            1.0,
-            0.8235294117647058,
-            0.5411764705882353
-          ]
+            0.090196,
+            0.396078,
+            0.486275
+          ],
+          "alpha": 1
         },
         "$description": "Keyboard-focus outline around interactive elements."
       }
@@ -417,13 +449,15 @@
       "$type": "fontFamily",
       "body": {
         "$value": [
-          "system-ui",
+          "Arial",
+          "Liberation Sans",
           "sans-serif"
         ],
         "$description": "Ordered font fallback stack for body text and controls."
       },
       "title": {
         "$value": [
+          "IM Fell English",
           "Georgia",
           "serif"
         ],
@@ -433,11 +467,11 @@
     "weight": {
       "$type": "fontWeight",
       "title": {
-        "$value": 500,
+        "$value": 400,
         "$description": "Weight of the page title."
       },
       "control": {
-        "$value": 600,
+        "$value": 500,
         "$description": "Weight of control labels within buttons."
       },
       "emphasis": {
@@ -448,7 +482,7 @@
     "line-height": {
       "$type": "number",
       "body": {
-        "$value": 1.55,
+        "$value": 1.45,
         "$description": "Unitless line-height multiplier for body text and controls."
       },
       "title": {
@@ -468,7 +502,7 @@
         "minimum": {
           "$type": "dimension",
           "$value": {
-            "value": 2.2,
+            "value": 1.75,
             "unit": "rem"
           },
           "$description": "Lower font-size bound for the responsive page title."
@@ -476,14 +510,14 @@
         "maximum": {
           "$type": "dimension",
           "$value": {
-            "value": 4.2,
+            "value": 2.5,
             "unit": "rem"
           },
           "$description": "Upper font-size bound for the responsive page title."
         },
         "viewport-factor": {
           "$type": "number",
-          "$value": 5,
+          "$value": 3,
           "$description": "Fluid page-title size, multiplied by 1vw between its minimum and maximum bounds."
         }
       },
@@ -510,7 +544,7 @@
       },
       "caption": {
         "$type": "dimension",
-        "$value": "{scale.font-size.1}",
+        "$value": "{scale.font-size.2}",
         "$description": "Short metric units and observation-count captions."
       },
       "eyebrow": {
@@ -520,8 +554,11 @@
       },
       "summary": {
         "$type": "dimension",
-        "$value": "{scale.font-size.5}",
-        "$description": "Latest-collection timestamp and total observation count."
+        "$value": {
+          "value": 2,
+          "unit": "rem"
+        },
+        "$description": "Exact headline counts, stronger than explanatory text and timestamps."
       },
       "coefficient": {
         "$type": "dimension",
@@ -542,7 +579,7 @@
       "$type": "dimension",
       "max-width": {
         "$value": {
-          "value": 94,
+          "value": 82,
           "unit": "rem"
         },
         "$description": "Maximum width of the main dashboard content."
@@ -582,7 +619,7 @@
           "value": 480,
           "unit": "px"
         },
-        "$description": "Minimum displayed plot width; narrower containers scroll horizontally."
+        "$description": "Minimum width of multi-series comparison plots; ordinary plots fit their container."
       }
     },
     "source-note": {
@@ -592,11 +629,32 @@
         "$description": "Maximum source-note line length, multiplied by 1ch in CSS."
       }
     },
-    "chart-description": {
-      "$type": "number",
+    "control": {
       "min-height": {
-        "$value": 3.8,
-        "$description": "Reserved chart-description height, multiplied by 1em in CSS; narrow layouts may collapse this space."
+        "$type": "dimension",
+        "$value": {
+          "value": 2.75,
+          "unit": "rem"
+        },
+        "$description": "Preferred minimum height for buttons and field controls."
+      },
+      "compact-min-height": {
+        "$type": "dimension",
+        "$value": {
+          "value": 1.75,
+          "unit": "rem"
+        },
+        "$description": "Minimum height for compact disclosure and summary links, with surrounding space."
+      }
+    },
+    "compact-grid": {
+      "min-track-width": {
+        "$type": "dimension",
+        "$value": {
+          "value": 10,
+          "unit": "rem"
+        },
+        "$description": "Minimum readable track width for paired controls and summary cards before they stack."
       }
     }
   },
@@ -623,14 +681,14 @@
       "swatch": {
         "width": {
           "$value": {
-            "value": 0.9,
+            "value": 3,
             "unit": "rem"
           },
           "$description": "Width of a series-color swatch beside its legend label."
         },
         "height": {
           "$value": {
-            "value": 0.22,
+            "value": 0.5,
             "unit": "rem"
           },
           "$description": "Height of a series-color swatch beside its legend label."
@@ -644,26 +702,25 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.7254901960784313,
-              0.788235294117647,
-              0.8352941176470589
-            ]
+              0.333333,
+              0.333333,
+              0.294118
+            ],
+            "alpha": 1
           },
           "$description": "Color of numeric and time tick labels inside the SVG chart."
         },
         "font-size": {
           "$type": "dimension",
           "$value": {
-            "value": 12,
+            "value": 14,
             "unit": "px"
           },
           "$description": "Tick-label font size in CSS pixels."
         },
         "font-family": {
           "$type": "fontFamily",
-          "$value": [
-            "sans-serif"
-          ],
+          "$value": "{font.family.body}",
           "$description": "Ordered font fallback stack for SVG axis tick labels."
         }
       },
@@ -673,10 +730,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.4,
-              0.4823529411764706,
-              0.5450980392156862
-            ]
+              0.533333,
+              0.521569,
+              0.466667
+            ],
+            "alpha": 1
           },
           "$description": "Color of axis lines and tick marks."
         }
@@ -685,7 +743,7 @@
         "$type": "dimension",
         "label-area": {
           "$value": {
-            "value": 52,
+            "value": 36,
             "unit": "px"
           },
           "$description": "Height reserved for horizontal-axis labels in CSS pixels."
@@ -700,7 +758,7 @@
         "$type": "dimension",
         "label-area": {
           "$value": {
-            "value": 64,
+            "value": 44,
             "unit": "px"
           },
           "$description": "Width reserved for vertical-axis labels in CSS pixels."
@@ -714,10 +772,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.23137254901960785,
-              0.2980392156862745,
-              0.34509803921568627
-            ]
+              0.898039,
+              0.87451,
+              0.827451
+            ],
+            "alpha": 1
           },
           "$description": "Color of major grid lines behind plotted observations."
         }
@@ -768,11 +827,11 @@
           "$description": "Fraction of a full hue turn advanced per series when generating colors beyond the explicit palette."
         },
         "saturation": {
-          "$value": 0.65,
+          "$value": 0.6,
           "$description": "HSL saturation of generated additional-series colors, from 0 to 1."
         },
         "lightness": {
-          "$value": 0.7,
+          "$value": 0.32,
           "$description": "HSL lightness of generated additional-series colors, from 0 to 1."
         },
         "alpha": {
@@ -786,10 +845,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.5450980392156862,
-              0.8509803921568627,
-              0.7764705882352941
-            ]
+              0.090196,
+              0.431373,
+              0.439216
+            ],
+            "alpha": 1
           },
           "$description": "Color for comparison series position 1; the position does not identify a particular server or metric."
         },
@@ -797,10 +857,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              1.0,
-              0.7803921568627451,
-              0.47058823529411764
-            ]
+              0.639216,
+              0.278431,
+              0.121569
+            ],
+            "alpha": 1
           },
           "$description": "Color for comparison series position 2; the position does not identify a particular server or metric."
         },
@@ -808,10 +869,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.6274509803921569,
-              0.7254901960784313,
-              1.0
-            ]
+              0.439216,
+              0.317647,
+              0.607843
+            ],
+            "alpha": 1
           },
           "$description": "Color for comparison series position 3; the position does not identify a particular server or metric."
         },
@@ -819,10 +881,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.9372549019607843,
-              0.615686274509804,
-              0.7568627450980392
-            ]
+              0.670588,
+              0.196078,
+              0.368627
+            ],
+            "alpha": 1
           },
           "$description": "Color for comparison series position 4; the position does not identify a particular server or metric."
         },
@@ -830,10 +893,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.796078431372549,
-              0.8627450980392157,
-              0.5333333333333333
-            ]
+              0.329412,
+              0.431373,
+              0.156863
+            ],
+            "alpha": 1
           },
           "$description": "Color for comparison series position 5; the position does not identify a particular server or metric."
         },
@@ -841,10 +905,11 @@
           "$value": {
             "colorSpace": "srgb",
             "components": [
-              0.5647058823529412,
-              0.8274509803921568,
-              0.9490196078431372
-            ]
+              0.137255,
+              0.4,
+              0.627451
+            ],
+            "alpha": 1
           },
           "$description": "Color for comparison series position 6; the position does not identify a particular server or metric."
         }
@@ -941,7 +1006,7 @@
     "$type": "dimension",
     "page": {
       "block": {
-        "$value": "{scale.spacing.10}",
+        "$value": "{scale.spacing.6}",
         "$description": "Padding above and below the main page content."
       },
       "inline": {
@@ -950,7 +1015,7 @@
       },
       "compact": {
         "block": {
-          "$value": "{scale.spacing.5}",
+          "$value": "{scale.spacing.3}",
           "$description": "Page padding above and below content on narrow screens."
         },
         "inline": {
@@ -961,13 +1026,13 @@
     },
     "section": {
       "stack": {
-        "$value": "{scale.spacing.8}",
+        "$value": "{scale.spacing.6}",
         "$description": "Vertical separation between major dashboard sections."
       }
     },
     "panel": {
       "padding": {
-        "$value": "{scale.spacing.6}",
+        "$value": "{scale.spacing.4}",
         "$description": "Inner padding of panels containing controls or explanatory content."
       },
       "compact-padding": {
@@ -977,7 +1042,7 @@
     },
     "chart": {
       "padding": {
-        "$value": "{scale.spacing.5}",
+        "$value": "{scale.spacing.4}",
         "$description": "Inner padding of individual metric cards."
       }
     },
@@ -1048,7 +1113,7 @@
     "summary": {
       "padding": {
         "block": {
-          "$value": "{scale.spacing.5}",
+          "$value": "{scale.spacing.3}",
           "$description": "Vertical padding inside the latest-collection summary band."
         }
       }
@@ -1092,6 +1157,13 @@
         "$value": "{scale.spacing.5}",
         "$description": "Separation between metric cards in the chart grid."
       }
+    }
+  },
+  "layer": {
+    "skip-link": {
+      "$type": "number",
+      "$value": 10,
+      "$description": "Stacking layer for the keyboard skip link above page content."
     }
   }
 }

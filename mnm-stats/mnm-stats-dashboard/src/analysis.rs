@@ -415,6 +415,8 @@ impl Point {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Series {
+    pub identity: String,
+    pub style: usize,
     pub label: String,
     pub points: Vec<Point>,
 }
@@ -498,6 +500,8 @@ pub fn plot(
                     return Err("Intervals must have equal durations.".into());
                 }
                 result.series.push(Series {
+                    identity: format!("period:{}", period.label()),
+                    style: result.series.len(),
                     label: format!("{} · {}", scope_label(scope), period.label()),
                     points: history
                         .snapshots()
@@ -530,6 +534,12 @@ pub fn plot(
             };
             for scope in scopes {
                 result.series.push(Series {
+                    identity: if *metric == Metric::Subscriptions {
+                        "global".into()
+                    } else {
+                        format!("entity:{scope:?}")
+                    },
+                    style: result.series.len(),
                     label: scope_label(&scope),
                     points: history
                         .snapshots()
@@ -596,4 +606,32 @@ pub fn correlation(
         paired_days: count,
         r,
     }
+}
+
+/// All headline values must use this same snapshot, including unavailable servers.
+pub fn latest_in_range(
+    history: &History,
+    range: TimeRange,
+    now: DateTime<Utc>,
+) -> Option<&Snapshot> {
+    let (start, end) = range.bounds(history, now);
+    history
+        .snapshots()
+        .iter()
+        .rev()
+        .find(|s| s.observed_at >= start && s.observed_at <= end)
+}
+
+pub fn grouped_count(value: u128) -> String {
+    let digits = value.to_string();
+    digits
+        .chars()
+        .enumerate()
+        .fold(String::new(), |mut result, (index, digit)| {
+            if index > 0 && (digits.len() - index).is_multiple_of(3) {
+                result.push(',');
+            }
+            result.push(digit);
+            result
+        })
 }

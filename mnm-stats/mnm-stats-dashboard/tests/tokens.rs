@@ -190,11 +190,11 @@ fn authored_tokens_generate_styles_and_typed_chart_values() {
     assert!(!result.css.contains("token("));
     assert_eq!(
         mnm_stats_dashboard::charts::css_color(0),
-        "rgba(139, 217, 198, 1)"
+        "rgba(23, 110, 112, 1)"
     );
     assert_eq!(
         mnm_stats_dashboard::tokens::T_SPACING_PANEL_PADDING,
-        mnm_stats_dashboard::tokens::Dimension::Rem(1.5)
+        mnm_stats_dashboard::tokens::Dimension::Rem(1.0)
     );
     // Additional comparisons keep their own deterministic colors beyond the palette.
     assert_ne!(
@@ -207,9 +207,9 @@ fn authored_tokens_generate_styles_and_typed_chart_values() {
     assert!(
         changed
             .css
-            .contains("--mnm-chart-series-palette-01: rgba(139, 217, 198, 0.25)")
+            .contains("--mnm-chart-series-palette-01: rgba(23, 110, 112, 0.25)")
     );
-    assert!(changed.rust.contains("rgba(139, 217, 198, 0.25)"));
+    assert!(changed.rust.contains("rgba(23, 110, 112, 0.25)"));
 }
 
 #[test]

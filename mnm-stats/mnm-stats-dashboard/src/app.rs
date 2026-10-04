@@ -2,7 +2,10 @@ use crate::{analysis::*, charts, charts::browser::InteractivePlot};
 use chrono::{DateTime, Datelike, Utc};
 use leptos::prelude::*;
 use mnm_stats_model::History;
-use std::{collections::BTreeSet, sync::Arc};
+use std::{
+    collections::BTreeSet,
+    sync::{Arc, Mutex},
+};
 use wasm_bindgen::{JsCast, JsValue};
 
 fn download(history: &History) -> Result<(), JsValue> {
@@ -58,12 +61,69 @@ impl Mode {
     }
     fn label(self) -> &'static str {
         match self {
-            Self::Overview => "Overview",
-            Self::Entities => "Compare entities",
-            Self::Months => "Compare months",
-            Self::Years => "Compare calendar years",
-            Self::Intervals => "Compare equal-duration intervals",
+            Self::Overview => "No comparison",
+            Self::Entities => "Servers",
+            Self::Months => "Periods · months",
+            Self::Years => "Periods · years",
+            Self::Intervals => "Periods · equal intervals",
         }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Section {
+    Overview,
+    Activity,
+    Population,
+    Relationships,
+}
+impl Section {
+    const ALL: [Self; 4] = [
+        Self::Overview,
+        Self::Activity,
+        Self::Population,
+        Self::Relationships,
+    ];
+    fn label(self) -> &'static str {
+        match self {
+            Self::Overview => "Overview",
+            Self::Activity => "Activity",
+            Self::Population => "Population",
+            Self::Relationships => "Relationships",
+        }
+    }
+    fn key(self) -> &'static str {
+        match self {
+            Self::Overview => "overview",
+            Self::Activity => "activity",
+            Self::Population => "population",
+            Self::Relationships => "relationships",
+        }
+    }
+}
+fn readable(time: DateTime<Utc>) -> String {
+    time.format("%d %b %Y, %H:%M UTC").to_string()
+}
+
+#[component]
+fn Summary(
+    history: Arc<History>,
+    scope: RwSignal<Scope>,
+    range: RwSignal<TimeRange>,
+    now: RwSignal<DateTime<Utc>>,
+    section: RwSignal<Section>,
+) -> impl IntoView {
+    let names = servers(&history);
+    let selected = Memo::new(move |_| latest_in_range(&history, range.get(), now.get()).cloned());
+    view! {
+        <div class="summary-heading"><h2>"At a glance"</h2><p id="summary-time">{move || selected.get().map_or_else(|| "No observations in this interval".into(), |s| format!("Last in range · {}", readable(s.observed_at)))}</p></div>
+        <p class="scope-caption">{move || if scope.get() == Scope::All { "Sum across servers; not deduplicated.".to_string() } else { scope.get().label(&names) }}</p>
+        <div class="headline-grid">{[(Metric::Online, "Online population", Section::Population), (Metric::Daily, "Daily active", Section::Activity), (Metric::Monthly, "Monthly active", Section::Activity), (Metric::Subscriptions, "Global subscriptions", Section::Activity)].into_iter().map(|(metric, label, target)| {
+            let key = metric.key();
+            view! { <article class="headline" data-summary=key>
+                <h3><button class="text-action" aria-label=format!("{label}: open {}", target.label()) on:click=move |_| { section.set(target); if let Some(el) = document().get_element_by_id(&format!("nav-{}", target.key())).and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = el.focus(); } }>{label}" →"</button></h3><p class="headline-value">{move || selected.get().and_then(|s| metric.value(&s, &scope.get())).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() })}</p>
+            </article> }
+        }).collect_view()}</div>
     }
 }
 
@@ -93,13 +153,14 @@ fn PeriodPicker(periods: RwSignal<Vec<Period>>, yearly: bool, initial: String) -
         <div class="period-picker">
             <label> {if yearly { "Calendar year (UTC)" } else { "Calendar month (UTC)" }}
                 <input id="period-input" type="text" inputmode=if yearly { "numeric" } else { "text" }
+                    aria-describedby="period-error" aria-invalid=move || error.get().is_some().to_string()
                     placeholder=if yearly { "YYYY" } else { "YYYY-MM" }
                     prop:value=move || value.get() on:input=move |ev| value.set(event_target_value(&ev))/>
             </label>
             <button id="add-period" on:click=add>"Add period"</button>
-            <p class="error" role="alert">{move || error.get()}</p>
+            <p id="period-error" class="error" role="alert">{move || error.get()}</p>
             <ul class="selections">{move || periods.get().into_iter().enumerate().map(|(i, period)| view! {
-                <li><span>{period.label()}</span><button class="secondary remove-period" aria-label=format!("Remove {}", period.label()) on:click=move |_| periods.update(|p| { p.remove(i); })>"Remove"</button></li>
+                <li><span>{period.label()}</span><button class="secondary remove-period" aria-label=format!("Remove {}", period.label()) on:click=move |_| { periods.update(|p| { p.remove(i); }); if let Some(el) = document().get_element_by_id("period-input").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = el.focus(); } }>"Remove"</button></li>
             }).collect_view()}</ul>
         </div>
     }
@@ -119,6 +180,7 @@ fn ChartCard(
     let description = metric.description();
     let unit = metric.unit();
     let chart_metric = metric.clone();
+    let styles = expect_context::<Arc<Mutex<charts::SeriesStyles>>>();
     let plotted = Memo::new(move |_| {
         comparison.get().and_then(|comparison| {
             plot(
@@ -129,7 +191,10 @@ fn ChartCard(
                 now.get(),
                 &comparison,
             )
-            .map(Arc::new)
+            .map(|mut plot| {
+                styles.lock().expect("series styles").assign(&mut plot);
+                Arc::new(plot)
+            })
         })
     });
     let open = RwSignal::new(false);
@@ -141,29 +206,32 @@ fn ChartCard(
     view! {
         <article class="chart-card" data-metric=key>
             <div class="chart-heading"><h3>{title.clone()}</h3><span class="unit">{unit}</span></div>
-            <p class="metric-description">{description}</p>
             {move || match plotted.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(plot) => {
                     let has_values = plot.series.iter().any(|s| s.points.iter().any(|p| p.value.is_some()));
                     let count = plot.series.iter().map(|s| s.points.iter().filter(|p| p.value.is_some()).count()).sum::<usize>();
                     view! {
+                        {if plot.series.len() > 1 { view! {
+                            <ul class="legend">{plot.series.iter().enumerate().map(|(index, series)| view! {
+                                <li><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style) stroke-dasharray=charts::dash_array(series.style)/></svg>{format!("{}. {}", index + 1, series.label)}</li>
+                            }).collect_view()}</ul>
+                        }.into_any() } else { view! { <p class="chart-scope">{plot.series.first().map(|s| s.label.clone())}</p> }.into_any() }}
                         <p class="chart-note">{plot.note.clone()}</p>
-                        <ul class="legend">{plot.series.iter().enumerate().map(|(index, series)| view! {
-                            <li><span class="swatch" style:background=charts::css_color(index)></span>{format!("{}. {}", index + 1, series.label)}</li>
-                        }).collect_view()}</ul>
-                        <p class="sample-count">{format!("{count} plotted observations")}</p>
                         {if has_values {
                             view! { <InteractivePlot plot=plot.clone() metric=chart_metric.clone()/> }.into_any()
                         } else {
                             view! { <p class="empty-chart">"No available observations for this selection."</p> }.into_any()
                         }}
-                        <p class="axis-label">{plot.alignment.description()}" · Lines break across gaps longer than two hours."</p>
+                        <p class="axis-label">{plot.alignment.description()}</p>
+                        <p class="sample-count">{format!("{count} plotted observations")}</p>
                     }.into_any()
                 }
             }}
-            <details class="exact-values" on:toggle=move |ev| open.set(event_target::<web_sys::HtmlDetailsElement>(&ev).open())>
-                <summary>"Inspect exact values"</summary>
+            <details class="exact-values" prop:open=move || open.get() on:toggle=move |ev| open.set(event_target::<web_sys::HtmlDetailsElement>(&ev).open())>
+                <summary>"View data"</summary>
+                <p class="metric-description">{description}</p>
+                <p>"Lines break across gaps longer than two hours. Daily/monthly counts retain the source’s unverified counting units and windows; starting-zone counts do not identify new players."</p>
                 <Show when=move || open.get()>
                     {move || plotted.get().ok().map(|plot| {
                         let total = plot.series.iter().map(|s| s.points.len()).sum::<usize>();
@@ -201,11 +269,12 @@ fn Correlations(
     now: RwSignal<DateTime<Utc>>,
 ) -> impl IntoView {
     let names = servers(&history);
+    let range_history = history.clone();
     view! {
         <section class="correlations" aria-labelledby="correlations-heading">
-            <h2 id="correlations-heading">"Relationships over time"</h2>
+            <h2 id="correlations-heading">"Correlations"</h2>
             <p>"Pearson's r uses the last jointly available observation per UTC day in the shared time range. At least three paired days and variation in both counts are needed."</p>
-            <p id="correlation-scope">{move || format!("{} · {}", scope.get().label(&names), range.get().label())}</p>
+            <p id="correlation-scope">{move || { let (start, end) = range.get().bounds(&range_history, now.get()); format!("{} · {} · {} – {}", scope.get().label(&names), range.get().label(), readable(start), readable(end)) }}</p>
             <div class="correlation-grid">{move || {
                 let (start, end) = range.get().bounds(&history, now.get());
                 [(Metric::Daily, Metric::Monthly), (Metric::Daily, Metric::Subscriptions), (Metric::Monthly, Metric::Subscriptions)].into_iter().map(|(a, b)| {
@@ -224,11 +293,14 @@ fn Correlations(
 #[component]
 pub fn App() -> impl IntoView {
     let history = Arc::new(crate::embedded_history());
+    provide_context(Arc::new(Mutex::new(charts::SeriesStyles::default())));
+    let section = RwSignal::new(Section::Overview);
     let count = history.snapshots().len();
     let latest = history.snapshots().last().map(|s| s.observed_at);
     let first = history.snapshots().first().map(|s| s.observed_at);
     let names = servers(&history);
     let zone_names = zones(&history);
+    let zone = RwSignal::new(zone_names.keys().next().cloned().unwrap_or_default());
     let utc_now =
         || DateTime::from_timestamp_millis(js_sys::Date::now() as i64).expect("browser timestamp");
     let now = RwSignal::new(utc_now());
@@ -307,65 +379,53 @@ pub fn App() -> impl IntoView {
     });
     let download_history = history.clone();
     let range_history = history.clone();
+    let interval_history = history.clone();
     let entities_names = names.clone();
     let selected_history = history.clone();
     let month_default = latest.unwrap_or_else(utc_now).format("%Y-%m").to_string();
     let year_default = latest.unwrap_or_else(utc_now).format("%Y").to_string();
-    let mut metrics = vec![
-        Metric::Daily,
-        Metric::Monthly,
-        Metric::Subscriptions,
-        Metric::Online,
-        Metric::StartingZones,
-    ];
-    metrics.extend(
-        zone_names
-            .into_iter()
-            .map(|(id, name)| Metric::Zone(id, name)),
-    );
-    let ratio_metrics = [
-        Metric::DailyMonthly,
-        Metric::DailySubscriptions,
-        Metric::MonthlySubscriptions,
-    ];
+    let summary_history = history.clone();
+    let empty_history = history.clone();
+    let empty_range =
+        Memo::new(move |_| latest_in_range(&empty_history, range.get(), now.get()).is_none());
+    let chip_names = StoredValue::new(entities_names.clone());
+    let summary_names = StoredValue::new(entities_names.clone());
     view! {
         <style>{include_str!(concat!(env!("OUT_DIR"), "/style.css"))}</style>
+        <a class="skip-link" href="#content">"Skip to dashboard content"</a>
         <main>
             {matches!(env!("MNM_STATS_DEMO"), "1").then(|| view! {
-                <p id="demo-notice" role="status">"Demonstration preview — all observations and server names are synthetic."</p>
+                <p id="demo-notice" role="status">"Demo · synthetic data and server names."</p>
             })}
             <header class="page-header">
-                <div><p class="eyebrow">"Community statistics archive"</p><h1>"Monsters & Memories"</h1><p>"Hourly observations. A longer view of the world."</p></div>
-                <button id="download-history" on:click=move |_| download_error.set(download(&download_history).err().map(|_| "The history download could not be created. Please try again.".into()))>"Download complete history (JSON)"</button>
+                <div><p class="eyebrow">"Independent community statistics"</p><h1>"Monsters & Memories"</h1></div>
+                <div class="download"><button class="secondary" id="download-history" aria-describedby="download-help" on:click=move |_| download_error.set(download(&download_history).err().map(|_| "The history download could not be created. Please try again.".into()))>"Download history (JSON)"</button><p id="download-help">"Complete archive"</p></div>
             </header>
             <p class="error" role="alert">{move || download_error.get()}</p>
             <section class="history-summary" aria-label="Collection status">
-                <div><p class="eyebrow">"Archive"</p><p id="history-count">{format!("{count} observations")}</p>
-                    <p id="history-status">{first.zip(latest).map_or_else(|| "No observations have been collected yet.".into(), |(first, last)| format!("Available history: {} to {} UTC", utc(first), utc(last)))}</p>
-                </div>
-                <div><p class="eyebrow">"Latest collection"</p><p id="latest-collection">{latest.map_or_else(|| "Not available yet".into(), utc)}</p>
-                    <p id="freshness" role="status" class:stale=move || latest.is_some_and(|t| crate::is_stale(t, now.get()))>{move || latest.map_or("Awaiting the first successful collection.", |t| if crate::is_stale(t, now.get()) { "Stale data: the latest collection is more than three hours old." } else { "The latest collection is within the last three hours." })}</p>
-                </div>
+                <p>"Hourly observations · Latest: "<time id="latest-collection" datetime=latest.map(utc)>{latest.map_or_else(|| "not available yet".into(), readable)}</time></p>
+                <p id="freshness" role="status" class:stale=move || latest.is_some_and(|t| crate::is_stale(t, now.get()))>{move || latest.map_or("Awaiting the first successful collection.", |t| if crate::is_stale(t, now.get()) { "Stale data: the latest collection is more than three hours old." } else { "Collected within 3 hours." })}</p>
+                <details id="archive-details"><summary>"Archive details"</summary><p id="history-count">{format!("{count} observations")}</p><p id="history-status">{first.zip(latest).map_or_else(|| "No observations have been collected yet.".into(), |(first, last)| format!("Available history: {} to {} UTC", utc(first), utc(last)))}</p></details>
             </section>
             <section class="controls" aria-labelledby="controls-heading">
-                <h2 id="controls-heading">"Explore the archive"</h2>
+                <h2 id="controls-heading" class="visually-hidden">"Explore the archive"</h2>
                 <div class="control-grid">
-                    <label>"Time range"<select id="time-range" prop:value=move || range.get().key() on:change=move |ev| {
+                    <label class:hidden=move || mode.get() == Mode::Entities && section.get() != Section::Relationships>{move || if mode.get() == Mode::Entities { "Correlation scope" } else { "Server scope" }}<select id="server-scope" prop:value=move || match scope.get() { Scope::All => String::new(), Scope::Server(id) => id } on:change=move |ev| {
+                        let value = event_target_value(&ev); scope.set(if value.is_empty() { Scope::All } else { Scope::Server(value) });
+                    }><option value="">"All servers (sum)"</option>{names.into_iter().map(|(id, name)| view! { <option value=id.clone()>{format!("{name} [{id}]")}</option> }).collect_view()}</select></label>
+                    <label class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships>{move || if mode.get() == Mode::Overview || mode.get() == Mode::Entities { "Time range" } else { "Correlation range" }}<select id="time-range" prop:value=move || range.get().key() on:change=move |ev| {
                         let value = event_target_value(&ev);
                         if let Some(selected) = TimeRange::ALL.into_iter().find(|r| r.key() == value) { range.set(selected); }
                     }>{TimeRange::ALL.into_iter().map(|r| view! { <option value=r.key()>{r.label()}</option> }).collect_view()}</select></label>
-                    <label>"Server scope"<select id="server-scope" prop:value=move || match scope.get() { Scope::All => String::new(), Scope::Server(id) => id } on:change=move |ev| {
-                        let value = event_target_value(&ev); scope.set(if value.is_empty() { Scope::All } else { Scope::Server(value) });
-                    }><option value="">"All servers (sum)"</option>{names.into_iter().map(|(id, name)| view! { <option value=id.clone()>{format!("{name} [{id}]")}</option> }).collect_view()}</select></label>
-                    <label>"View"<select id="comparison-mode" prop:value=move || mode.get().key() on:change=move |ev| {
+                    <label>"Compare"<select id="comparison-mode" prop:value=move || mode.get().key() on:change=move |ev| {
                         let value = event_target_value(&ev); if let Some(selected) = Mode::ALL.into_iter().find(|m| m.key() == value) { mode.set(selected); }
                     }>{Mode::ALL.into_iter().map(|m| view! { <option value=m.key()>{m.label()}</option> }).collect_view()}</select></label>
                 </div>
-                <p id="selected-interval">{move || { let (start, end) = range.get().bounds(&range_history, now.get()); format!("Shared range: {} to {} UTC", utc(start), utc(end)) }}</p>
-                <p id="selected-observations">{move || {
+                <details class="range-details" class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships><summary>{move || { let (start, end) = range.get().bounds(&interval_history, now.get()); { let format = if start.year() == end.year() { "%d %b" } else { "%d %b %Y" }; format!("{} – {} UTC", start.format(format), end.format(format)) } }}</summary><p id="selected-interval">{move || { let (start, end) = range.get().bounds(&range_history, now.get()); format!("Shared range: {} to {} UTC", utc(start), utc(end)) }}</p></details>
+                <p id="selected-observations" class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships>{move || {
                     let (start, end) = range.get().bounds(&selected_history, now.get());
                     let count = selected_history.snapshots().iter().filter(|s| s.observed_at >= start && s.observed_at <= end).count();
-                    if count == 0 { "No observations in the shared time range.".into() } else { format!("{count} observations in the shared time range.") }
+                    if count == 0 { "No observations in the shared time range.".into() } else { format!("{count} observations") }
                 }}</p>
                 <Show when=move || mode.get() == Mode::Entities>
                     <fieldset id="entity-choices"><legend>"Compare entities · select any number"</legend>
@@ -378,14 +438,18 @@ pub fn App() -> impl IntoView {
                         }).collect_view()}
                         <p>"All-server sums include the selected individual servers; activity counts are not deduplicated."</p>
                     </fieldset>
+                    <ul class="selections entity-selections">{move || entities.get().into_iter().map(|entity| {
+                        let label = entity.label(&chip_names.get_value());
+                        view! { <li><span>{label.clone()}</span><button class="secondary remove-entity" aria-label=format!("Remove {label}") on:click=move |_| { entities.update(|list| list.retain(|e| e != &entity)); if let Some(el) = document().get_element_by_id("comparison-mode").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = el.focus(); } }>"Remove"</button></li> }
+                    }).collect_view()}</ul>
                 </Show>
                 {move || match mode.get() {
                     Mode::Months => view! { <PeriodPicker periods=months yearly=false initial=month_default.clone()/> }.into_any(),
                     Mode::Years => view! { <PeriodPicker periods=years yearly=true initial=year_default.clone()/> }.into_any(),
                     Mode::Intervals => view! {
                         <div class="period-picker">
-                            <label>"Duration for every interval (hours)"<input id="interval-hours" type="number" min="1" step="1" prop:value=move || hours.get() on:input=move |ev| hours.set(event_target_value(&ev))/></label>
-                            <label>"Start (UTC, YYYY-MM-DDTHH:MM)"<input id="interval-start" type="text" prop:value=move || start_input.get() on:input=move |ev| start_input.set(event_target_value(&ev))/></label>
+                            <label>"Duration for every interval (hours)"<input id="interval-hours" aria-describedby="interval-error" aria-invalid=move || comparison.get().is_err().to_string() type="number" min="1" step="1" prop:value=move || hours.get() on:input=move |ev| hours.set(event_target_value(&ev))/></label>
+                            <label>"Start (UTC, YYYY-MM-DDTHH:MM)"<input id="interval-start" aria-describedby="interval-error" aria-invalid=move || interval_error.get().is_some().to_string() type="text" prop:value=move || start_input.get() on:input=move |ev| start_input.set(event_target_value(&ev))/></label>
                             <button id="add-interval" on:click=move |_| {
                                 let result = hours.get().parse::<u32>().map_err(|_| "Choose a positive duration in hours.".to_string()).and_then(|h| Period::interval(&start_input.get(), h));
                                 match result {
@@ -393,31 +457,72 @@ pub fn App() -> impl IntoView {
                                     Err(error) => interval_error.set(Some(error)), _ => unreachable!(),
                                 }
                             }>"Add interval"</button>
-                            <p role="alert">{move || interval_error.get()}</p>
+                            <p id="interval-error" role="alert">{move || interval_error.get().or_else(|| comparison.get().err())}</p>
                             <ul class="selections">{move || starts.get().into_iter().enumerate().map(|(i, start)| view! {
-                                <li><span>{utc(start)}</span><button class="secondary remove-period" aria-label=format!("Remove interval starting {}", utc(start)) on:click=move |_| starts.update(|s| { s.remove(i); })>"Remove"</button></li>
+                                <li><span>{utc(start)}</span><button class="secondary remove-period" aria-label=format!("Remove interval starting {}", utc(start)) on:click=move |_| { starts.update(|s| { s.remove(i); }); if let Some(el) = document().get_element_by_id("interval-start").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = el.focus(); } }>"Remove"</button></li>
                             }).collect_view()}</ul>
                         </div>
                     }.into_any(),
                     _ => ().into_any(),
                 }}
                 <Show when=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals)>
-                    <p class="comparison-explanation">"Charts use the selected periods and server scope. The shared range still controls correlations below. Calendar years align by month and day, unlike the rolling 365-day range. All boundaries are UTC; gaps and incomplete periods remain visible."</p>
+                    <p class="comparison-explanation">"Periods align by calendar date or elapsed hours. Incomplete periods remain gaps. Correlations use their own shared range and scope."</p>
                 </Show>
             </section>
-            <section class="metrics" aria-labelledby="counts-heading"><div class="section-heading"><h2 id="counts-heading">"Reported counts"</h2><p>"Source observations and clearly labeled sums"</p></div>
-                <div class="chart-grid">{metrics.into_iter().map(|metric| view! { <ChartCard history=history.clone() metric scope range now comparison/> }).collect_view()}</div>
+            <nav class="section-nav" aria-label="Dashboard sections">{Section::ALL.into_iter().map(|item| view! {
+                <button id=format!("nav-{}", item.key()) aria-pressed=move || (section.get() == item).to_string() on:click=move |_| section.set(item)>{item.label()}</button>
+            }).collect_view()}</nav>
+            <section id="content" tabindex="-1" class:comparing=move || mode.get() != Mode::Overview aria-label=move || section.get().label()>
+                <Show when=move || mode.get() == Mode::Overview && empty_range.get()>
+                    <div class="empty-selection" role="status"><p>{if count == 0 { "No history yet. The first successful collection will appear in a future dashboard build." } else { "No observations in this interval. Choose All time to explore the available archive." }}</p>
+                    {(count > 0).then(|| view! { <button class="secondary" on:click=move |_| range.set(TimeRange::All)>"Show All time"</button> })}</div>
+                </Show>
+                <Show when=move || section.get() == Section::Overview && mode.get() == Mode::Overview>
+                    <Summary history=summary_history.clone() scope range now section/>
+                </Show>
+                <Show when=move || mode.get() != Mode::Overview>
+                    <div class="comparison-summary" role="status"><h2>"Comparison"</h2><p>{move || match comparison.get() {
+                        Ok(Comparison::Entities(items)) => if items.is_empty() { "Select servers above to compare.".into() } else { items.iter().map(|s| s.label(&summary_names.get_value())).collect::<Vec<_>>().join(" · ") },
+                        Ok(Comparison::Periods(items)) => if items.is_empty() { "Add a period above to compare.".into() } else { items.iter().map(Period::label).collect::<Vec<_>>().join(" · ") },
+                        Err(e) => e, _ => String::new()
+                    }}</p></div>
+                </Show>
+                {move || {
+                    let selected = section.get();
+                    let metrics = match selected {
+                        Section::Overview => vec![Metric::Online],
+                        Section::Activity => vec![Metric::Daily, Metric::Monthly, Metric::Subscriptions],
+                        Section::Population => vec![Metric::Online, Metric::StartingZones],
+                        Section::Relationships => vec![Metric::DailyMonthly, Metric::DailySubscriptions, Metric::MonthlySubscriptions],
+                    };
+                    let chart_history = history.clone();
+                    let zone_history = history.clone();
+                    let zone_options = zone_names.clone();
+                    let zone_labels = zone_names.clone();
+                    view! {
+                        <h2 class="section-title">{match selected { Section::Overview => "Online over time", Section::Activity => "Activity over time", Section::Population => "Population over time", Section::Relationships => "Ratios of reported counts" }}</h2>
+                        {(selected != Section::Overview).then(|| view! { <p class="scope-caption">{move || if scope.get() == Scope::All && mode.get() != Mode::Entities { "Sum across servers; activity is not deduplicated. Subscriptions are global." } else { "Daily/monthly activity retains the source’s counting units. Subscriptions are global." }}</p> })}
+                        <div class="chart-grid" class:overview-chart=selected == Section::Overview>{metrics.into_iter().map(|metric| view! { <ChartCard history=chart_history.clone() metric scope range now comparison/> }).collect_view()}</div>
+                        {(selected == Section::Population).then(move || view! {
+                            <section class="zone-detail" aria-label="Individual starting zone"><h2>"Explore a starting zone"</h2>
+                                <label>"Starting zone"<select id="zone-scope" prop:value=move || zone.get() on:change=move |ev| zone.set(event_target_value(&ev))>{zone_options.into_iter().map(|(id, name)| view! { <option value=id.clone()>{format!("{name} [{id}]")}</option> }).collect_view()}</select></label>
+                                {move || zone_labels.get(&zone.get()).map(|name| view! { <ChartCard history=zone_history.clone() metric=Metric::Zone(zone.get(), name.clone()) scope range now comparison/> })}
+                            </section>
+                        })}
+                        {(selected == Section::Relationships).then(|| view! {
+                            <p class="correlation-explanation">"Correlations below always use the shared range and server scope, including when the charts compare different servers or periods."</p>
+                            <Correlations history=history.clone() scope range now/>
+                        })}
+                    }
+                }}
             </section>
-            <section class="metrics" aria-labelledby="ratios-heading"><div class="section-heading"><h2 id="ratios-heading">"Ratios of reported counts"</h2><p>"Derived values · global subscription denominators"</p></div>
-                <div class="chart-grid">{ratio_metrics.into_iter().map(|metric| view! { <ChartCard history=history.clone() metric scope range now comparison/> }).collect_view()}</div>
-            </section>
-            <Correlations history=history.clone() scope range now/>
-            <section class="source-notes" aria-labelledby="source-heading"><h2 id="source-heading">"What these numbers can tell us"</h2>
+            <details class="source-notes"><summary>"About the data"</summary>
                 <p>"DAU and MAU retain the source's daily/monthly active values; their counting units and window boundaries are unverified. Adding observations cannot recover unique activity. Subscriptions are not assumed to represent unique people."</p>
                 <p>"Per-server subscriptions and deduplicated global activity are unavailable. Starting-zone population is not a count of new players."</p>
                 <p>"The archive starts with successful collections. Earlier history and missed intervals are unavailable. These hourly snapshots are not an exhaustive record of every change within the hour."</p>
                 <p>"The download contains every observation in this dashboard build, across all servers and dates, regardless of the controls above."</p>
-            </section>
+                <p>"Display type: IM Fell English by Igino Marini, "<a href="fonts/OFL.txt">"SIL Open Font License"</a>"."</p>
+            </details>
             <footer>
                 <p>"Independent community archive · All times UTC"</p>
                 <p>"Source: "<a href="https://account.monstersandmemories.com/metrics">"Monsters & Memories public metrics"</a></p>

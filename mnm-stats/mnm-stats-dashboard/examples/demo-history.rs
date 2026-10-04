@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Snapshot {
                 observed_at,
                 active_subscriptions: 2000 + step,
-                servers: ["Amber", "Birch", "Cedar"]
+                servers: ["Amber — Eastern North American realm", "Birch", "Cedar"]
                     .into_iter()
                     .enumerate()
                     .map(|(i, name)| {

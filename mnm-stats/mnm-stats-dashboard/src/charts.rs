@@ -6,10 +6,28 @@ use crate::{
 use chrono::{Datelike, NaiveDate};
 use plotly::{
     Configuration, Layout, Plot as Figure, Scatter,
-    common::{Font, Label, Line, Marker, Mode},
+    common::{DashType, Font, Label, Line, Marker, Mode},
     configuration::DisplayModeBar,
     layout::{Axis, AxisType, HoverMode, Margin},
 };
+
+/// Assign an encoding once per identity and retain it throughout an exploration session.
+#[derive(Default)]
+pub struct SeriesStyles(Vec<String>);
+impl SeriesStyles {
+    pub fn assign(&mut self, plot: &mut Plot) {
+        for series in &mut plot.series {
+            series.style = self
+                .0
+                .iter()
+                .position(|key| *key == series.identity)
+                .unwrap_or_else(|| {
+                    self.0.push(series.identity.clone());
+                    self.0.len() - 1
+                });
+        }
+    }
+}
 
 pub fn css_color(index: usize) -> String {
     if let Some(color) = tokens::CHART_PALETTE.get(index) {
@@ -24,6 +42,36 @@ pub fn css_color(index: usize) -> String {
     )
 }
 
+pub fn dash(index: usize) -> DashType {
+    [
+        DashType::Solid,
+        DashType::Dash,
+        DashType::Dot,
+        DashType::DashDot,
+        DashType::LongDash,
+        DashType::LongDashDot,
+    ][index % 6]
+        .clone()
+}
+
+pub fn dash_array(index: usize) -> String {
+    // Plotly's named dash patterns use a unit of max(line width, 3px).
+    let unit = tokens::T_CHART_SERIES_LINE_WIDTH.px().max(3.0);
+    let pattern: &[f64] = match index % 6 {
+        0 => return "none".into(),
+        1 => &[3.0, 3.0],
+        2 => &[1.0, 1.0],
+        3 => &[3.0, 1.0, 1.0, 1.0],
+        4 => &[5.0, 5.0],
+        _ => &[5.0, 2.0, 1.0, 2.0],
+    };
+    pattern
+        .iter()
+        .map(|part| (part * unit).to_string())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn escape(text: &str) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -34,17 +82,15 @@ fn escape(text: &str) -> String {
 
 fn time_ticks(plot: &Plot) -> Vec<f64> {
     match plot.alignment {
-        Alignment::Month => [0, 7, 14, 21, 28]
-            .map(|day| f64::from(day * 86400))
-            .to_vec(),
-        Alignment::Year => [1, 4, 7, 10]
+        Alignment::Month => [0, 14, 28].map(|day| f64::from(day * 86400)).to_vec(),
+        Alignment::Year => [1, 5, 9]
             .map(|month| {
                 f64::from(NaiveDate::from_ymd_opt(2000, month, 1).unwrap().ordinal0() * 86400)
             })
             .to_vec(),
         _ => {
             let (start, end) = plot.x_bounds;
-            let target = (end - start) / 4.0;
+            let target = (end - start) / 3.0;
             // Round ticks to seconds, minutes, hours or whole UTC days. Unix
             // numeric ticks alone can label arbitrary times such as 16:53.
             let step = [
@@ -56,7 +102,7 @@ fn time_ticks(plot: &Plot) -> Vec<f64> {
             .find(|step| *step >= target)
             .unwrap_or_else(|| (target / 31536000.0).ceil() * 31536000.0);
             let first = (start / step).ceil() * step;
-            (0..=4)
+            (0..=3)
                 .map(|i| first + f64::from(i) * step)
                 .filter(|x| *x <= end)
                 .collect()
@@ -125,7 +171,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             previous = Some(point);
         }
         let markers = marker_sizes.iter().any(|size| *size > 0);
-        let color = css_color(index);
+        let color = css_color(series.style);
         figure.add_trace(
             Scatter::new(x, y)
                 .name(escape(&series.label))
@@ -138,6 +184,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
                 .line(
                     Line::new()
                         .color(color.clone())
+                        .dash(dash(series.style))
                         .width(tokens::T_CHART_SERIES_LINE_WIDTH.px())
                         .simplify(false),
                 )
@@ -161,6 +208,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
         Axis::new()
             .type_(AxisType::Linear)
             .fixed_range(true)
+            .auto_margin(true)
             .zero_line(false)
             .show_line(true)
             .line_color(tokens::T_CHART_AXIS_LINE_COLOR)
@@ -178,7 +226,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
                 } else if span > 2.0 * 86400.0 {
                     "%d %b"
                 } else {
-                    "%d %b %H:%M"
+                    "%d %b<br>%H:%M"
                 };
                 chrono::DateTime::from_timestamp(*x as i64, 0)
                     .map_or_else(String::new, |t| t.format(format).to_string())
@@ -220,7 +268,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
                 axis()
                     .range(vec![0.0, (maximum * 1.12).max(1.0)])
                     .n_ticks(5)
-                    .tick_format(".0f")
+                    .tick_format(",.0f")
                     .tick_suffix(if metric.is_ratio() { "%" } else { "" }),
             )
             .hover_mode(HoverMode::X)
@@ -295,13 +343,13 @@ pub mod browser {
                     Ok(_) => {
                         let _ = element.set_attribute("data-ready", "true");
                     }
-                    Err(reason) => error.set(Some(format!("Chart unavailable: {reason:?}"))),
+                    Err(_) => error.set(Some("Chart unavailable. View data below or download the history; reload to retry the chart engine.".into())),
                 }
             });
         });
         view! {
             <div class="interactive-plot">
-                <div class="plot" role="img" aria-label=label>
+                <div class="plot" role="region" tabindex="0" aria-label=label>
                     <div class="plot-surface" node_ref=node style:height=height></div>
                 </div>
                 <p class="error" role="alert">{move || error.get()}</p>

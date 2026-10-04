@@ -346,6 +346,8 @@ fn lines_break_on_missing_values_long_intervals_and_absent_calendar_dates() {
     })
     .to_vec();
     let series = Series {
+        identity: "test".into(),
+        style: 0,
         label: "test".into(),
         points,
     };
@@ -385,6 +387,8 @@ fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
     let start = time("2024-02-01T00:00:00.123Z");
     let plot = Plot {
         series: vec![Series {
+            identity: "test".into(),
+            style: 0,
             label: "Alpha <island> & West".into(),
             points: vec![
                 Point {
@@ -431,6 +435,8 @@ fn dense_plots_keep_every_observation_for_hover() {
     let start = time("2024-01-01T00:00:00Z");
     let plot = Plot {
         series: vec![Series {
+            identity: "test".into(),
+            style: 0,
             label: "Dense series".into(),
             points: (0..201)
                 .map(|i| Point {
@@ -473,6 +479,8 @@ fn dense_history_keeps_isolated_observations_visible() {
     let start = time("2024-01-01T00:00:00Z");
     let plot = Plot {
         series: vec![Series {
+            identity: "test".into(),
+            style: 0,
             label: "Sparse history".into(),
             points: (0..201)
                 .map(|i| Point {
@@ -505,4 +513,77 @@ fn dense_history_keeps_isolated_observations_visible() {
             .count(),
         200
     );
+}
+
+#[test]
+fn headlines_use_one_in_range_snapshot_without_filling_absent_servers() {
+    let earlier = snapshot("2026-05-01T00:00:00Z", 100, 200, 300);
+    let mut latest = snapshot("2026-05-31T12:00:00Z", 1, 2, 0);
+    latest.servers.remove(0);
+    let future = snapshot("2026-06-02T00:00:00Z", 999, 999, 999);
+    let history = History::new(vec![earlier, latest.clone(), future]).unwrap();
+    let now = time("2026-06-01T12:00:00Z");
+    let selected = latest_in_range(&history, TimeRange::All, now).unwrap();
+    assert_eq!(selected, &latest);
+    for metric in [Metric::Online, Metric::Daily, Metric::Monthly] {
+        assert_eq!(metric.value(selected, &Scope::Server("a".into())), None);
+    }
+    assert_eq!(
+        Metric::Subscriptions.value(selected, &Scope::Server("a".into())),
+        Some(MetricValue::Count(0))
+    );
+    assert!(latest_in_range(&history, TimeRange::Days7, time("2026-07-01T00:00:00Z")).is_none());
+    assert_eq!(
+        grouped_count(u128::MAX),
+        "340,282,366,920,938,463,463,374,607,431,768,211,455"
+    );
+    assert_eq!(grouped_count(0), "0");
+}
+
+#[test]
+fn comparison_encodings_survive_other_selections_and_metric_changes() {
+    use mnm_stats_dashboard::charts::{SeriesStyles, render};
+    let history = History::new(vec![snapshot("2026-05-01T00:00:00Z", 1, 2, 3)]).unwrap();
+    let now = time("2026-06-01T00:00:00Z");
+    let periods: Vec<_> = (1..=7)
+        .map(|month| Period::month(&format!("2026-{month:02}")).unwrap())
+        .collect();
+    let mut styles = SeriesStyles::default();
+    let mut original = plot(
+        &history,
+        &Metric::Daily,
+        &Scope::All,
+        TimeRange::All,
+        now,
+        &Comparison::Periods(periods.clone()),
+    )
+    .unwrap();
+    styles.assign(&mut original);
+    let mut subset = plot(
+        &history,
+        &Metric::Monthly,
+        &Scope::Server("a".into()),
+        TimeRange::All,
+        now,
+        &Comparison::Periods(periods[2..].to_vec()),
+    )
+    .unwrap();
+    styles.assign(&mut subset);
+    for (expected, actual) in original.series[2..].iter().zip(&subset.series) {
+        assert_eq!(expected.identity, actual.identity);
+        assert_eq!(expected.style, actual.style);
+    }
+    let figure: serde_json::Value =
+        serde_json::from_str(&render(&original, &Metric::Daily).to_json()).unwrap();
+    let lines: Vec<_> = figure["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["line"].clone())
+        .collect();
+    assert_eq!(lines.len(), 7);
+    for (i, line) in lines.iter().enumerate() {
+        assert!(!lines[..i].contains(line));
+    }
+    assert_ne!(lines[0]["dash"], lines[1]["dash"]);
 }
