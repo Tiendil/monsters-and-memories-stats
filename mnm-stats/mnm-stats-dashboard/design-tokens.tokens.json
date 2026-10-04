@@ -66,6 +66,15 @@
       }
     }
   },
+  "icon": {
+    "$type": "dimension",
+    "control": {
+      "size": {
+        "$value": "{tailwind.spacing.4}",
+        "$description": "Size of icons accompanying text in controls."
+      }
+    }
+  },
   "color": {
     "$type": "color",
     "surface": {
@@ -704,7 +713,7 @@
         },
         "inline": {
           "$value": "{scale.spacing.2}",
-          "$description": "Inline padding of compact remove-selection buttons."
+          "$description": "Inline padding of compact buttons and links styled as controls."
         }
       }
     },

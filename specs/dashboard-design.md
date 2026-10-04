@@ -27,9 +27,13 @@ The [layout illustration](../docs/dashboard-layout.svg) demonstrates the hierarc
 
 ### Masthead and collection status
 
-The masthead MUST contain the game name, the dashboard's community identity, and a secondary action labeled “Download history (JSON).”
+The masthead MUST contain the game name, the dashboard's community identity, and grouped secondary actions labeled “Download JSON” and “Star on GitHub.”
 It MUST remain compact rather than use a promotional hero layout.
+On wide screens, the action group MUST sit beside the title; on narrow screens, the title MUST precede a compact action row.
+The actions MUST share a control height, neutral surfaces, and subtle borders, and MUST wrap when needed for narrow widths or enlarged text.
 The download action MUST explain that it contains the complete archive, independently of the current selection.
+The repository action required by [requirements.md](requirements.md#dashboard-behavior) MUST retain link navigation and pair its text with a decorative scalable star icon.
+Both actions MUST remain available from every content section.
 
 The latest collection time and freshness MUST appear near the masthead.
 The status MUST distinguish the age of the loaded dataset from the selected historical period.
@@ -118,7 +122,10 @@ Detailed methodology, source limitations, and archive coverage MUST live in a la
 Disclosures MUST NOT hide stale-data warnings, active selection, or qualifications needed to interpret a displayed number.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.
 
-The footer MUST retain the source link, independent community attribution, and Plotly credit.
+The “About the data” disclosure MUST sit immediately above the footer, with one divider separating this area from the dashboard content.
+The footer MUST form two compact groups: independent community attribution with the UTC convention, and plain links labeled “Data source,” “GitHub,” and “Charts by Plotly.”
+Footer links MUST remain outside disclosures and available from every content section.
+The groups and links MUST wrap on narrow screens with restrained spacing.
 
 ## Comparisons
 
