@@ -584,12 +584,6 @@ impl Browser {
             "/window/rect",
             json!({"width":1280,"height":1000}),
         );
-        self.click(".range-details summary");
-        assert!(
-            self.text("#selected-interval")
-                .contains("2026-06-01T12:00:00Z")
-        );
-        self.click(".range-details summary");
         assert!(self.text("#freshness").contains("Stale data"));
         self.click(".source-notes summary");
         assert!(self.text(".source-notes").contains(

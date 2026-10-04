@@ -344,10 +344,7 @@ pub fn App() -> impl IntoView {
         })
     });
     let download_history = history.clone();
-    let range_history = history.clone();
-    let interval_history = history.clone();
     let entities_names = names.clone();
-    let selected_history = history.clone();
     let month_default = latest.unwrap_or_else(utc_now).format("%Y-%m").to_string();
     let year_default = latest.unwrap_or_else(utc_now).format("%Y").to_string();
     let summary_history = history.clone();
@@ -400,12 +397,6 @@ pub fn App() -> impl IntoView {
                         let value = event_target_value(&ev); if let Some(selected) = Mode::ALL.into_iter().find(|m| m.key() == value) { mode.set(selected); }
                     }>{Mode::ALL.into_iter().map(|m| view! { <option value=m.key()>{m.label()}</option> }).collect_view()}</select></label>
                 </div>
-                <details class="range-details" class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships><summary>{move || { let (start, end) = range.get().bounds(&interval_history, now.get()); { let format = if start.year() == end.year() { "%d %b" } else { "%d %b %Y" }; format!("{} – {} UTC", start.format(format), end.format(format)) } }}</summary><p id="selected-interval">{move || { let (start, end) = range.get().bounds(&range_history, now.get()); format!("Shared range: {} to {} UTC", utc(start), utc(end)) }}</p></details>
-                <p id="selected-observations" class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships>{move || {
-                    let (start, end) = range.get().bounds(&selected_history, now.get());
-                    let count = selected_history.snapshots().iter().filter(|s| s.observed_at >= start && s.observed_at <= end).count();
-                    if count == 0 { "No observations in the shared time range.".into() } else { format!("{count} observations") }
-                }}</p>
                 <Show when=move || mode.get() == Mode::Entities>
                     <fieldset id="entity-choices"><legend>"Compare entities · select any number"</legend>
                         {std::iter::once(Scope::All).chain(entities_names.keys().cloned().map(Scope::Server)).map(|entity| {

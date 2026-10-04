@@ -118,11 +118,7 @@
       },
       "link": {
         "$value": "{tailwind.color.orange.800}",
-        "$description": "Text of navigable links and expandable exact-value details."
-      },
-      "range-summary": {
-        "$value": "{color.text.secondary}",
-        "$description": "Summary of the selected time interval and observation count, using supporting-text emphasis."
+        "$description": "Text of navigable links and disclosure controls."
       },
       "stale": {
         "$value": "{tailwind.color.orange.800}",

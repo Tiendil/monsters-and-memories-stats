@@ -42,7 +42,6 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="837" y="309" class="" font-size="14">All time</text>
 <rect x="930" y="282" width="158" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="954" y="309" class="body">Compare  +</text>
-<text x="56" y="348" class="small muted">4 Sep–4 Oct 2026 UTC · 712 observations in range</text>
 <text x="56" y="392" class="accent" font-size="17">Overview</text>
 <text x="202" y="392" class="" font-size="17">Activity</text>
 <text x="333" y="392" class="" font-size="17">Population</text>
@@ -101,8 +100,6 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1390" y="322" class="" font-size="14">Last 30 days  ⌄</text>
 <rect x="1180" y="350" width="125" height="40" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="1195" y="376" class="body">Compare  +</text>
-<text x="1321" y="368" class="small muted">4 Sep–4 Oct 2026 UTC</text>
-<text x="1321" y="387" class="small muted">712 observations</text>
 <text x="1180" y="426" class="accent" font-size="13">Overview</text>
 <text x="1265" y="426" class="" font-size="13">Activity</text>
 <text x="1341" y="426" class="" font-size="13">Population</text>
