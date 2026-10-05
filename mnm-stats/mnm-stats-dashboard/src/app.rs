@@ -312,7 +312,7 @@ fn ChartCard(
     view! {
         <article class="chart-card" id=format!("chart-{key}") tabindex="-1" data-metric=key>
             <h3 class="chart-heading">{title.clone()}</h3>
-            {is_share.then(|| view! { <p class="chart-note">"Share of all online players. All Servers shows each server separately."</p> })}
+            {is_share.then(|| view! { <p class="chart-note">"The “All Servers” option shows a separate line for every server. Uncheck it and select individual servers to see only their shares of all online players."</p> })}
             {move || match plotted.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(plot) => {
