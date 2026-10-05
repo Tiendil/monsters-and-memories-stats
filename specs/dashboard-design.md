@@ -164,13 +164,13 @@ Daily and monthly activity MUST retain their distinct source labels, and subscri
 The Player activity section MUST show full-width views in this order: Starting-zone population, Server population share, and Activity heatmap.
 The Starting-zone population chart MUST combine the selected starting-zone totals and individual zones.
 Online MUST remain in Overview without a duplicate chart in Player activity.
-A checkbox dropdown labeled “Starting zones” MUST precede the chart and provide “All Zones” plus every zone discovered in the complete history.
+A checkbox dropdown labeled “Show zones” MUST appear inside the Starting-zone population card, after its explanation and before its legend, and provide “All Zones” plus every zone discovered in the complete history.
 “All Zones” MUST plot the total across all reported starting zones; it MUST NOT select individual-zone checkboxes or sum only checked zones.
 Only “All Zones” MUST be selected initially.
 Every option MUST toggle independently, allowing the total and more than two individual zones on the same chart.
 The dropdown MUST follow the same interaction, layout, and accessibility requirements as the Servers control.
 Its closed label MUST name a single selection or summarize multiple selections, including whether “All Zones” is selected.
-Clearing all zones MUST show a prompt and an explicit “Show All Zones” recovery action, without silently restoring a selection.
+Clearing all zones MUST show a prompt and an explicit “Show All Zones” recovery action inside that chart card, without silently restoring a selection.
 Changing zones MUST preserve the current servers, time range, and comparisons; zone selections MUST persist across content sections.
 Historical zones MUST remain selectable, and missing zone values MUST follow the unavailable-value rules in [requirements.md](requirements.md#metric-interpretation).
 Each selected zone or total MUST produce a series for each selected server scope and comparison period.
@@ -195,7 +195,7 @@ Engagement MUST show three full-width charts in this order:
 2. Online presence — online population divided by daily or monthly active counts from the same snapshot.
 3. Activity relative to subscribers — daily active, monthly active, or online population divided by global subscriptions from the same snapshot.
 
-The latter two charts MUST each have a checkbox dropdown labeled “Metrics,” using the Servers control's interaction and accessibility behavior.
+The latter two charts MUST each have a checkbox dropdown labeled “Show metrics,” using the Servers control's interaction and accessibility behavior.
 Online presence MUST initially select both Online / daily active and Online / monthly active.
 Activity relative to subscribers MUST initially select daily activity, monthly activity, and online.
 Each metric MUST remain independently toggleable, and restoring defaults MUST select all metrics offered by that chart.
@@ -261,7 +261,20 @@ Its legend identifies the selected months.
 
 ### Hierarchy and labeling
 
-Each time-series chart MUST present a short metric title, a series legend, and the visualization.
+Each time-series chart MUST present its content in this order:
+
+1. Short metric title.
+2. Formula, when applicable.
+3. Short explanation.
+4. Selector affecting only that chart, when present.
+5. Series legend.
+6. Visualization.
+
+A selector affecting only one chart MUST remain inside that chart's card rather than above the section's charts.
+Its label MUST use semibold dark text, distinct from muted explanatory prose and smaller than the chart title.
+The label MUST sit directly above its dropdown, with a smaller gap than the space separating the control group from the explanation above it.
+Chart selectors MUST share this presentation and MUST NOT add an enclosing border or background beyond the dropdown's own control styling.
+Their labels MUST contribute to their accessible names.
 Heatmaps MUST use the panel labels and color scale defined under Detailed sections.
 The same chart anatomy MUST be used across sections.
 The value-axis title MUST sit beside its axis and read “Count” for counts or “Percent (%)” for ratios.

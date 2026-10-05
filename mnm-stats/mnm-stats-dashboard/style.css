@@ -99,8 +99,9 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
 .text-action:hover { background: transparent; color: var(--mnm-color-text-primary); }
 .comparing .plot-surface { min-width: var(--mnm-layout-plot-min-width); }
 .chart-note { margin: var(--mnm-spacing-gap-tight) 0; overflow-wrap: anywhere; }
-.zone-control { max-width: var(--mnm-layout-period-input-max-width); margin-bottom: var(--mnm-spacing-gap-large); }
-.metric-control { max-width: var(--mnm-layout-period-input-max-width); margin-block: var(--mnm-spacing-gap-small); }
+.chart-control { max-width: var(--mnm-layout-chart-control-max-width); margin-block: var(--mnm-spacing-gap-large) var(--mnm-spacing-gap-small); }
+.chart-control .selection-control { gap: var(--mnm-spacing-gap-tight); }
+.chart-control .control-label { color: var(--mnm-color-text-primary); font-weight: var(--mnm-font-weight-emphasis); }
 #content { min-width: 0; }
 .swatch line { stroke-width: var(--mnm-chart-series-line-width); }
 

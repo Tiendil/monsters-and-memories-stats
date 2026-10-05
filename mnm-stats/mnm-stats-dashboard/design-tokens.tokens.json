@@ -361,13 +361,16 @@
     },
     "period-input": {
       "$type": "dimension",
-      "max-width": {
-        "$value": "{tailwind.spacing.100}",
-        "$description": "Maximum width of a comparison-period input."
-      },
       "preferred-width": {
         "$value": "{tailwind.spacing.48}",
         "$description": "Preferred width of a comparison-period input before wrapping; it may shrink on narrow screens."
+      }
+    },
+    "chart-control": {
+      "$type": "dimension",
+      "max-width": {
+        "$value": "{tailwind.spacing.100}",
+        "$description": "Maximum width of a selector within a chart card; it shrinks to fit narrow screens."
       }
     },
     "plot": {

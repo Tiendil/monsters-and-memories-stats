@@ -774,6 +774,7 @@ impl Browser {
         self.servers(&["a"]);
         self.zones(&["", "w", "z"]);
         self.expect_count(".chart-card", 3);
+        self.expect_text("#chart-starting-zones #zones-label", "Show zones");
         self.expect_count("[data-metric='starting-zones'] .legend li", 3);
         self.expect_text("#zones-selection", "All Zones + 2");
         assert_eq!(
@@ -1005,6 +1006,14 @@ impl Browser {
         );
         self.expect_count("#online-metrics-options input:checked", 2);
         self.expect_count("#subscriber-metrics-options input:checked", 3);
+        self.expect_text(
+            "#chart-online-presence #online-metrics-label",
+            "Show metrics",
+        );
+        self.expect_text(
+            "#chart-subscriber-activity #subscriber-metrics-label",
+            "Show metrics",
+        );
         self.expect_count("[data-metric='subscriber-activity'] .legend li", 3);
         self.click("#online-metrics-toggle");
         self.click("#online-metrics-options label:nth-child(2)");

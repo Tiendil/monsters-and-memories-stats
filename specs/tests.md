@@ -157,6 +157,7 @@ Automated tests MUST cover:
 - Multiple zones combined with server and period comparisons, exact hover values, stable colors, and persistent choices across content sections.
 - Full-width server population shares and heatmaps in Player activity, correct percentage and aggregate hover details, independent zone filtering, entity/period changes, blank buckets versus zero, and narrow-screen labels and color scales.
 - Zone checkbox keyboard operation, Escape and outside dismissal, long labels at narrow widths, empty-selection recovery, and independence from the shared view controls.
+- “Show zones” inside the starting-zone chart and “Show metrics” inside each applicable Engagement chart, after explanations and before legends, with accessible labels and recovery actions in their own cards.
 - Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes.

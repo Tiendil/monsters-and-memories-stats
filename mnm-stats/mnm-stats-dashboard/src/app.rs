@@ -369,6 +369,7 @@ fn ChartCard(
     let explanation_metric = metric.clone();
     let picker_metric = metric.clone();
     let chart_metric = metric.clone();
+    let zone_options = zone_scopes.map(|selected| (selected, zones(&history)));
     let styles = expect_context::<Arc<Mutex<charts::SeriesStyles>>>();
     let plotted = Memo::new(move |_| {
         comparison.get().and_then(|comparison| {
@@ -410,6 +411,12 @@ fn ChartCard(
         <article class="chart-card" id=format!("chart-{key}") tabindex="-1" data-metric=key>
             <h3 class="chart-heading">{title.clone()}</h3>
             <ChartExplanation metric=explanation_metric/>
+            {zone_options.map(|(selected, names)| view! {
+                <ZonePicker names zones=selected/>
+                <Show when=move || selected.get().is_empty()>
+                    <div class="empty-zones" role="status"><p>"Select at least one starting zone to show statistics."</p><button class="secondary" on:click=move |_| selected.set(vec![ZoneScope::All])>"Show All Zones"</button></div>
+                </Show>
+            })}
             {metric_choices.map(|selected| {
                 let online = picker_metric == Metric::OnlineDaily;
                 view! {
@@ -604,7 +611,7 @@ fn ZonePicker(names: BTreeMap<String, String>, zones: RwSignal<Vec<ZoneScope>>) 
             }
         });
     });
-    view! { <CheckboxPicker id="zones" label="Starting zones" choices selected summary on_toggle/> }
+    view! { <div class="chart-control"><CheckboxPicker id="zones" label="Show zones" choices selected summary on_toggle/></div> }
 }
 
 #[component]
@@ -632,7 +639,7 @@ fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView 
             });
         }
     });
-    view! { <div class="metric-control"><CheckboxPicker id=if online { "online-metrics" } else { "subscriber-metrics" } label="Metrics" choices selected=selected_keys summary on_toggle/></div> }
+    view! { <div class="chart-control"><CheckboxPicker id=if online { "online-metrics" } else { "subscriber-metrics" } label="Show metrics" choices selected=selected_keys summary on_toggle/></div> }
 }
 
 #[component]
@@ -644,7 +651,6 @@ pub fn App() -> impl IntoView {
     let latest = history.snapshots().last().map(|s| s.observed_at);
     let first = history.snapshots().first().map(|s| s.observed_at);
     let names = servers(&history);
-    let zone_names = zones(&history);
     let zone_scopes = RwSignal::new(vec![ZoneScope::All]);
     let online_metrics = RwSignal::new(ONLINE_METRICS.to_vec());
     let subscriber_metrics = RwSignal::new(SUBSCRIBER_METRICS.to_vec());
@@ -736,15 +742,8 @@ pub fn App() -> impl IntoView {
                         Section::Relationships => vec![Metric::DailyMonthly, Metric::OnlineDaily, Metric::DailySubscriptions],
                     };
                     let chart_history = history.clone();
-                    let zone_options = zone_names.clone();
                     view! {
                         <h2 class="section-title" class:visually-hidden=selected == Section::Relationships>{match selected { Section::Overview => "Trends over time", Section::Population => "Player activity", Section::Relationships => "Engagement" }}</h2>
-                        {(selected == Section::Population).then(move || view! {
-                            <div class="zone-control"><ZonePicker names=zone_options zones=zone_scopes/></div>
-                            <Show when=move || zone_scopes.get().is_empty()>
-                                <div class="empty-zones" role="status"><p>"Select at least one starting zone to show statistics."</p><button class="secondary" on:click=move |_| zone_scopes.set(vec![ZoneScope::All])>"Show All Zones"</button></div>
-                            </Show>
-                        })}
                         <div class="chart-grid" class:overview-chart=selected == Section::Overview class:population-chart=selected == Section::Population>{metrics.into_iter().map(|metric| {
                             let selected_zones = (metric == Metric::StartingZones).then_some(zone_scopes);
                             let metric_choices = match metric {
