@@ -260,6 +260,9 @@ It MUST plot the following over time:
 - online population.
 - starting-zone populations.
 
+Starting-zone totals and individual zones MUST be selectable together in one plot, with independent choices for “All Zones” and each discovered zone.
+These selections MUST combine with the selected server scopes and comparison periods without changing the aggregation and missing-value rules.
+
 All plots, ratio series, and correlation calculations MUST share one visible primary time-range selector.
 Time-frame comparisons MUST add periods alongside that primary range as defined under Comparisons below; correlations MUST continue to use the primary range.
 The available ranges MUST be:

@@ -108,7 +108,7 @@ Opening one menu MUST close any other open selection menu.
 The dashboard MUST provide three clearly named content sections:
 
 - Overview — trends for online population, daily activity, monthly activity, and global subscriptions.
-- Population — online population, total starting-zone population, and individual starting zones over time.
+- Population — starting-zone totals and individual zones over time.
 - Relationships — the three activity ratios and the corresponding correlations.
 
 Overview MUST be the initial section.
@@ -161,11 +161,20 @@ Daily and monthly activity MUST retain their distinct source labels, and subscri
 
 ### Detailed sections
 
-Population MUST present the online and total starting-zone trends before individual-zone detail.
-Individual-zone detail MUST use a labeled zone selector derived from the complete history, with one selected zone chart visible at a time.
-The selector MUST preserve historical zone identities and MUST NOT use a hardcoded roster.
-Every available zone MUST remain reachable; absence in the current selection MUST produce an explicit unavailable state.
-Changing zone MUST preserve the current server, range, and comparison selections.
+Population MUST show one full-width “Starting-zone population” chart combining the selected starting-zone totals and individual zones.
+Online MUST remain in Overview without a duplicate Population chart.
+A checkbox dropdown labeled “Starting zones” MUST precede the chart and provide “All Zones” plus every zone discovered in the complete history.
+“All Zones” MUST plot the total across all reported starting zones; it MUST NOT select individual-zone checkboxes or sum only checked zones.
+Only “All Zones” MUST be selected initially.
+Every option MUST toggle independently, allowing the total and more than two individual zones on the same chart.
+The dropdown MUST follow the same interaction, layout, and accessibility requirements as the Servers control.
+Its closed label MUST name a single selection or summarize multiple selections, including whether “All Zones” is selected.
+Clearing all zones MUST show a prompt and an explicit “Show All Zones” recovery action, without silently restoring a selection.
+Changing zones MUST preserve the current servers, time range, and comparisons; zone selections MUST persist across content sections.
+Historical zones MUST remain selectable, and missing zone values MUST follow the unavailable-value rules in [requirements.md](requirements.md#metric-interpretation).
+Each selected zone or total MUST produce a series for each selected server scope and comparison period.
+Legends and hover details MUST identify the zone or “All Zones,” server scope, and period when applicable.
+Zone/server/period combinations MUST have distinct, stable series identities, preserving their colors when other selections change.
 
 Relationships MUST group ratios separately from correlations.
 Correlation results MUST show their paired-day counts and actual shared range and server scope next to the coefficients.
@@ -296,8 +305,8 @@ The title MUST remain subordinate to the dashboard's data on the initial screen.
 
 The page MUST use one centered content region with aligned controls, summary values, and chart edges.
 Wide-screen summaries MUST form one row of four values; narrow-screen summaries MUST use a two-by-two layout when labels fit and a single column when needed.
-Ordinary Population and Relationships charts MAY use two columns where each plot remains readable.
-All Overview charts and all comparison plots MUST use the full content width.
+Ordinary Relationships charts MAY use two columns where each plot remains readable.
+All Overview charts, the Population chart, and all comparison plots MUST use the full content width.
 Spacing MUST distinguish content sections more strongly than elements inside one chart or control group.
 
 At a 1440 by 900 CSS-pixel viewport, the default populated view MUST show the collection status, shared controls, four summary values, and plotted data without scrolling.

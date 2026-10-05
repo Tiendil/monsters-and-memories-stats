@@ -22,6 +22,21 @@ impl Scope {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ZoneScope {
+    All,
+    Zone(String),
+}
+
+impl ZoneScope {
+    pub fn label(&self, names: &BTreeMap<String, String>) -> String {
+        match self {
+            Self::All => "All Zones".into(),
+            Self::Zone(id) => display_name(id, names.get(id).map_or("", String::as_str)),
+        }
+    }
+}
+
 pub fn servers(history: &History) -> BTreeMap<String, String> {
     history
         .snapshots()
@@ -875,6 +890,48 @@ pub fn plot(
         result.x_bounds.1 = result.x_bounds.0 + 3600.0;
     }
     Ok(result)
+}
+
+/// Combine zone totals and individual zones on the same server/period axes.
+pub fn population_plot(
+    history: &History,
+    selected_zones: &[ZoneScope],
+    scopes: &[Scope],
+    range: TimeRange,
+    now: DateTime<Utc>,
+    comparison: &Comparison,
+) -> Result<Plot, String> {
+    let names = zones(history);
+    let mut combined: Option<Plot> = None;
+    for zone in selected_zones {
+        let label = zone.label(&names);
+        let metric = match zone {
+            ZoneScope::All => Metric::StartingZones,
+            ZoneScope::Zone(id) => Metric::Zone(id.clone(), label.clone()),
+        };
+        let mut part = plot(history, &metric, scopes, range, now, comparison)?;
+        for series in &mut part.series {
+            series.label = format!("{label} · {}", series.label);
+            if let ZoneScope::Zone(id) = zone {
+                series.identity = format!("zone:{id:?}:{}", series.identity);
+            }
+        }
+        if let Some(result) = &mut combined {
+            result.series.extend(part.series);
+        } else {
+            combined = Some(part);
+        }
+    }
+    if let Some(mut result) = combined {
+        for (style, series) in result.series.iter_mut().enumerate() {
+            series.style = style;
+        }
+        Ok(result)
+    } else {
+        let mut result = plot(history, &Metric::StartingZones, &[], range, now, comparison)?;
+        result.note = "Select starting zones to show their data.".into();
+        Ok(result)
+    }
 }
 
 #[derive(Debug, PartialEq)]

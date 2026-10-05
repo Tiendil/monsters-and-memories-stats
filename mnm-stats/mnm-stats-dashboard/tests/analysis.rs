@@ -149,6 +149,160 @@ fn changing_zone_membership_preserves_gaps_totals_and_exported_rows() {
 }
 
 #[test]
+fn population_combines_zones_servers_and_periods_without_partial_totals() {
+    let records = (2..=4)
+        .map(|month| {
+            let mut record = snapshot(&format!("2024-{month:02}-01T00:00:00Z"), 15, 25, 10);
+            record.servers[0].starting_zones.push(StartingZone {
+                id: "w".into(),
+                name: "West".into(),
+                online: 2,
+            });
+            record
+        })
+        .collect();
+    let history = History::new(records).unwrap();
+    let selected = [
+        ZoneScope::All,
+        ZoneScope::Zone("z".into()),
+        ZoneScope::Zone("w".into()),
+    ];
+    let scopes = [Scope::All, Scope::Server("a".into())];
+    let comparison = Comparison::periods(
+        (2..=4)
+            .map(|month| Period::month(&format!("2024-{month:02}")).unwrap())
+            .collect(),
+    );
+    let now = time("2024-05-01T00:00:00Z");
+    let chart = population_plot(
+        &history,
+        &selected,
+        &scopes,
+        TimeRange::All,
+        now,
+        &comparison,
+    )
+    .unwrap();
+    assert_eq!(chart.series.len(), 18);
+    assert_eq!(
+        chart
+            .series
+            .iter()
+            .map(|s| &s.identity)
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        18
+    );
+    assert_eq!(
+        chart
+            .series
+            .iter()
+            .map(|s| s.style)
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        18
+    );
+    for (zone, expected) in chart.series.chunks(6).zip([
+        [Some(6.0), Some(5.0)],
+        [Some(4.0), Some(3.0)],
+        [None, Some(2.0)],
+    ]) {
+        for period in zone.chunks(2) {
+            assert_eq!(
+                period
+                    .iter()
+                    .map(|s| s.points[0].value.map(|v| v.number()))
+                    .collect::<Vec<_>>(),
+                expected
+            );
+            assert_eq!(period[0].points[0].x, period[1].points[0].x);
+        }
+    }
+    assert_eq!(
+        chart.series[0].label,
+        "All Zones · All Servers · February 2024 (UTC)"
+    );
+    assert_eq!(chart.series[7].label, "Zone · Alpha · February 2024 (UTC)");
+    assert_eq!(chart.series[13].label, "West · Alpha · February 2024 (UTC)");
+    let single = population_plot(
+        &history,
+        &selected[1..],
+        &scopes,
+        TimeRange::All,
+        now,
+        &comparison,
+    )
+    .unwrap();
+    assert_eq!(single.x_bounds, chart.x_bounds);
+    assert_eq!(single.alignment, chart.alignment);
+    assert!(
+        population_plot(&history, &[], &scopes, TimeRange::All, now, &comparison)
+            .unwrap()
+            .series
+            .is_empty()
+    );
+    assert!(
+        population_plot(&history, &selected, &[], TimeRange::All, now, &comparison)
+            .unwrap()
+            .series
+            .is_empty()
+    );
+}
+
+#[test]
+fn population_colors_survive_zone_reordering_and_renaming() {
+    let now = time("2024-01-01T03:00:00Z");
+    let mut records = vec![snapshot("2024-01-01T00:00:00Z", 1, 2, 3)];
+    let selected = [ZoneScope::All, ZoneScope::Zone("z".into())];
+    let scopes = [Scope::All, Scope::Server("a".into())];
+    let history = History::new(records.clone()).unwrap();
+    let mut original = population_plot(
+        &history,
+        &selected,
+        &scopes,
+        TimeRange::All,
+        now,
+        &Comparison::None,
+    )
+    .unwrap();
+    let mut styles = mnm_stats_dashboard::charts::SeriesStyles::default();
+    styles.assign(&mut original);
+    for server in &mut records[0].servers {
+        server.starting_zones[0].name = "New name".into();
+    }
+    let renamed = History::new(records).unwrap();
+    for selection in [
+        vec![selected[1].clone()],
+        vec![selected[1].clone(), ZoneScope::All],
+    ] {
+        let mut changed = population_plot(
+            &renamed,
+            &selection,
+            &scopes,
+            TimeRange::All,
+            now,
+            &Comparison::None,
+        )
+        .unwrap();
+        styles.assign(&mut changed);
+        assert!(changed.series[0].label.starts_with("New name ·"));
+        for series in changed.series {
+            let before = original
+                .series
+                .iter()
+                .find(|s| s.identity == series.identity)
+                .unwrap();
+            assert_eq!(series.style, before.style);
+            assert_eq!(series.points, before.points);
+        }
+    }
+    assert_eq!(
+        ZoneScope::Zone("missing".into()).label(&zones(&history)),
+        "missing"
+    );
+}
+
+#[test]
 fn ranges_end_at_now_and_include_their_exact_utc_boundaries() {
     let now = time("2024-03-01T12:30:00Z");
     for (range, days) in [

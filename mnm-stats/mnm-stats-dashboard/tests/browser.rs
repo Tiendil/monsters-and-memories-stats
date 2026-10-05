@@ -158,9 +158,8 @@ impl Browser {
     // Presentation assertions use the navigation controls directly.
     fn show_metric(&self, metric: &str) {
         let section = match metric {
-            "daily" | "monthly" | "subscriptions" => "overview",
-            "online" | "starting-zones" => "population",
-            m if m.starts_with("zone-") => "population",
+            "online" | "daily" | "monthly" | "subscriptions" => "overview",
+            "starting-zones" => "population",
             _ => "relationships",
         };
         let present = self.request(
@@ -175,9 +174,6 @@ impl Browser {
             return;
         }
         self.click(&format!("#nav-{section}"));
-        if let Some(zone) = metric.strip_prefix("zone-") {
-            self.select("#zone-scope", zone);
-        }
     }
 
     fn visit_chart_selector(&self, selector: &str) {
@@ -252,32 +248,42 @@ impl Browser {
     }
 
     fn servers(&self, ids: &[&str]) {
-        self.click("#servers-toggle");
+        self.select_entities("servers", "server", ids);
+    }
+
+    fn zones(&self, ids: &[&str]) {
+        self.show_metric("starting-zones");
+        self.select_entities("zones", "zone", ids);
+    }
+
+    fn select_entities(&self, picker: &str, prefix: &str, ids: &[&str]) {
+        self.click(&format!("#{picker}-toggle"));
         let selected: Vec<_> = ids
             .iter()
             .map(|id| {
                 if id.is_empty() {
-                    "all".to_string()
+                    "all".to_owned()
                 } else {
-                    format!("server:{id}")
+                    format!("{prefix}:{id}")
                 }
             })
             .collect();
-        let choices = self.request(Method::POST, "/execute/sync", json!({
-            "script":"return Array.from(document.querySelectorAll('#server-options input'), e => ({value:e.value,checked:e.checked}));", "args":[]
+        let inputs = self.request(Method::POST, "/execute/sync", json!({
+            "script":"return Array.from(document.querySelectorAll(arguments[0]), e => ({value:e.value,checked:e.checked}));",
+            "args":[format!("#{picker}-options input")]
         }));
-        for choice in choices.as_array().unwrap() {
-            let value = choice["value"].as_str().unwrap();
-            if choice["checked"].as_bool().unwrap() != selected.iter().any(|id| id == value) {
-                self.click(&format!("#server-options input[value='{value}']"));
+        for input in inputs.as_array().unwrap() {
+            let value = input["value"].as_str().unwrap();
+            if input["checked"].as_bool().unwrap() != selected.iter().any(|id| id == value) {
+                self.click(&format!("#{picker}-options input[value='{value}']"));
             }
         }
-        self.click("#servers-toggle");
+        self.click(&format!("#{picker}-toggle"));
     }
 
     fn toggle_server(&self, value: &str) {
         self.click("#servers-toggle");
-        self.click(&format!("#server-options input[value='{value}']"));
+        self.click(&format!("#servers-options input[value='{value}']"));
         self.click("#servers-toggle");
     }
 
@@ -580,34 +586,52 @@ impl Browser {
         self.select("#time-range", "7");
         assert_eq!(self.text("#history-status"), coverage);
         self.click("#nav-population");
-        self.expect_count(".chart-card", 3);
-        self.select("#zone-scope", "zz-archived");
+        self.expect_count(".chart-card", 1);
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('[data-metric=online]') === null;","args":[]})), true);
+        self.zones(&["zz-archived"]);
         self.expect_text(
-            "[data-metric='zone-zz-archived'] .empty-chart",
+            "[data-metric='starting-zones'] .empty-chart",
             "No available observations for this selection.",
         );
         self.select("#time-range", "all");
-        self.ready("zone-zz-archived");
+        self.ready("starting-zones");
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":320,"height":812}),
+        );
+        self.click("#zones-toggle");
+        assert!(
+            self.text("#zones-options")
+                .contains("An old starting zone retained only in the archive")
+        );
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const panel=document.querySelector('#zones-options'); return document.documentElement.scrollWidth <= innerWidth && panel.scrollWidth <= panel.clientWidth;", "args":[]})), true);
+        self.click("#zones-toggle");
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
+        );
         self.select("#time-range", "7");
-        self.select("#zone-scope", "w");
+        self.zones(&["w"]);
         self.activate("[data-summary='daily'] a");
         self.expect_count(".chart-card", 4);
         self.click("#nav-population");
-        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#server-options input:checked').value,document.querySelector('#time-range').dataset.value,document.querySelector('#zone-scope').value];","args":[]})), json!(["server:a","7","w"]));
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#servers-options input:checked').value,document.querySelector('#time-range').dataset.value,document.querySelector('#zones-options input:checked').value];","args":[]})), json!(["server:a","7","zone:w"]));
         self.servers(&["", "a", "b"]);
-        self.expect_count("[data-metric='online'] .legend li", 3);
+        self.expect_count("[data-metric='starting-zones'] .legend li", 3);
         // The checkbox dropdown supports keyboard toggling and Escape restores focus.
         self.activate("#servers-toggle");
         self.request(
             Method::POST,
             &format!(
                 "/element/{}/value",
-                self.element("#server-options input[value='server:b']")
+                self.element("#servers-options input[value='server:b']")
             ),
             json!({"text":" ","value":[" "]}),
         );
         self.request(Method::POST, "/actions", json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e00c}"},{"type":"keyUp","value":"\u{e00c}"}]}]}));
-        self.expect_count("[data-metric='online'] .legend li", 2);
+        self.expect_count("[data-metric='starting-zones'] .legend li", 2);
         assert_eq!(
             self.request(
                 Method::POST,
@@ -616,7 +640,7 @@ impl Browser {
             ),
             "servers-toggle"
         );
-        self.expect_count(".server-picker[open]", 0);
+        self.expect_count(".selection-picker[open]", 0);
         self.toggle_server("server:b");
         self.click("#nav-overview");
         self.verify_now(expected);
@@ -686,20 +710,166 @@ impl Browser {
             "/execute/sync",
             json!({"script":"document.documentElement.style.fontSize='';","args":[]}),
         );
+        self.zones(&[""]);
+        self.click("#nav-overview");
         self.servers(&[""]);
+        self.select("#time-range", "30");
+    }
+
+    fn verify_checkbox_labels(&self, zone: &str, server: &str) {
+        // A label click briefly focuses the surrounding content before its input.
+        // Closing the dropdown during that transition crashed Chromium; clicking
+        // the checkbox directly does not exercise that native activation path.
+        for width in [1280, 375] {
+            self.request(
+                Method::POST,
+                "/window/rect",
+                json!({"width":width,"height":900}),
+            );
+            self.servers(&[""]);
+            self.zones(&[""]);
+            for (picker, value) in [
+                ("zones", format!("zone:{zone}")),
+                ("servers", format!("server:{server}")),
+            ] {
+                self.click(&format!("#{picker}-toggle"));
+                let input = format!("#{picker}-options input[value='{value}']");
+                for checked in [true, false, true, false] {
+                    self.click(&format!("{input} + span"));
+                    assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+                        "script":"const input=document.querySelector(arguments[0]); return {checked:input.checked, focused:document.activeElement===input, open:input.closest('details').open};",
+                        "args":[input]
+                    })), json!({"checked":checked,"focused":true,"open":true}));
+                    self.expect_count(
+                        "[data-metric='starting-zones'] .legend li",
+                        if checked { 2 } else { 1 },
+                    );
+                    self.ready("starting-zones");
+                }
+                self.request(
+                    Method::POST,
+                    "/execute/sync",
+                    json!({
+                        "script":"document.querySelector(arguments[0]).focus();",
+                        "args":[format!("#{picker}-options label:last-child input")]
+                    }),
+                );
+                self.request(Method::POST, "/actions", json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e004}"},{"type":"keyUp","value":"\u{e004}"}]}]}));
+                self.expect_count(".selection-picker[open]", 0);
+                self.click(&format!("#{picker}-toggle"));
+                self.click("h1");
+                self.expect_count(".selection-picker[open]", 0);
+            }
+        }
+        self.click("#nav-overview");
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
+        );
+    }
+
+    fn verify_population(&self, expected: &Value) {
+        self.select("#time-range", "7");
+        self.servers(&["a"]);
+        self.zones(&["", "w", "z"]);
+        self.expect_count(".chart-card", 1);
+        self.expect_count("[data-metric='starting-zones'] .legend li", 3);
+        self.expect_text("#zones-selection", "All Zones + 2");
+        assert_eq!(
+            self.computed(".chart-grid", "grid-template-columns")
+                .split_whitespace()
+                .count(),
+            1
+        );
+        let colors = self.request(Method::POST, "/execute/sync", json!({
+            "script":"return Object.fromEntries(Array.from(document.querySelectorAll('.legend li'),e=>[e.textContent,getComputedStyle(e.querySelector('line')).stroke]));", "args":[]
+        }));
+        assert_eq!(
+            colors
+                .as_object()
+                .unwrap()
+                .values()
+                .map(Value::to_string)
+                .collect::<std::collections::BTreeSet<_>>()
+                .len(),
+            3
+        );
+        self.zones(&["w", "z"]);
+        self.expect_text("#zones-selection", "2 zones");
+        self.ready("starting-zones");
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+            "script":"return Array.from(document.querySelectorAll('.legend li')).every(e=>getComputedStyle(e.querySelector('line')).stroke===arguments[0][e.textContent]);", "args":[colors]
+        })), true);
+        let first = expected["snapshots"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["observed_at"] == "2026-05-25T12:00:00Z")
+            .unwrap();
+        for (zone, name, row) in [("w", "Lower Docks", 1), ("z", "Harbor & Hills", 0)] {
+            self.zones(&[zone]);
+            self.hover("[data-metric='starting-zones'] .scatterlayer .point");
+            self.expect_hover(
+                "starting-zones",
+                &format!("{name} · Alpha <island> & West"),
+                "2026-05-25T12:00:00Z",
+                &first["servers"][0]["starting_zones"][row]["online"].to_string(),
+            );
+        }
+        self.zones(&["", "w", "z"]);
+        self.servers(&["", "a"]);
+        self.select("#comparison-mode", "previous");
+        self.expect_count("[data-metric='starting-zones'] .legend li", 12);
+        self.verify_now(expected);
+        // Space toggles a zone, and Escape restores focus to its closed control.
+        self.activate("#zones-toggle");
+        self.request(
+            Method::POST,
+            &format!(
+                "/element/{}/value",
+                self.element("#zones-options input[value='zone:w']")
+            ),
+            json!({"text":" ","value":[" "]}),
+        );
+        self.request(Method::POST, "/actions", json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e00c}"},{"type":"keyUp","value":"\u{e00c}"}]}]}));
+        self.expect_count("[data-metric='starting-zones'] .legend li", 8);
+        self.expect_count(".selection-picker[open]", 0);
+        assert_eq!(
+            self.request(
+                Method::POST,
+                "/execute/sync",
+                json!({"script":"return document.activeElement.id;", "args":[]})
+            ),
+            "zones-toggle"
+        );
+        self.click("#zones-toggle");
+        self.click("#time-range");
+        self.expect_count(".selection-picker[open]", 0);
+        self.click("#time-range");
+        self.zones(&[]);
+        self.expect_count(".empty-zones", 1);
+        self.expect_count(".plot-surface", 0);
+        self.expect_text("#zones-selection", "Choose zones");
+        self.click(".empty-zones button");
+        self.expect_text("#zones-selection", "All Zones");
+        self.expect_count("[data-metric='starting-zones'] .legend li", 4);
+        self.select("#comparison-mode", "disabled");
+        self.servers(&[""]);
+        self.click("#nav-overview");
         self.select("#time-range", "30");
     }
 
     fn verify_features(&self, url: &str, expected: &Value, scratch: &Path) {
         self.verify_presentation(expected, scratch);
+        self.verify_checkbox_labels("w", "a");
+        self.verify_population(expected);
         let metrics = [
             "daily",
             "monthly",
             "subscriptions",
             "online",
             "starting-zones",
-            "zone-z",
-            "zone-w",
             "daily-monthly",
             "daily-subscriptions",
             "monthly-subscriptions",
@@ -713,7 +883,7 @@ impl Browser {
         );
         self.expect_count(".chart-card", 4);
         self.click("#servers-toggle");
-        assert!(self.text("#server-options").contains("Retired server"));
+        assert!(self.text("#servers-options").contains("Retired server"));
         self.click("#servers-toggle");
         let midnight = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
         for (key, days) in [
@@ -790,20 +960,6 @@ impl Browser {
                 .to_string(),
             ),
             (
-                "zone-z",
-                a["starting_zones"][0]["online"]
-                    .as_u64()
-                    .unwrap()
-                    .to_string(),
-            ),
-            (
-                "zone-w",
-                a["starting_zones"][1]["online"]
-                    .as_u64()
-                    .unwrap()
-                    .to_string(),
-            ),
-            (
                 "daily-monthly",
                 format!(
                     "{:.2}% ({} / {})",
@@ -836,6 +992,8 @@ impl Browser {
                 metric,
                 if metric == "subscriptions" {
                     "Global subscribers"
+                } else if metric == "starting-zones" {
+                    "All Zones · Alpha <island> & West"
                 } else {
                     "Alpha <island> & West"
                 },
@@ -967,7 +1125,8 @@ impl Browser {
             self.toggle_server("server:b");
             // Constant zone counts coincide across all three periods. Every
             // series must retain its actual observation date, not its aligned x.
-            self.hover("[data-metric='zone-w'] .scatterlayer .point");
+            self.zones(&["w"]);
+            self.hover("[data-metric='starting-zones'] .scatterlayer .point");
             let dates = if mode == "months" {
                 [
                     "2024-02-01T00:00:00Z",
@@ -982,9 +1141,15 @@ impl Browser {
                 ]
             };
             for at in dates {
-                self.expect_hover("zone-w", "Alpha <island> & West", at, "3");
+                self.expect_hover(
+                    "starting-zones",
+                    "Lower Docks · Alpha <island> & West",
+                    at,
+                    "3",
+                );
             }
-            self.expect_count("[data-metric='zone-w'] .hovertext", 3);
+            self.expect_count("[data-metric='starting-zones'] .hovertext", 3);
+            self.zones(&[""]);
             self.ready("daily");
             assert_eq!(
                 self.request(Method::POST, "/execute/sync", json!({
@@ -1025,12 +1190,13 @@ impl Browser {
             self.expect_count(&format!("[data-metric='{metric}'] .legend li"), 3);
             self.ready(metric);
         }
-        self.hover("[data-metric='zone-w'] .scatterlayer .point");
+        self.zones(&["w"]);
+        self.hover("[data-metric='starting-zones'] .scatterlayer .point");
         assert!(
-            self.text("[data-metric='zone-w'] .hoverlayer")
+            self.text("[data-metric='starting-zones'] .hoverlayer")
                 .contains("01 Feb 2024, 00:00 UTC")
         );
-        self.move_pointer("[data-metric='zone-w'] .plot-surface", 0, 0);
+        self.move_pointer("[data-metric='starting-zones'] .plot-surface", 0, 0);
         self.expect_count(".hovertext", 0);
         self.click("#time-range");
         self.click("#custom-range");
@@ -1221,9 +1387,9 @@ impl Browser {
             self.text("[data-metric='daily'] .hoverlayer")
                 .contains("UTC")
         );
-        // Population retains its responsive two-column layout.
-        self.click("#nav-population");
-        self.ready("online");
+        // Relationships retains its responsive two-column layout.
+        self.click("#nav-relationships");
+        self.ready("daily-monthly");
         // The changed breakpoint is 900px, so the same 1000px window changes layout.
         self.request(
             Method::POST,
@@ -1706,6 +1872,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
     browser.verify(&origin, &expected, scratch);
     assert!(browser.text("#demo-notice").contains("synthetic"));
+    browser.verify_checkbox_labels("harbor", "demo-0");
     browser.ready("online");
     let solid = "[data-metric='online'] .scatterlayer .trace:nth-child(1) .js-line";
     let subdued = "[data-metric='online'] .scatterlayer .trace:nth-child(2) .js-line";

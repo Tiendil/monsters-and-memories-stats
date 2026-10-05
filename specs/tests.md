@@ -91,6 +91,7 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 
 - Server and starting-zone aggregation without claiming deduplicated global activity.
 - Unavailable individual-zone values and chart gaps when a server omits a zone, including all-server views that would otherwise show a partial sum.
+- Combined starting-zone series for each selected zone/total, server scope, and period, with consistent axes, stable distinct identities, and no observations for empty selections.
 - Zero starting-zone totals for validated empty lists, historical zone discovery, and complete JSON exports preserving differing per-server zone membership.
 - Ratio values, including zero denominators and values above 100 percent.
 - Correlation with known expected results and selection of the last jointly available sample per UTC day.
@@ -148,7 +149,11 @@ Automated tests MUST cover:
 - Unchanged “Now” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
 - Card link text matching the plot titles, with mouse and keyboard activation opening Overview and scrolling to and focusing the corresponding plot without changing filters.
 - Persistent cards during comparisons, without a duplicate comparison-information section.
-- Dynamic individual-zone selection, including historical and unavailable zones, without losing other selections.
+- A single full-width Population plot with independently selectable “All Zones” and discovered zones, including historical and unavailable zones, without a duplicate Online chart.
+- Multiple zones combined with server and period comparisons, exact hover values, stable colors, and persistent choices across content sections.
+- Zone checkbox keyboard operation, Escape and outside dismissal, long labels at narrow widths, empty-selection recovery, and independence from the shared view controls.
+- Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.
+- Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes, with correlations grouped per selected entity over the shared range.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.

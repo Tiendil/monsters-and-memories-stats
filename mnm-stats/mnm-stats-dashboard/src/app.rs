@@ -104,6 +104,20 @@ fn close_menu(node: NodeRef<leptos::html::Details>, id: &str) {
     }
 }
 
+fn close_menu_on_focus_out(node: NodeRef<leptos::html::Details>, event: web_sys::FocusEvent) {
+    if let (Some(element), Some(target)) = (
+        node.get(),
+        event.related_target().and_then(|t| t.dyn_into::<web_sys::Node>().ok()),
+    ) && !element.contains(Some(&target))
+        // Pressing a label can focus an outside ancestor before activating its
+        // checkbox. Hiding the menu during that native activation crashes Chrome.
+        // Outside clicks still close it through the separate click handler.
+        && !element.matches(":active").unwrap_or(false)
+    {
+        let _ = element.remove_attribute("open");
+    }
+}
+
 #[component]
 fn DateMenu(
     id: &'static str,
@@ -125,11 +139,7 @@ fn DateMenu(
     view! {
         <details class="date-menu" node_ref=node on:keydown=move |event| {
             if event.key() == "Escape" { event.prevent_default(); close_menu(node, id); }
-        } on:focusout=move |event| {
-            if let (Some(element), Some(target)) = (node.get(), event.related_target().and_then(|t| t.dyn_into::<web_sys::Node>().ok())) && !element.contains(Some(&target)) {
-                let _ = element.remove_attribute("open");
-            }
-        }>
+        } on:focusout=move |event| close_menu_on_focus_out(node, event)>
             <summary id=id data-value=move || value.get() aria-labelledby=format!("{id}-label {id}-selection")>
                 <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 11h18"/></svg>
                 <span id=format!("{id}-selection")>{move || label.get()}</span><span aria-hidden="true">"⌄"</span>
@@ -261,6 +271,7 @@ fn ChartCard(
     range: RwSignal<TimeRange>,
     now: RwSignal<DateTime<Utc>>,
     comparison: Memo<Result<Comparison, String>>,
+    zone_scopes: Option<RwSignal<Vec<ZoneScope>>>,
 ) -> impl IntoView {
     let key = metric.key();
     let title = metric.title();
@@ -268,15 +279,26 @@ fn ChartCard(
     let styles = expect_context::<Arc<Mutex<charts::SeriesStyles>>>();
     let plotted = Memo::new(move |_| {
         comparison.get().and_then(|comparison| {
-            plot(
-                &history,
-                &metric,
-                &scopes.get(),
-                range.get(),
-                now.get(),
-                &comparison,
-            )
-            .map(|mut plot| {
+            let result = if let Some(selected) = zone_scopes {
+                population_plot(
+                    &history,
+                    &selected.get(),
+                    &scopes.get(),
+                    range.get(),
+                    now.get(),
+                    &comparison,
+                )
+            } else {
+                plot(
+                    &history,
+                    &metric,
+                    &scopes.get(),
+                    range.get(),
+                    now.get(),
+                    &comparison,
+                )
+            };
+            result.map(|mut plot| {
                 styles.lock().expect("series styles").assign(&mut plot);
                 Arc::new(plot)
             })
@@ -307,57 +329,127 @@ fn ChartCard(
 }
 
 #[component]
-fn ServerPicker(names: BTreeMap<String, String>, scopes: RwSignal<Vec<Scope>>) -> impl IntoView {
+fn CheckboxPicker(
+    id: &'static str,
+    label: &'static str,
+    choices: Vec<(String, String)>,
+    selected: Signal<Vec<String>>,
+    summary: Signal<String>,
+    on_toggle: Callback<String>,
+) -> impl IntoView {
     let node = NodeRef::<leptos::html::Details>::new();
-    let summary_names = names.clone();
-    let summary = Memo::new(move |_| {
-        let selected = scopes.get();
-        match selected.as_slice() {
-            [] => "Choose servers".into(),
-            [scope] => scope.label(&summary_names),
-            _ if selected.contains(&Scope::All) => format!("All Servers + {}", selected.len() - 1),
-            _ => format!("{} servers", selected.len()),
-        }
-    });
     let outside = window_event_listener(ev::click, move |event| {
-        if let (Some(element), Some(target)) = (
-            node.get(),
-            event
-                .target()
-                .and_then(|t| t.dyn_into::<web_sys::Node>().ok()),
-        ) && !element.contains(Some(&target))
+        if let Some(element) = node.get()
+            && !event.composed_path().includes(element.as_ref(), 0)
         {
             let _ = element.remove_attribute("open");
         }
     });
     on_cleanup(move || outside.remove());
     view! {
-        <div class="server-control">
-            <span id="servers-label" class="control-label">"Servers"</span>
-            <details class="server-picker" node_ref=node on:keydown=move |event| {
-                if event.key() == "Escape" {
-                    if let Some(element) = node.get() { let _ = element.remove_attribute("open"); }
-                    if let Some(toggle) = document().get_element_by_id("servers-toggle").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = toggle.focus(); }
-                }
-            } on:focusout=move |event| {
-                if let (Some(element), Some(target)) = (node.get(), event.related_target().and_then(|t| t.dyn_into::<web_sys::Node>().ok())) && !element.contains(Some(&target)) {
-                    let _ = element.remove_attribute("open");
-                }
-            }>
-                <summary id="servers-toggle" aria-labelledby="servers-label servers-selection"><span id="servers-selection">{move || summary.get()}</span></summary>
-                <div id="server-options" role="group" aria-labelledby="servers-label">
-                    {std::iter::once(Scope::All).chain(names.keys().cloned().map(Scope::Server)).map(|scope| {
-                        let label = scope.label(&names);
-                        let checked = scope.clone();
-                        let value = match &scope { Scope::All => "all".to_string(), Scope::Server(id) => format!("server:{id}") };
-                        view! { <label class="checkbox"><input type="checkbox" value=value prop:checked=move || scopes.get().contains(&checked) on:change=move |_| scopes.update(|selected| {
-                            if selected.contains(&scope) { selected.retain(|s| s != &scope); } else { selected.push(scope.clone()); }
-                        })/><span>{label}</span></label> }
+        <div class="selection-control">
+            <span id=format!("{id}-label") class="control-label">{label}</span>
+            <details class="selection-picker" node_ref=node on:keydown=move |event| {
+                if event.key() == "Escape" { event.prevent_default(); close_menu(node, &format!("{id}-toggle")); }
+            } on:focusout=move |event| close_menu_on_focus_out(node, event)>
+                <summary id=format!("{id}-toggle") aria-labelledby=format!("{id}-label {id}-selection")><span class="selection-summary" id=format!("{id}-selection")>{move || summary.get()}</span></summary>
+                <div class="selection-options" id=format!("{id}-options") role="group" aria-labelledby=format!("{id}-label")>
+                    {choices.into_iter().map(|(value, label)| {
+                        let checked = value.clone();
+                        view! { <label class="checkbox"><input type="checkbox" value=value.clone() prop:checked=move || selected.get().contains(&checked) on:change=move |_| on_toggle.run(value.clone())/><span>{label}</span></label> }
                     }).collect_view()}
                 </div>
             </details>
         </div>
     }
+}
+
+#[component]
+fn ServerPicker(names: BTreeMap<String, String>, scopes: RwSignal<Vec<Scope>>) -> impl IntoView {
+    let choices = std::iter::once(("all".into(), "All Servers".into()))
+        .chain(
+            names
+                .iter()
+                .map(|(id, name)| (format!("server:{id}"), display_name(id, name))),
+        )
+        .collect();
+    let summary = Signal::derive(move || {
+        let selected = scopes.get();
+        match selected.as_slice() {
+            [] => "Choose servers".into(),
+            [scope] => scope.label(&names),
+            _ if selected.contains(&Scope::All) => format!("All Servers + {}", selected.len() - 1),
+            _ => format!("{} servers", selected.len()),
+        }
+    });
+    let selected = Signal::derive(move || {
+        scopes
+            .get()
+            .iter()
+            .map(|scope| match scope {
+                Scope::All => "all".into(),
+                Scope::Server(id) => format!("server:{id}"),
+            })
+            .collect()
+    });
+    let on_toggle = Callback::new(move |value: String| {
+        let scope = value
+            .strip_prefix("server:")
+            .map_or(Scope::All, |id| Scope::Server(id.into()));
+        scopes.update(|selected| {
+            if selected.contains(&scope) {
+                selected.retain(|s| s != &scope);
+            } else {
+                selected.push(scope);
+            }
+        });
+    });
+    view! { <CheckboxPicker id="servers" label="Servers" choices selected summary on_toggle/> }
+}
+
+#[component]
+fn ZonePicker(names: BTreeMap<String, String>, zones: RwSignal<Vec<ZoneScope>>) -> impl IntoView {
+    let choices = std::iter::once(("all".into(), "All Zones".into()))
+        .chain(
+            names
+                .iter()
+                .map(|(id, name)| (format!("zone:{id}"), display_name(id, name))),
+        )
+        .collect();
+    let summary = Signal::derive(move || {
+        let selected = zones.get();
+        match selected.as_slice() {
+            [] => "Choose zones".into(),
+            [zone] => zone.label(&names),
+            _ if selected.contains(&ZoneScope::All) => {
+                format!("All Zones + {}", selected.len() - 1)
+            }
+            _ => format!("{} zones", selected.len()),
+        }
+    });
+    let selected = Signal::derive(move || {
+        zones
+            .get()
+            .iter()
+            .map(|zone| match zone {
+                ZoneScope::All => "all".into(),
+                ZoneScope::Zone(id) => format!("zone:{id}"),
+            })
+            .collect()
+    });
+    let on_toggle = Callback::new(move |value: String| {
+        let zone = value
+            .strip_prefix("zone:")
+            .map_or(ZoneScope::All, |id| ZoneScope::Zone(id.into()));
+        zones.update(|selected| {
+            if selected.contains(&zone) {
+                selected.retain(|z| z != &zone);
+            } else {
+                selected.push(zone);
+            }
+        });
+    });
+    view! { <CheckboxPicker id="zones" label="Starting zones" choices selected summary on_toggle/> }
 }
 
 #[component]
@@ -402,7 +494,7 @@ pub fn App() -> impl IntoView {
     let first = history.snapshots().first().map(|s| s.observed_at);
     let names = servers(&history);
     let zone_names = zones(&history);
-    let zone = RwSignal::new(zone_names.keys().next().cloned().unwrap_or_default());
+    let zone_scopes = RwSignal::new(vec![ZoneScope::All]);
     let utc_now =
         || DateTime::from_timestamp_millis(js_sys::Date::now() as i64).expect("browser timestamp");
     let now = RwSignal::new(utc_now());
@@ -487,22 +579,20 @@ pub fn App() -> impl IntoView {
                     let selected = section.get();
                     let metrics = match selected {
                         Section::Overview => vec![Metric::Online, Metric::Daily, Metric::Monthly, Metric::Subscriptions],
-                        Section::Population => vec![Metric::Online, Metric::StartingZones],
+                        Section::Population => vec![Metric::StartingZones],
                         Section::Relationships => vec![Metric::DailyMonthly, Metric::DailySubscriptions, Metric::MonthlySubscriptions],
                     };
                     let chart_history = history.clone();
-                    let zone_history = history.clone();
                     let zone_options = zone_names.clone();
-                    let zone_labels = zone_names.clone();
                     view! {
                         <h2 class="section-title">{match selected { Section::Overview => "Trends over time", Section::Population => "Population over time", Section::Relationships => "Ratios of reported counts" }}</h2>
-                        <div class="chart-grid" class:overview-chart=selected == Section::Overview>{metrics.into_iter().map(|metric| view! { <ChartCard history=chart_history.clone() metric scopes range now comparison/> }).collect_view()}</div>
                         {(selected == Section::Population).then(move || view! {
-                            <section class="zone-detail" aria-label="Individual starting zone"><h2>"Explore a starting zone"</h2>
-                                <label>"Starting zone"<select id="zone-scope" prop:value=move || zone.get() on:change=move |ev| zone.set(event_target_value(&ev))>{zone_options.into_iter().map(|(id, name)| view! { <option value=id.clone()>{display_name(&id, &name)}</option> }).collect_view()}</select></label>
-                                {move || zone_labels.get(&zone.get()).map(|name| view! { <ChartCard history=zone_history.clone() metric=Metric::Zone(zone.get(), name.clone()) scopes range now comparison/> })}
-                            </section>
+                            <div class="zone-control"><ZonePicker names=zone_options zones=zone_scopes/></div>
+                            <Show when=move || zone_scopes.get().is_empty()>
+                                <div class="empty-zones" role="status"><p>"Select at least one starting zone to show statistics."</p><button class="secondary" on:click=move |_| zone_scopes.set(vec![ZoneScope::All])>"Show All Zones"</button></div>
+                            </Show>
                         })}
+                        <div class="chart-grid" class:overview-chart=selected == Section::Overview class:population-chart=selected == Section::Population>{metrics.into_iter().map(|metric| view! { <ChartCard history=chart_history.clone() metric scopes range now comparison zone_scopes=(selected == Section::Population).then_some(zone_scopes)/> }).collect_view()}</div>
                         {(selected == Section::Relationships).then(|| view! {
                             <p class="correlation-explanation">"Correlations below use the primary time range for each selected server."</p>
                             <Correlations history=history.clone() scopes range now/>
