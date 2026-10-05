@@ -511,6 +511,18 @@
       }
     },
     "series": {
+      "gap": {
+        "color": {
+          "$type": "color",
+          "$value": "{tailwind.color.stone.500}",
+          "$description": "Neutral color of visual connections across sparse collection intervals."
+        },
+        "opacity": {
+          "$type": "number",
+          "$value": 0.85,
+          "$description": "Opacity multiplier for connections across sparse collection intervals, from transparent (0) to opaque (1)."
+        }
+      },
       "line": {
         "$type": "dimension",
         "width": {

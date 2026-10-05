@@ -277,7 +277,7 @@ The available ranges MUST be:
 Custom dates MUST be valid, with the end on or after the start. Both boundary dates MUST be included in full.
 Invalid inputs MUST leave the applied range unchanged and show a local validation message.
 
-The default range SHOULD be the last 30 days.
+The default range MUST be the last 7 days.
 Today MUST run from the current UTC midnight through the current time. Yesterday MUST include the complete preceding UTC calendar day and exclude the current midnight.
 These day presets MUST follow the current UTC date when the clock crosses midnight.
 The rolling ranges and All time MUST end at the current UTC time; “last year” MUST mean the previous 365 days, and “all time” MUST include all collected history.
@@ -286,7 +286,18 @@ The UI MUST state the selected interval and show when it contains no observation
 The UI MUST show the latest collection time and the available history interval.
 The displayed latest collection time MUST indicate data age without a separate freshness warning or status label.
 Times MUST be labeled UTC.
-Missing samples MUST NOT be plotted as zeros; line charts MUST break across gaps longer than two hours.
+Missing samples MUST NOT be plotted as zeros or added as synthetic observations.
+Connections between consecutive available observations MUST use their actual collection interval:
+
+- Less than 3 hours: a solid line in the series color.
+- At least 3 hours and less than 24 hours: a subdued gray solid line.
+- At least 24 hours: no line.
+
+Unavailable metric values and absent calendar dates introduced by comparison alignment MUST interrupt connections regardless of the collection interval.
+Connections MUST be straight visual guides between observations, without adding values to hover details, calculations, or downloads.
+
+**Example:** Observations exactly 3 hours apart are connected with a subdued gray solid line; observations exactly 24 hours apart are not connected.
+
 Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
 Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSON.
@@ -363,7 +374,8 @@ Different durations MUST retain their actual lengths; the common axis MUST accom
 Calendar boundaries MUST use UTC, and exact-value inspection MUST display each observation's original UTC date and time to the minute rather than the aligned comparison coordinate.
 Calendar-year comparison MUST be distinguished from the standard rolling “last year” range of 365 days.
 Dates absent from a compared period, such as a leap day in a non-leap year, MUST remain absent.
-Missing observations and incomplete periods MUST remain visible as gaps or partial coverage, without invented zeros or extrapolated values.
+Connections across missing collection intervals MUST follow the same interval rules as ordinary charts.
+Absent calendar dates and incomplete periods MUST remain visible as gaps or partial coverage, without invented zeros or extrapolated values.
 
 **Example:** Selecting February as the primary range and adding March and April with exact-date matching produces three series aligned by day of month.
 March's day 31 has no corresponding value in the February or April series.

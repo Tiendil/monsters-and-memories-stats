@@ -1,11 +1,11 @@
 //! Plotly figure construction from Rust-owned observations and presentation tokens.
 use crate::{
-    analysis::{Alignment, Metric, Plot},
+    analysis::{Alignment, Connection, Metric, Plot},
     tokens,
 };
 use plotly::{
     Configuration, Layout, Plot as Figure, Scatter,
-    common::{DashType, Font, Label, Line, Marker, Mode, Title},
+    common::{DashType, Font, HoverInfo, Label, Line, Marker, Mode, Title},
     configuration::DisplayModeBar,
     layout::{Axis, AxisType, HoverMode, Margin},
 };
@@ -84,6 +84,7 @@ fn height(plot: &Plot) -> usize {
 
 pub fn render(plot: &Plot, metric: &Metric) -> Figure {
     let mut figure = Figure::new();
+    let mut sparse_traces = Vec::new();
     let maximum = plot
         .series
         .iter()
@@ -96,14 +97,30 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
         let mut y = Vec::new();
         let mut text = Vec::new();
         let mut marker_sizes = Vec::new();
+        let mut sparse_x = Vec::new();
+        let mut sparse_y = Vec::new();
         let dense = series.points.len() > 200;
         let mut previous: Option<&crate::analysis::Point> = None;
         for (point_index, point) in series.points.iter().enumerate() {
-            if previous.is_some_and(|p| point.has_gap_from(p)) {
+            if previous.is_some_and(|p| {
+                p.value.is_some()
+                    && point.value.is_some()
+                    && point.connection_from(p) != Some(Connection::Regular)
+            }) {
                 x.push(None);
                 y.push(None);
                 text.push(String::new());
                 marker_sizes.push(0);
+            }
+            if let Some(p) = previous
+                && point.connection_from(p) == Some(Connection::Sparse)
+            {
+                sparse_x.extend([Some(p.x), Some(point.x), None]);
+                sparse_y.extend([
+                    p.value.map(|v| v.number()),
+                    point.value.map(|v| v.number()),
+                    None,
+                ]);
             }
             x.push(Some(point.x));
             y.push(point.value.map(|v| v.number()));
@@ -116,12 +133,11 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
                 )
             }));
             // Dense lines omit markers except where an observation has no connected neighbor.
-            let connected_before =
-                previous.is_some_and(|p| p.value.is_some() && !point.has_gap_from(p));
+            let connected_before = previous.is_some_and(|p| point.connection_from(p).is_some());
             let connected_after = series
                 .points
                 .get(point_index + 1)
-                .is_some_and(|p| p.value.is_some() && !p.has_gap_from(point));
+                .is_some_and(|p| p.connection_from(point).is_some());
             marker_sizes.push(
                 if point.value.is_some() && (!dense || (!connected_before && !connected_after)) {
                     tokens::T_CHART_SERIES_POINT_RADIUS.pixels() as usize * 2
@@ -160,6 +176,29 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
                         .font(Font::new().color(tokens::T_COLOR_TEXT_PRIMARY)),
                 ),
         );
+        if !sparse_x.is_empty() {
+            // Only the observation trace participates in hover, so endpoints
+            // shared with these visual connections never produce duplicate labels.
+            sparse_traces.push(
+                Scatter::new(sparse_x, sparse_y)
+                    .name(escape(&series.label))
+                    .mode(Mode::Lines)
+                    .connect_gaps(false)
+                    .hover_info(HoverInfo::Skip)
+                    .opacity(tokens::T_CHART_SERIES_GAP_OPACITY)
+                    .show_legend(false)
+                    .line(
+                        Line::new()
+                            .color(tokens::T_CHART_SERIES_GAP_COLOR)
+                            .dash(DashType::Solid)
+                            .width(tokens::T_CHART_SERIES_LINE_WIDTH.px())
+                            .simplify(false),
+                    ),
+            );
+        }
+    }
+    for trace in sparse_traces {
+        figure.add_trace(trace);
     }
     let font = Font::new()
         .family(tokens::T_CHART_AXIS_LABEL_FONT_FAMILY_CSS)

@@ -207,8 +207,8 @@ impl MetricValue {
 pub enum TimeRange {
     Today,
     Yesterday,
-    Days7,
     #[default]
+    Days7,
     Days30,
     Days90,
     Days180,
@@ -692,9 +692,28 @@ pub struct Point {
     pub value: Option<MetricValue>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Connection {
+    Regular,
+    Sparse,
+}
+
 impl Point {
-    pub(crate) fn has_gap_from(&self, previous: &Self) -> bool {
-        self.at - previous.at > Duration::hours(2) || self.x - previous.x > 7200.0
+    pub(crate) fn connection_from(&self, previous: &Self) -> Option<Connection> {
+        let elapsed = self.at - previous.at;
+        // Calendar alignment can introduce an absent leap day between otherwise
+        // adjacent observations. Keep that space empty as well as actual outages.
+        if self.value.is_none()
+            || previous.value.is_none()
+            || elapsed >= Duration::hours(24)
+            || self.x - previous.x >= 86400.0
+        {
+            None
+        } else if elapsed >= Duration::hours(3) {
+            Some(Connection::Sparse)
+        } else {
+            Some(Connection::Regular)
+        }
     }
 }
 
@@ -712,7 +731,7 @@ impl Series {
         let mut segment = Vec::new();
         let mut previous: Option<&Point> = None;
         for point in &self.points {
-            let gap = previous.is_some_and(|p| point.has_gap_from(p));
+            let gap = previous.is_some_and(|p| point.connection_from(p).is_none());
             if (point.value.is_none() || gap) && !segment.is_empty() {
                 segments.push(std::mem::take(&mut segment));
             }
@@ -826,7 +845,7 @@ pub fn plot(
                     });
                 }
             }
-            result.note = "Missing dates and observations remain gaps; incomplete periods are not extrapolated.".into();
+            result.note = "Incomplete periods are not extrapolated.".into();
         }
         Comparison::None => {
             for scope in scopes {

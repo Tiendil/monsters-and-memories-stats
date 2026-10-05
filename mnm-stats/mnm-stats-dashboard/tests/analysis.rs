@@ -416,6 +416,7 @@ fn lines_break_on_missing_values_long_intervals_and_absent_calendar_dates() {
         ("2023-03-01T01:00:00Z", None),
         ("2023-03-01T02:00:00Z", Some(MetricValue::Count(4))),
         ("2023-03-01T05:00:00Z", Some(MetricValue::Count(5))),
+        ("2023-03-02T05:00:00Z", Some(MetricValue::Count(6))),
     ]
     .map(|(s, value)| {
         let at = time(s);
@@ -434,7 +435,7 @@ fn lines_break_on_missing_values_long_intervals_and_absent_calendar_dates() {
     };
     assert_eq!(
         series.segments().iter().map(Vec::len).collect::<Vec<_>>(),
-        [2, 1, 1, 1]
+        [2, 1, 2, 1]
     );
 }
 
@@ -496,15 +497,100 @@ fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
             .unwrap();
     let series = &figure["data"][0];
     assert_eq!(series["connectgaps"], false);
-    assert_eq!(series["x"], serde_json::json!([0.0, 3600.0, null, 18000.0]));
-    assert!(series["y"][1].is_null() && series["y"][2].is_null());
+    assert_eq!(series["x"], serde_json::json!([0.0, 3600.0, 18000.0]));
+    assert!(series["y"][1].is_null());
+    assert_eq!(series["y"][2], 7.0);
     let text = series["text"][0].as_str().unwrap();
     assert_eq!(
         text, "<b>9007199254740993 Alpha &lt;island&gt; &amp; West</b><br>01 Feb 2024, 12:34 UTC",
         "hover keeps the exact value and literal name, with minute precision on the second line"
     );
     assert_eq!(series["text"][1], "");
-    assert_eq!(series["text"][2], "");
+    assert_eq!(figure["data"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn plotly_styles_interval_boundaries_without_extra_hover_observations() {
+    let start = time("2024-01-01T00:00:00Z");
+    let intervals = [
+        0, 10_799_999, 10_800_000, 86_399_999, 86_400_000, 86_400_001, 3_600_000, 3_600_000,
+        3_600_000,
+    ];
+    let mut elapsed = 0_i64;
+    let points: Vec<_> = intervals
+        .into_iter()
+        .enumerate()
+        .map(|(i, interval)| {
+            elapsed += interval;
+            Point {
+                at: start + Duration::milliseconds(elapsed),
+                x: elapsed as f64 / 1000.0,
+                value: (i != 7).then_some(MetricValue::Count(i as u128)),
+            }
+        })
+        .collect();
+    let x: Vec<_> = points.iter().map(|p| p.x).collect();
+    let plot = Plot {
+        series: vec![Series {
+            identity: "intervals".into(),
+            style: 0,
+            label: "Intervals".into(),
+            points,
+        }],
+        alignment: Alignment::Elapsed,
+        x_bounds: (0.0, *x.last().unwrap()),
+        note: String::new(),
+    };
+    let figure: serde_json::Value = serde_json::from_str(
+        &mnm_stats_dashboard::charts::render(&plot, &Metric::Online).to_json(),
+    )
+    .unwrap();
+    let traces = figure["data"].as_array().unwrap();
+    let edges = |trace: &serde_json::Value| {
+        trace["x"]
+            .as_array()
+            .unwrap()
+            .windows(2)
+            .zip(trace["y"].as_array().unwrap().windows(2))
+            .filter_map(|(xs, ys)| {
+                (ys.iter().all(serde_json::Value::is_number))
+                    .then(|| Some((xs[0].as_f64()?, xs[1].as_f64()?)))
+                    .flatten()
+            })
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(traces.len(), 2);
+    assert_eq!(traces[0]["line"]["dash"], "solid");
+    assert_eq!(traces[1]["line"]["dash"], "solid");
+    assert_eq!(edges(&traces[0]), [(x[0], x[1]), (x[5], x[6])]);
+    assert_eq!(edges(&traces[1]), [(x[1], x[2]), (x[2], x[3])]);
+    assert_eq!(
+        traces[1]["line"]["color"],
+        mnm_stats_dashboard::tokens::T_CHART_SERIES_GAP_COLOR
+    );
+    assert_eq!(
+        traces[1]["opacity"],
+        mnm_stats_dashboard::tokens::T_CHART_SERIES_GAP_OPACITY
+    );
+    assert_ne!(traces[0]["line"]["color"], traces[1]["line"]["color"]);
+    assert_eq!(traces[0]["line"]["width"], traces[1]["line"]["width"]);
+    assert_eq!(traces[1]["hoverinfo"], "skip");
+    assert_eq!(traces[1]["showlegend"], false);
+    let values: Vec<_> = traces[0]["y"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|v| v.as_f64())
+        .collect();
+    assert_eq!(values, [0., 1., 2., 3., 4., 5., 6., 8.]);
+    assert_eq!(
+        plot.series[0]
+            .segments()
+            .iter()
+            .map(Vec::len)
+            .collect::<Vec<_>>(),
+        [4, 1, 2, 1]
+    );
 }
 
 #[test]
@@ -559,14 +645,14 @@ fn dense_history_keeps_isolated_observations_visible() {
             label: "Sparse history".into(),
             points: (0..201)
                 .map(|i| Point {
-                    at: start + Duration::hours(i * 3),
-                    x: (i * 10800) as f64,
+                    at: start + Duration::hours(i * 24),
+                    x: (i * 86400) as f64,
                     value: Some(MetricValue::Count(i as u128)),
                 })
                 .collect(),
         }],
         alignment: Alignment::Elapsed,
-        x_bounds: (0.0, 201.0 * 10800.0),
+        x_bounds: (0.0, 201.0 * 86400.0),
         note: String::new(),
     };
     let figure: serde_json::Value =

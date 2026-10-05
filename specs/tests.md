@@ -97,7 +97,8 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Unavailable correlation for insufficient paired days or zero variance.
 - All range presets and custom inclusive UTC date boundaries, including invalid or reversed inputs.
 - Today and Yesterday at UTC midnight, month/year rollover, and leap-day boundaries; Today comparisons MUST use the same elapsed part of the prior day, and Yesterday comparisons MUST retain the full day.
-- Gaps between observations.
+- Series-colored connections below 3 hours, subdued gray connections from 3 hours to less than 24 hours, and no connections at 24 hours or more, including values immediately below and at both boundaries.
+- Interrupted connections for unavailable metric values and absent calendar dates, independently of interval styling.
 - Automatic previous-period and year-over-year calculation when the primary range changes; exact-date and weekday matching, including leap-day boundaries and ranges crossing a year.
 - Elapsed and calendar-period alignment, including unequal month lengths, different custom durations, leap-day gaps, and original observation timestamps.
 - Stable automatic series identities across clock updates, deduplication of resolved periods, and disabled or empty custom comparisons.
@@ -114,9 +115,10 @@ Browser coverage MUST include:
 - Rendering and exact-value inspection for the supported metric families.
 - Mouse hover details with exact counts or ratios followed by the series name on the first line and the original UTC date and time to the minute on the second, including comparison plots, overlapping points, and resized or horizontally scrolled charts; ratio numerators and denominators MUST remain available.
 - Native chart hover on dense series without visible point markers.
+- Mixed series-colored and subdued gray solid connections with matching widths, without duplicate hover details at shared endpoints or invented values along connections.
 - Chart-engine loading from the pinned CDN URL at both root and subpath URLs, and successful chart initialization after selection changes.
 - Clearing hover details when leaving a plot or changing selections, without showing values inside gaps or for unavailable observations.
-- Range selection and independent server checkbox toggles, including historical servers, “All Servers,” and clearing/restoring the selection.
+- The default last-7-days range, range selection, and independent server checkbox toggles, including historical servers, “All Servers,” and clearing/restoring the selection.
 - Unavailable metrics and empty or invalid data states.
 - Month-to-month and year-to-year comparisons with at least three periods.
 - Server-to-server and all-servers-to-server comparisons with at least three series.
@@ -126,7 +128,7 @@ Browser coverage MUST include:
 - Complete-history JSON downloads independent of filters, including valid empty history.
 - Operation under a repository subpath.
 - Absence of separate runtime requests for metrics data.
-- Charts and downloads containing only the collected current-state snapshots, with gaps for missed collections.
+- Charts and downloads containing only the collected current-state snapshots, with interval styling for missed collections and no synthetic records.
 
 Build integration tests MUST verify that a history-only change updates the embedded dataset even when caches are reused.
 They MUST verify that empty and populated JSONL fixtures become equivalent embedded history available through the dashboard's shared Rust snapshot types.
@@ -160,7 +162,7 @@ Rendered review MUST cover:
 - Page reflow at 320 CSS pixels, intermediate widths, and 200-percent text enlargement.
 - Readable value-axis titles and vertical legends on single-series and comparison charts, with one series per row and each name followed by its matching solid line sample; include dense comparisons and any confined horizontal scrolling.
 - Text and essential-graphic contrast from the actual token colors and rendered backgrounds.
-- Stable series labels in legends and hover details, matching series colors, and solid data-series lines.
+- Stable series labels in legends and hover details, matching series colors, and series-colored or subdued gray solid connections according to collection intervals.
 - Visible focus, touch target sizes, control states, and unobscured content when controls are sticky.
 - Empty, unavailable, initialization, and chart-failure states.
 - Reduced-motion behavior and preservation of chart information without decorative animation.
@@ -201,6 +203,7 @@ A history-only change outside the dashboard crate MUST trigger a rebuild and upd
 A token-only change outside the dashboard crate MUST also rebuild the preview and update both CSS and chart presentation without restarting it.
 Coverage MUST include valid empty history, invalid input diagnostics, and changing between demo and ordinary history without retaining the previous dataset.
 Demo generation MUST be checked using a fixed timestamp; interactive demos MAY use the current time.
+The default demo range MUST cover all three interval styles, including the exact 3-hour and 24-hour boundaries.
 Browser inspection through MCP MUST use local synthetic data or existing local history and MUST NOT refresh source fixtures.
 
 ### Automation

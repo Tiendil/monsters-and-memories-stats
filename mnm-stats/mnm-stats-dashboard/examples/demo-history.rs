@@ -17,6 +17,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         .unwrap();
     let mut times = BTreeSet::new();
     for hour in 0..14 * 24 {
+        // Repeat in each week so the default range and its previous period both
+        // demonstrate 1h colored intervals, 3h/6h gray connections and 24h/30h breaks.
+        if matches!(hour % 168, 13..=14 | 37..=41 | 61..=83 | 109..=137) {
+            continue;
+        }
         times.insert(end - Duration::hours(hour));
     }
     for month in 1..=24 {

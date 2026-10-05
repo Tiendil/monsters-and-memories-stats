@@ -232,6 +232,8 @@ Each legend entry MUST show the entity or period name followed by a colored line
 Legends MUST appear consistently near the chart and wrap readable labels rather than truncate identities.
 Line samples, labels, and chart hover styling MUST use matching series encodings.
 All data-series lines and legend line samples MUST be solid.
+Connections across sparse collection intervals MUST use a subdued gray with reduced opacity according to the observation-interval rules in [requirements.md](requirements.md#dashboard-behavior).
+These connections MUST retain the ordinary line width; observation markers, legends, and hover details MUST retain their series colors.
 Legends and hover details MUST identify each series by its stable label alongside its color.
 An entity or period MUST retain its visual encoding across the active charts and when other selections are added or removed during the session.
 Entity identities and their style assignment MUST remain application data rather than become hardcoded design tokens.

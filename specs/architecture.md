@@ -107,6 +107,7 @@ The preview MUST publish to host loopback by default; the browser container MUST
 The preview launcher MUST support an explicit history path and a synthetic demo mode.
 It MUST identify its selected history and observation count, rebuild when that history changes, and keep preview output separate from release and test output.
 Demo generation MUST remain Rust tooling, support reproducible input timestamps, and include recent observations visible in the default range.
+Within that range, demo history MUST demonstrate series-colored and subdued gray connections and unconnected intervals, including observations exactly 3 and 24 hours apart.
 The UI MUST identify demo data as synthetic.
 Preview and test operations MUST NOT collect source metrics or modify committed history.
 These development services do not form part of the deployed static dashboard.

@@ -30,7 +30,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="70" y="309" class="body">All Servers</text>
 <text x="362" y="309" class="body">⌄</text>
 <rect x="408" y="282" width="200" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
-<text x="424" y="309" class="body">Last 30 days</text>
+<text x="424" y="309" class="body">Last 7 days</text>
 <text x="582" y="309" class="body">⌄</text>
 <rect x="626" y="282" width="170" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="642" y="309" class="body">Compare</text>
@@ -70,8 +70,8 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <line x1="106" y1="864.0" x2="1063" y2="864.0" stroke="#e4dfd4" stroke-width="1"/>
 <text x="65" y="868.0" class="muted" font-size="12">0</text>
 <polyline points="106.0,810.0 162.3,802.8 218.6,817.2 274.9,783.0 331.2,788.4 387.5,770.4 443.8,777.6 500.1,743.4 556.4,754.2 612.6,765.0 668.9,756.0 725.2,730.8 781.5,723.6 837.8,732.6 894.1,716.4 950.4,747.0 1006.7,738.0 1063.0,734.4" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
-<text x="106" y="888" class="small muted">4 Sep</text>
-<text x="564.5" y="888" class="small muted">19 Sep</text>
+<text x="106" y="888" class="small muted">27 Sep</text>
+<text x="564.5" y="888" class="small muted">1 Oct</text>
 <text x="1025" y="888" class="small muted">4 Oct</text>
 <line x1="56" y1="958" x2="1088" y2="958" class="rule"/>
 <text x="1088" y="994" text-anchor="end" class="small accent"><a href="https://plotly.com/javascript/" text-decoration="underline">Charts by Plotly</a></text>
@@ -88,7 +88,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <rect x="1180" y="295" width="181" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <rect x="1377" y="295" width="175" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="1191" y="322" class="" font-size="14">All Servers  ⌄</text>
-<text x="1390" y="322" class="" font-size="14">Last 30 days  ⌄</text>
+<text x="1390" y="322" class="" font-size="14">Last 7 days  ⌄</text>
 <text x="1180" y="358" class="label muted">COMPARISON</text>
 <rect x="1180" y="368" width="125" height="40" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="1195" y="394" class="body">Compare  ⌄</text>
@@ -126,8 +126,8 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <line x1="1230" y1="916.0" x2="1527" y2="916.0" stroke="#e4dfd4" stroke-width="1"/>
 <text x="1189" y="920.0" class="muted" font-size="10">0</text>
 <polyline points="1230.0,881.2 1247.5,876.6 1264.9,885.8 1282.4,863.8 1299.9,867.3 1317.4,855.7 1334.8,860.3 1352.3,838.3 1369.8,845.2 1387.2,852.2 1404.7,846.4 1422.2,830.2 1439.6,825.5 1457.1,831.3 1474.6,820.9 1492.1,840.6 1509.5,834.8 1527.0,832.5" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
-<text x="1230" y="940" class="small muted">4 Sep</text>
-<text x="1358.5" y="940" class="small muted">19 Sep</text>
+<text x="1230" y="940" class="small muted">27 Sep</text>
+<text x="1358.5" y="940" class="small muted">1 Oct</text>
 <text x="1489" y="940" class="small muted">4 Oct</text>
 <line x1="1180" y1="992" x2="1552" y2="992" class="rule"/>
 <text x="1552" y="1012" text-anchor="end" class="small accent"><a href="https://plotly.com/javascript/" text-decoration="underline">Charts by Plotly</a></text>

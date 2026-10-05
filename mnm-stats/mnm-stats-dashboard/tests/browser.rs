@@ -438,6 +438,7 @@ impl Browser {
                 if count == 1 { "record" } else { "records" }
             ),
         );
+        self.expect_text("#time-range-selection", "Last 7 days");
         assert_eq!(
             self.text("footer a[href='https://plotly.com/javascript/']"),
             "Charts by Plotly"
@@ -689,7 +690,7 @@ impl Browser {
                     .count();
                 self.ready(metric);
                 let plotted_count = self.request(Method::POST, "/execute/sync", json!({
-                    "script":"return document.querySelector(arguments[0]).data.reduce((n, trace) => n + trace.y.filter(value => value !== null).length, 0);",
+                    "script":"return document.querySelector(arguments[0]).data.filter(trace => trace.hoverinfo !== 'skip').reduce((n, trace) => n + trace.y.filter(value => value !== null).length, 0);",
                     "args":[format!("[data-metric='{metric}'] .plot-surface")]
                 }));
                 assert_eq!(plotted_count, count, "{metric} in range {key}");
@@ -816,7 +817,7 @@ impl Browser {
                 if metric == "subscriptions" { 1 } else { 3 },
             );
         }
-        self.hover("[data-metric='online'] .scatterlayer .trace:last-child .point:last-child");
+        self.hover("[data-metric='online'] .scatterlayer .trace:nth-child(3) .point:last-child");
         self.expect_hover(
             "online",
             "Beta",
@@ -925,7 +926,7 @@ impl Browser {
             self.ready("daily");
             assert_eq!(
                 self.request(Method::POST, "/execute/sync", json!({
-                    "script":"return document.querySelector('[data-metric=\"daily\"] .plot-surface').data.some(trace=>trace.text.some(text=>text.includes(arguments[0])));",
+                    "script":"return document.querySelector('[data-metric=\"daily\"] .plot-surface').data.some(trace=>trace.text?.some(text=>text.includes(arguments[0])));",
                     "args":["29 Feb 2024, 23:00 UTC"]
                 })),
                 true,
@@ -1019,7 +1020,7 @@ impl Browser {
         self.select("#time-range", "7");
         self.servers(&["a"]);
         // Boundary markers remain reachable in a plot sized to the narrow container.
-        self.hover("[data-metric='daily'] .scatterlayer .trace:last-child .point:last-child");
+        self.hover("[data-metric='daily'] .scatterlayer .trace:first-child .point:last-child");
         let last = records.last().unwrap();
         self.expect_hover(
             "daily",
@@ -1618,7 +1619,15 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let demo = generate();
     assert_eq!(generate(), demo, "a fixed time reproduces demo history");
     let parsed = mnm_stats_model::History::from_jsonl(std::str::from_utf8(&demo).unwrap()).unwrap();
-    assert_eq!(parsed.snapshots().len(), 480);
+    assert_eq!(parsed.snapshots().len(), 362);
+    let end = parsed.snapshots().last().unwrap().observed_at;
+    let intervals: std::collections::BTreeSet<_> = parsed
+        .snapshots()
+        .windows(2)
+        .filter(|pair| pair[0].observed_at >= end - chrono::Duration::days(7))
+        .map(|pair| (pair[1].observed_at - pair[0].observed_at).num_hours())
+        .collect();
+    assert_eq!(intervals, [1, 3, 6, 24, 30].into_iter().collect());
     assert_eq!(
         parsed.snapshots().last().unwrap().observed_at.to_rfc3339(),
         "2026-06-01T12:00:00+00:00"
@@ -1631,6 +1640,19 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
     browser.verify(&origin, &expected, scratch);
     assert!(browser.text("#demo-notice").contains("synthetic"));
+    browser.ready("online");
+    let solid = "[data-metric='online'] .scatterlayer .trace:nth-child(1) .js-line";
+    let subdued = "[data-metric='online'] .scatterlayer .trace:nth-child(2) .js-line";
+    assert_eq!(browser.computed(solid, "stroke-dasharray"), "none");
+    assert_eq!(browser.computed(subdued, "stroke-dasharray"), "none");
+    assert_ne!(
+        browser.computed(solid, "stroke"),
+        browser.computed(subdued, "stroke")
+    );
+    assert_eq!(
+        browser.computed(solid, "stroke-width"),
+        browser.computed(subdued, "stroke-width")
+    );
     browser.request(Method::POST, "/execute/async", json!({"script":"const done=arguments[0]; document.fonts.ready.then(() => {window.scrollTo(0,0); done(null);});","args":[]}));
     let first_view = browser.request(Method::POST, "/execute/sync", json!({"script":"return {cards:document.querySelector('.headline-grid').getBoundingClientRect().bottom, chart:document.querySelector('.plot-surface').getBoundingClientRect().top, width:document.documentElement.scrollWidth, viewport:innerWidth};","args":[]}));
     assert!(
@@ -1655,6 +1677,27 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     );
     browser.ready("online");
     assert_eq!(browser.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('.scatterlayer').getBoundingClientRect().top < 900;","args":[]})), true);
+
+    // The final subdued section ends 12 hours before the latest demo sample.
+    // Its endpoint belongs to both SVG traces, but must show one actual observation.
+    let endpoint = parsed
+        .snapshots()
+        .iter()
+        .find(|s| s.observed_at == end - chrono::Duration::hours(12))
+        .unwrap();
+    let endpoint_total: u64 = endpoint.servers.iter().map(|s| s.online).sum();
+    let point = browser.request(Method::POST, "/execute/async", json!({
+        "script":r#"const done=arguments[arguments.length-1]; const line=Array.from(document.querySelectorAll("[data-metric='online'] .scatterlayer .trace:nth-child(2) .js-line")).at(-1); line.scrollIntoView({block:'center'}); requestAnimationFrame(() => {const p=line.getPointAtLength(line.getTotalLength()).matrixTransform(line.getScreenCTM()); done([p.x,p.y]);});"#,
+        "args":[]
+    }));
+    browser.pointer_at(&point);
+    browser.expect_hover(
+        "online",
+        "All Servers",
+        &endpoint.observed_at.to_rfc3339(),
+        &endpoint_total.to_string(),
+    );
+    browser.expect_count("[data-metric='online'] .hovertext", 1);
 
     assert_eq!(browser.count(".plot-surface[data-ready='true']"), 1);
     drop(demo_preview);
@@ -1684,7 +1727,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
         0
     );
     let point = browser.request(Method::POST, "/execute/async", json!({
-        "script":r#"const done = arguments[arguments.length-1]; const line = Array.from(document.querySelectorAll("[data-metric='daily'] .scatterlayer .js-line")).at(-1); line.scrollIntoView({block:'center',inline:'end'}); requestAnimationFrame(() => requestAnimationFrame(() => { const p = line.getPointAtLength(line.getTotalLength()).matrixTransform(line.getScreenCTM()); done([p.x+1,p.y]); }));"#,
+        "script":r#"const done = arguments[arguments.length-1]; const line = Array.from(document.querySelectorAll("[data-metric='daily'] .scatterlayer .trace:first-child .js-line")).at(-1); line.scrollIntoView({block:'center',inline:'end'}); requestAnimationFrame(() => requestAnimationFrame(() => { const p = line.getPointAtLength(line.getTotalLength()).matrixTransform(line.getScreenCTM()); done([p.x+1,p.y]); }));"#,
         "args":[]
     }));
     browser.pointer_at(&point);
