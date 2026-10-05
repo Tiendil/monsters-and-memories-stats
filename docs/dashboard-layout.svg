@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title description">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2182" viewBox="0 0 1600 2182" role="img" aria-labelledby="title description">
 <title id="title">Dashboard Overview layout study</title>
-<desc id="description">A warm light desktop dashboard and a narrow-screen arrangement. Compact shared controls precede four headline counts and a full-width population trend. All values and lines are synthetic; this illustration is not an implemented interface or an authoritative design-token source.</desc>
+<desc id="description">A warm light desktop dashboard and a narrow-screen arrangement. Compact shared controls precede four headline counts and four full-width trends: online, daily active, monthly active, and global subscriptions. All values and lines are synthetic; this illustration is not an implemented interface or an authoritative design-token source.</desc>
 <style>
 text { font-family: Arial, sans-serif; fill: #282720; }
 .display { font-family: Georgia, serif; }
@@ -12,10 +12,10 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 .value { font-size: 34px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .rule { stroke: #d8d2c5; stroke-width: 1; }
 </style>
-<rect x="0" y="0" width="1600" height="1120" rx="0" fill="#e8e4dc"/>
+<rect x="0" y="0" width="1600" height="2182" rx="0" fill="#e8e4dc"/>
 <text x="34" y="36" class="label muted">DASHBOARD PRESENTATION / LAYOUT STUDY</text>
 <text x="34" y="63" class="small muted">Illustrative synthetic data · proportions and colors are not implementation tokens</text>
-<rect x="28" y="85" width="1090" height="937" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
+<rect x="28" y="85" width="1090" height="1999" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
 <text x="56" y="115" class="label muted">DESKTOP · OVERVIEW</text>
 <text x="57" y="139" class="body muted">Made with love and curiosity by <a href="https://tiendil.org" target="_blank" rel="noopener" text-decoration="underline">Tiendil</a></text>
 <text x="56" y="176" class="display" font-size="32">Statistics for Monsters &amp; Memories</text>
@@ -36,14 +36,13 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="642" y="309" class="body">Compare</text>
 <text x="770" y="309" class="body">⌄</text>
 <text x="56" y="392" class="accent" font-size="17">Overview</text>
-<text x="202" y="392" class="" font-size="17">Activity</text>
-<text x="333" y="392" class="" font-size="17">Population</text>
-<text x="489" y="392" class="" font-size="17">Relationships</text>
+<text x="202" y="392" class="" font-size="17">Population</text>
+<text x="365" y="392" class="" font-size="17">Relationships</text>
 <line x1="56" y1="408" x2="1088" y2="408" stroke="#d8d2c5" stroke-width="1"/>
 <line x1="56" y1="408" x2="150" y2="408" stroke="#9a401e" stroke-width="3"/>
 <text x="56" y="440" class="display" font-size="22">At a glance</text>
 <rect x="56" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="73" y="484" class="body muted">Online population</text>
+<text x="73" y="484" class="body muted">Online</text>
 <text x="73" y="526" class="value">4,328</text>
 <text x="73" y="551" class="small muted">All Servers</text>
 <rect x="320" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
@@ -53,11 +52,11 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="601" y="484" class="body muted">Monthly active</text>
 <text x="601" y="526" class="value">28,724</text>
 <rect x="848" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="865" y="484" class="body muted">Subscriptions</text>
+<text x="865" y="484" class="body muted">Subscribers</text>
 <text x="865" y="526" class="value">19,421</text>
 <text x="865" y="551" class="small muted">Global</text>
 <rect x="56" y="596" width="1032" height="330" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
-<text x="78" y="629" class="display" font-size="22">Online population</text>
+<text x="78" y="629" class="display" font-size="22">Online</text>
 <line x1="78" y1="650" x2="122" y2="650" stroke="#246a75" stroke-width="2.5"/>
 <text x="130" y="654" class="small muted">All Servers</text>
 <text x="65" y="674" class="muted" font-size="12">Count</text>
@@ -73,9 +72,66 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="106" y="888" class="small muted">27 Sep</text>
 <text x="564.5" y="888" class="small muted">1 Oct</text>
 <text x="1025" y="888" class="small muted">4 Oct</text>
-<line x1="56" y1="958" x2="1088" y2="958" class="rule"/>
-<text x="1088" y="994" text-anchor="end" class="small accent"><a href="https://plotly.com/javascript/" text-decoration="underline">Charts by Plotly</a></text>
-<rect x="1160" y="85" width="412" height="937" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
+<g transform="translate(0 354)">
+<rect x="56" y="596" width="1032" height="330" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
+<text x="78" y="629" class="display" font-size="22">Daily active</text>
+<line x1="78" y1="650" x2="122" y2="650" stroke="#246a75" stroke-width="2.5"/>
+<text x="130" y="654" class="small muted">All Servers</text>
+<text x="65" y="674" class="muted" font-size="12">Count</text>
+<line x1="106" y1="684.0" x2="1063" y2="684.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="688.0" class="muted" font-size="12">18,000</text>
+<line x1="106" y1="744.0" x2="1063" y2="744.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="748.0" class="muted" font-size="12">12,000</text>
+<line x1="106" y1="804.0" x2="1063" y2="804.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="808.0" class="muted" font-size="12">6,000</text>
+<line x1="106" y1="864.0" x2="1063" y2="864.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="868.0" class="muted" font-size="12">0</text>
+<polyline points="106.0,810.0 162.3,802.8 218.6,817.2 274.9,783.0 331.2,788.4 387.5,770.4 443.8,777.6 500.1,743.4 556.4,754.2 612.6,765.0 668.9,756.0 725.2,730.8 781.5,723.6 837.8,732.6 894.1,716.4 950.4,747.0 1006.7,738.0 1063.0,734.4" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="106" y="888" class="small muted">27 Sep</text>
+<text x="564.5" y="888" class="small muted">1 Oct</text>
+<text x="1025" y="888" class="small muted">4 Oct</text>
+</g>
+<g transform="translate(0 708)">
+<rect x="56" y="596" width="1032" height="330" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
+<text x="78" y="629" class="display" font-size="22">Monthly active</text>
+<line x1="78" y1="650" x2="122" y2="650" stroke="#246a75" stroke-width="2.5"/>
+<text x="130" y="654" class="small muted">All Servers</text>
+<text x="65" y="674" class="muted" font-size="12">Count</text>
+<line x1="106" y1="684.0" x2="1063" y2="684.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="688.0" class="muted" font-size="12">60,000</text>
+<line x1="106" y1="744.0" x2="1063" y2="744.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="748.0" class="muted" font-size="12">40,000</text>
+<line x1="106" y1="804.0" x2="1063" y2="804.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="808.0" class="muted" font-size="12">20,000</text>
+<line x1="106" y1="864.0" x2="1063" y2="864.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="868.0" class="muted" font-size="12">0</text>
+<polyline points="106.0,810.0 162.3,802.8 218.6,817.2 274.9,783.0 331.2,788.4 387.5,770.4 443.8,777.6 500.1,743.4 556.4,754.2 612.6,765.0 668.9,756.0 725.2,730.8 781.5,723.6 837.8,732.6 894.1,716.4 950.4,747.0 1006.7,738.0 1063.0,734.4" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="106" y="888" class="small muted">27 Sep</text>
+<text x="564.5" y="888" class="small muted">1 Oct</text>
+<text x="1025" y="888" class="small muted">4 Oct</text>
+</g>
+<g transform="translate(0 1062)">
+<rect x="56" y="596" width="1032" height="330" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
+<text x="78" y="629" class="display" font-size="22">Subscribers</text>
+<line x1="78" y1="650" x2="122" y2="650" stroke="#246a75" stroke-width="2.5"/>
+<text x="130" y="654" class="small muted">Global</text>
+<text x="65" y="674" class="muted" font-size="12">Count</text>
+<line x1="106" y1="684.0" x2="1063" y2="684.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="688.0" class="muted" font-size="12">24,000</text>
+<line x1="106" y1="744.0" x2="1063" y2="744.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="748.0" class="muted" font-size="12">16,000</text>
+<line x1="106" y1="804.0" x2="1063" y2="804.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="808.0" class="muted" font-size="12">8,000</text>
+<line x1="106" y1="864.0" x2="1063" y2="864.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="65" y="868.0" class="muted" font-size="12">0</text>
+<polyline points="106.0,810.0 162.3,802.8 218.6,817.2 274.9,783.0 331.2,788.4 387.5,770.4 443.8,777.6 500.1,743.4 556.4,754.2 612.6,765.0 668.9,756.0 725.2,730.8 781.5,723.6 837.8,732.6 894.1,716.4 950.4,747.0 1006.7,738.0 1063.0,734.4" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="106" y="888" class="small muted">27 Sep</text>
+<text x="564.5" y="888" class="small muted">1 Oct</text>
+<text x="1025" y="888" class="small muted">4 Oct</text>
+</g>
+<line x1="56" y1="2020" x2="1088" y2="2020" class="rule"/>
+<text x="1088" y="2056" text-anchor="end" class="small accent"><a href="https://plotly.com/javascript/" text-decoration="underline">Charts by Plotly</a></text>
+<rect x="1160" y="85" width="412" height="1807" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
 <text x="1180" y="115" class="label muted">NARROW SCREEN · OVERVIEW</text>
 <text x="1180" y="137" class="small muted">Made with love and curiosity by <a href="https://tiendil.org" target="_blank" rel="noopener" text-decoration="underline">Tiendil</a></text>
 <text x="1180" y="161" class="display" font-size="28">Statistics for<tspan x="1180" dy="28">Monsters &amp; Memories</tspan></text>
@@ -93,13 +149,12 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <rect x="1180" y="368" width="125" height="40" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="1195" y="394" class="body">Compare  ⌄</text>
 <text x="1180" y="426" class="accent" font-size="13">Overview</text>
-<text x="1265" y="426" class="" font-size="13">Activity</text>
-<text x="1341" y="426" class="" font-size="13">Population</text>
-<text x="1437" y="426" class="" font-size="13">Relationships</text>
+<text x="1290" y="426" class="" font-size="13">Population</text>
+<text x="1420" y="426" class="" font-size="13">Relationships</text>
 <line x1="1180" y1="441" x2="1552" y2="441" stroke="#d8d2c5" stroke-width="1"/>
 <line x1="1180" y1="441" x2="1246" y2="441" stroke="#9a401e" stroke-width="3"/>
 <rect x="1180" y="480" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="1192" y="504" class="" font-size="14">Online population</text>
+<text x="1192" y="504" class="" font-size="14">Online</text>
 <text x="1192" y="540" class="" font-size="29">4,328</text>
 <text x="1192" y="562" class="muted" font-size="11">All Servers</text>
 <rect x="1373" y="480" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
@@ -109,11 +164,11 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1192" y="614" class="" font-size="14">Monthly active</text>
 <text x="1192" y="650" class="" font-size="29">28,724</text>
 <rect x="1373" y="590" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="1385" y="614" class="" font-size="14">Subscriptions</text>
+<text x="1385" y="614" class="" font-size="14">Subscribers</text>
 <text x="1385" y="650" class="" font-size="29">19,421</text>
 <text x="1385" y="672" class="muted" font-size="11">Global</text>
 <rect x="1180" y="712" width="372" height="266" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
-<text x="1202" y="745" class="display" font-size="20">Online population</text>
+<text x="1202" y="745" class="display" font-size="20">Online</text>
 <line x1="1202" y1="766" x2="1246" y2="766" stroke="#246a75" stroke-width="2.5"/>
 <text x="1254" y="770" class="small muted">All Servers</text>
 <text x="1189" y="790" class="muted" font-size="10">Count</text>
@@ -129,8 +184,65 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1230" y="940" class="small muted">27 Sep</text>
 <text x="1358.5" y="940" class="small muted">1 Oct</text>
 <text x="1489" y="940" class="small muted">4 Oct</text>
-<line x1="1180" y1="992" x2="1552" y2="992" class="rule"/>
-<text x="1552" y="1012" text-anchor="end" class="small accent"><a href="https://plotly.com/javascript/" text-decoration="underline">Charts by Plotly</a></text>
-<text x="34" y="1058" class="body">Servers is a checkbox dropdown; selections persist across Activity, Population, and Relationships. Comparisons use full-width charts.</text>
-<text x="34" y="1087" class="body muted">Warm surfaces and serif identity frame the dashboard; sans-serif numbers and plain chart backgrounds carry the analysis.</text>
+<g transform="translate(0 290)">
+<rect x="1180" y="712" width="372" height="266" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
+<text x="1202" y="745" class="display" font-size="20">Daily active</text>
+<line x1="1202" y1="766" x2="1246" y2="766" stroke="#246a75" stroke-width="2.5"/>
+<text x="1254" y="770" class="small muted">All Servers</text>
+<text x="1189" y="790" class="muted" font-size="10">Count</text>
+<line x1="1230" y1="800.0" x2="1527" y2="800.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="804.0" class="muted" font-size="10">18,000</text>
+<line x1="1230" y1="838.6666666666666" x2="1527" y2="838.6666666666666" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="842.6666666666666" class="muted" font-size="10">12,000</text>
+<line x1="1230" y1="877.3333333333334" x2="1527" y2="877.3333333333334" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="881.3333333333334" class="muted" font-size="10">6,000</text>
+<line x1="1230" y1="916.0" x2="1527" y2="916.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="920.0" class="muted" font-size="10">0</text>
+<polyline points="1230.0,881.2 1247.5,876.6 1264.9,885.8 1282.4,863.8 1299.9,867.3 1317.4,855.7 1334.8,860.3 1352.3,838.3 1369.8,845.2 1387.2,852.2 1404.7,846.4 1422.2,830.2 1439.6,825.5 1457.1,831.3 1474.6,820.9 1492.1,840.6 1509.5,834.8 1527.0,832.5" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="1230" y="940" class="small muted">27 Sep</text>
+<text x="1358.5" y="940" class="small muted">1 Oct</text>
+<text x="1489" y="940" class="small muted">4 Oct</text>
+</g>
+<g transform="translate(0 580)">
+<rect x="1180" y="712" width="372" height="266" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
+<text x="1202" y="745" class="display" font-size="20">Monthly active</text>
+<line x1="1202" y1="766" x2="1246" y2="766" stroke="#246a75" stroke-width="2.5"/>
+<text x="1254" y="770" class="small muted">All Servers</text>
+<text x="1189" y="790" class="muted" font-size="10">Count</text>
+<line x1="1230" y1="800.0" x2="1527" y2="800.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="804.0" class="muted" font-size="10">60,000</text>
+<line x1="1230" y1="838.6666666666666" x2="1527" y2="838.6666666666666" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="842.6666666666666" class="muted" font-size="10">40,000</text>
+<line x1="1230" y1="877.3333333333334" x2="1527" y2="877.3333333333334" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="881.3333333333334" class="muted" font-size="10">20,000</text>
+<line x1="1230" y1="916.0" x2="1527" y2="916.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="920.0" class="muted" font-size="10">0</text>
+<polyline points="1230.0,881.2 1247.5,876.6 1264.9,885.8 1282.4,863.8 1299.9,867.3 1317.4,855.7 1334.8,860.3 1352.3,838.3 1369.8,845.2 1387.2,852.2 1404.7,846.4 1422.2,830.2 1439.6,825.5 1457.1,831.3 1474.6,820.9 1492.1,840.6 1509.5,834.8 1527.0,832.5" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="1230" y="940" class="small muted">27 Sep</text>
+<text x="1358.5" y="940" class="small muted">1 Oct</text>
+<text x="1489" y="940" class="small muted">4 Oct</text>
+</g>
+<g transform="translate(0 870)">
+<rect x="1180" y="712" width="372" height="266" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
+<text x="1202" y="745" class="display" font-size="20">Subscribers</text>
+<line x1="1202" y1="766" x2="1246" y2="766" stroke="#246a75" stroke-width="2.5"/>
+<text x="1254" y="770" class="small muted">Global</text>
+<text x="1189" y="790" class="muted" font-size="10">Count</text>
+<line x1="1230" y1="800.0" x2="1527" y2="800.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="804.0" class="muted" font-size="10">24,000</text>
+<line x1="1230" y1="838.6666666666666" x2="1527" y2="838.6666666666666" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="842.6666666666666" class="muted" font-size="10">16,000</text>
+<line x1="1230" y1="877.3333333333334" x2="1527" y2="877.3333333333334" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="881.3333333333334" class="muted" font-size="10">8,000</text>
+<line x1="1230" y1="916.0" x2="1527" y2="916.0" stroke="#e4dfd4" stroke-width="1"/>
+<text x="1189" y="920.0" class="muted" font-size="10">0</text>
+<polyline points="1230.0,881.2 1247.5,876.6 1264.9,885.8 1282.4,863.8 1299.9,867.3 1317.4,855.7 1334.8,860.3 1352.3,838.3 1369.8,845.2 1387.2,852.2 1404.7,846.4 1422.2,830.2 1439.6,825.5 1457.1,831.3 1474.6,820.9 1492.1,840.6 1509.5,834.8 1527.0,832.5" fill="none" stroke="#246a75" stroke-width="2.5" stroke-linejoin="round"/>
+<text x="1230" y="940" class="small muted">27 Sep</text>
+<text x="1358.5" y="940" class="small muted">1 Oct</text>
+<text x="1489" y="940" class="small muted">4 Oct</text>
+</g>
+<line x1="1180" y1="1862" x2="1552" y2="1862" class="rule"/>
+<text x="1552" y="1882" text-anchor="end" class="small accent"><a href="https://plotly.com/javascript/" text-decoration="underline">Charts by Plotly</a></text>
+<text x="34" y="2120" class="body">Servers is a checkbox dropdown; selections persist across Overview, Population, and Relationships. Overview and comparisons use full-width charts.</text>
+<text x="34" y="2149" class="body muted">Warm surfaces and serif identity frame the dashboard; sans-serif numbers and plain chart backgrounds carry the analysis.</text>
 </svg>

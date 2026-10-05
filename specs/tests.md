@@ -142,7 +142,8 @@ Presentation coverage MUST verify [dashboard-design.md](dashboard-design.md) alo
 Automated tests MUST cover:
 
 - A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
-- Navigation to every content section while retaining the selected scope, range, and comparisons.
+- Navigation between Overview, Population, and Relationships while retaining the selected scope, range, and comparisons.
+- Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
 - Headline counts from the same last snapshot inside the selected interval, including an absent historical server, a published zero, and an empty interval.
 - Explicit global subscription scope in the headline summary.
 - Omission of the ordinary summary during comparisons, without a duplicate comparison-information section.

@@ -99,7 +99,7 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
 .headline { min-width: 0; background: var(--mnm-color-surface-panel); padding: var(--mnm-spacing-panel-padding); border: var(--mnm-border-width-default) solid var(--mnm-color-border-panel); border-radius: var(--mnm-radius-panel); }
 .headline h3 { font-size: var(--mnm-font-size-body-small); color: var(--mnm-color-text-secondary); }
 .headline-value { font-size: var(--mnm-font-size-summary); line-height: var(--mnm-font-line-height-title); font-weight: var(--mnm-font-weight-control); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; margin: var(--mnm-spacing-gap-small) 0; }
-.text-action { display: block; background: transparent; color: var(--mnm-color-text-link); padding: 0; font-size: var(--mnm-font-size-body-small); text-align: left; text-decoration: underline; }
+.text-action { display: block; min-height: var(--mnm-layout-control-min-height); font-weight: var(--mnm-font-weight-control); background: transparent; color: var(--mnm-color-text-link); padding: 0; font-size: var(--mnm-font-size-body-small); text-align: left; text-decoration: underline; }
 .text-action:hover { background: transparent; color: var(--mnm-color-text-primary); }
 .overview-chart, .comparing .chart-grid { grid-template-columns: minmax(0,1fr); }
 .comparing .plot-surface { min-width: var(--mnm-layout-plot-min-width); }

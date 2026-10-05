@@ -39,21 +39,14 @@ fn utc(time: DateTime<Utc>) -> String {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Section {
     Overview,
-    Activity,
     Population,
     Relationships,
 }
 impl Section {
-    const ALL: [Self; 4] = [
-        Self::Overview,
-        Self::Activity,
-        Self::Population,
-        Self::Relationships,
-    ];
+    const ALL: [Self; 3] = [Self::Overview, Self::Population, Self::Relationships];
     fn label(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
-            Self::Activity => "Activity",
             Self::Population => "Population",
             Self::Relationships => "Relationships",
         }
@@ -61,7 +54,6 @@ impl Section {
     fn key(self) -> &'static str {
         match self {
             Self::Overview => "overview",
-            Self::Activity => "activity",
             Self::Population => "population",
             Self::Relationships => "relationships",
         }
@@ -77,15 +69,14 @@ fn Summary(
     scope: Memo<Scope>,
     range: RwSignal<TimeRange>,
     now: RwSignal<DateTime<Utc>>,
-    section: RwSignal<Section>,
 ) -> impl IntoView {
     let selected = Memo::new(move |_| latest_in_range(&history, range.get(), now.get()).cloned());
     view! {
         <h2 class="summary-heading">"At a glance"</h2>
-        <div class="headline-grid">{[(Metric::Online, "Online population", Section::Population), (Metric::Daily, "Daily active", Section::Activity), (Metric::Monthly, "Monthly active", Section::Activity), (Metric::Subscriptions, "Global subscriptions", Section::Activity)].into_iter().map(|(metric, label, target)| {
+        <div class="headline-grid">{[(Metric::Online, "Online"), (Metric::Daily, "Daily active"), (Metric::Monthly, "Monthly active"), (Metric::Subscriptions, "Global subscribers")].into_iter().map(|(metric, label)| {
             let key = metric.key();
             view! { <article class="headline" data-summary=key>
-                <h3><button class="text-action" aria-label=format!("{label}: open {}", target.label()) on:click=move |_| { section.set(target); if let Some(el) = document().get_element_by_id(&format!("nav-{}", target.key())).and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = el.focus(); } }>{label}" →"</button></h3><p class="headline-value">{move || selected.get().and_then(|s| metric.value(&s, &scope.get())).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() })}</p>
+                <h3><a class="text-action" href=format!("#chart-{key}") aria-label=format!("{label}: show chart")>{label}" →"</a></h3><p class="headline-value">{move || selected.get().and_then(|s| metric.value(&s, &scope.get())).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() })}</p>
             </article> }
         }).collect_view()}</div>
     }
@@ -282,7 +273,7 @@ fn ChartCard(
         })
     });
     view! {
-        <article class="chart-card" data-metric=key>
+        <article class="chart-card" id=format!("chart-{key}") tabindex="-1" data-metric=key>
             <h3 class="chart-heading">{title.clone()}</h3>
             {move || match plotted.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
@@ -484,13 +475,12 @@ pub fn App() -> impl IntoView {
                     {(count > 0).then(|| view! { <button class="secondary" on:click=move |_| range.set(TimeRange::All)>"Show All time"</button> })}</div>
                 </Show>
                 <Show when=move || section.get() == Section::Overview && mode.get() == ComparisonMode::Disabled && scopes.get().len() == 1>
-                    <Summary history=summary_history.clone() scope range now section/>
+                    <Summary history=summary_history.clone() scope range now/>
                 </Show>
                 {move || {
                     let selected = section.get();
                     let metrics = match selected {
-                        Section::Overview => vec![Metric::Online],
-                        Section::Activity => vec![Metric::Daily, Metric::Monthly, Metric::Subscriptions],
+                        Section::Overview => vec![Metric::Online, Metric::Daily, Metric::Monthly, Metric::Subscriptions],
                         Section::Population => vec![Metric::Online, Metric::StartingZones],
                         Section::Relationships => vec![Metric::DailyMonthly, Metric::DailySubscriptions, Metric::MonthlySubscriptions],
                     };
@@ -499,7 +489,7 @@ pub fn App() -> impl IntoView {
                     let zone_options = zone_names.clone();
                     let zone_labels = zone_names.clone();
                     view! {
-                        <h2 class="section-title">{match selected { Section::Overview => "Online over time", Section::Activity => "Activity over time", Section::Population => "Population over time", Section::Relationships => "Ratios of reported counts" }}</h2>
+                        <h2 class="section-title">{match selected { Section::Overview => "Trends over time", Section::Population => "Population over time", Section::Relationships => "Ratios of reported counts" }}</h2>
                         <div class="chart-grid" class:overview-chart=selected == Section::Overview>{metrics.into_iter().map(|metric| view! { <ChartCard history=chart_history.clone() metric scopes range now comparison/> }).collect_view()}</div>
                         {(selected == Section::Population).then(move || view! {
                             <section class="zone-detail" aria-label="Individual starting zone"><h2>"Explore a starting zone"</h2>

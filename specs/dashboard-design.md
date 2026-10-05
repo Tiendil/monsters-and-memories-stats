@@ -104,10 +104,9 @@ Opening one menu MUST close any other open selection menu.
 
 ### Content navigation
 
-The dashboard MUST provide four clearly named content sections:
+The dashboard MUST provide three clearly named content sections:
 
-- Overview — headline counts and the online-population trend.
-- Activity — daily activity, monthly activity, and global subscriptions over time.
+- Overview — headline counts and trends for online population, daily activity, monthly activity, and global subscriptions.
 - Population — online population, total starting-zone population, and individual starting zones over time.
 - Relationships — the three activity ratios and the corresponding correlations.
 
@@ -121,15 +120,16 @@ Section changes MUST NOT reset an open comparison or silently change its meaning
 
 When one entity is selected without a period comparison, Overview MUST show four headline counts:
 
-- Online population.
+- Online.
 - Daily active count.
 - Monthly active count.
-- Active subscriptions.
+- Subscribers.
 
 The counts MUST use the last snapshot within the shared interval.
 Server-scoped values MUST come from that same snapshot; if the chosen server is absent, its counts MUST show “Not available.”
 The UI MUST NOT silently retrieve an earlier server observation or sum successive daily/monthly observations to fill these counts.
-Subscriptions MUST be labeled global even when a server is selected.
+Online population MUST be labeled “Online” in the summary and chart headings.
+The active-subscription count MUST use the chart title “Subscribers” and the label “Global subscribers” in summaries and legends, even when a server is selected.
 The summary MUST NOT repeat the observation timestamp or an all-server aggregation explanation above the counts.
 An empty selected interval MUST produce an explicit empty state rather than display the latest values from outside it.
 
@@ -138,16 +138,21 @@ The activity and online summary values are unavailable for C; the global subscri
 
 Headline counts MUST be exact, readable integers with digit grouping, rather than abbreviated values or unexplained growth percentages.
 They MUST be visually stronger than supporting text.
-An online-population chart MUST follow the summary and occupy the full content width.
-The summary MUST offer clear links to the relevant detailed sections without making hover the only way to discover navigation.
+Four separate charts MUST follow the summary in this order:
+
+1. Online.
+2. Daily active count.
+3. Monthly active count.
+4. Subscribers (global).
+
+Each chart MUST occupy the full content width, including without comparisons.
+Daily and monthly activity MUST retain their distinct source labels, and subscriptions MUST visibly retain global scope.
+The summary MUST offer clear links to the corresponding charts within Overview without making hover the only way to discover navigation.
 
 When multiple entities or a period comparison are selected, the single-snapshot summary MUST be omitted without a replacement comparison-information section.
 The dashboard MUST NOT present one entity's or period's counts as the result of the whole comparison.
 
 ### Detailed sections
-
-Activity MUST keep daily and monthly activity in separate charts with their distinct source labels.
-Its subscriptions chart MUST visibly retain global scope.
 
 Population MUST present the online and total starting-zone trends before individual-zone detail.
 Individual-zone detail MUST use a labeled zone selector derived from the complete history, with one selected zone chart visible at a time.
@@ -162,7 +167,7 @@ The correlation block MUST explain this range and MUST NOT imply that it calcula
 
 ### Data explanations
 
-Short interpretation labels MUST remain close to affected values, including “Global subscriptions.”
+Short interpretation labels MUST remain close to affected values, including “Global subscribers.”
 Detailed methodology, source limitations, all-server aggregation semantics, and archive coverage MUST be documented in the README.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.
@@ -284,8 +289,8 @@ The title MUST remain subordinate to the dashboard's data on the initial screen.
 
 The page MUST use one centered content region with aligned controls, summary values, and chart edges.
 Wide-screen summaries MUST form one row of four values; narrow-screen summaries MUST use a two-by-two layout when labels fit and a single column when needed.
-Ordinary charts MAY use two columns where each plot remains readable.
-The primary Overview trend and all comparison plots MUST use the full content width.
+Ordinary Population and Relationships charts MAY use two columns where each plot remains readable.
+All Overview charts and all comparison plots MUST use the full content width.
 Spacing MUST distinguish content sections more strongly than elements inside one chart or control group.
 
 At a 1440 by 900 CSS-pixel viewport, the default populated view MUST show the collection status, shared controls, four summary values, and plotted data without scrolling.

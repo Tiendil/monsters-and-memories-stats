@@ -74,13 +74,13 @@ impl Metric {
         match self {
             Self::Daily => "Daily active (DAU)",
             Self::Monthly => "Monthly active (MAU)",
-            Self::Subscriptions => "Active subscriptions",
-            Self::Online => "Online population",
+            Self::Subscriptions => "Subscribers",
+            Self::Online => "Online",
             Self::StartingZones => "Starting-zone population",
             Self::Zone(id, name) => return display_name(id, name),
             Self::DailyMonthly => "Daily / monthly activity",
-            Self::DailySubscriptions => "Daily activity / global subscriptions",
-            Self::MonthlySubscriptions => "Monthly activity / global subscriptions",
+            Self::DailySubscriptions => "Daily activity / global subscribers",
+            Self::MonthlySubscriptions => "Monthly activity / global subscribers",
         }
         .into()
     }
@@ -118,7 +118,7 @@ impl Metric {
                 "Derived ratio of reported daily and monthly counts. A zero denominator is not available. Values may exceed 100%."
             }
             _ => {
-                "Derived ratio of reported activity to global subscriptions, not a proven fraction of subscribers playing. The denominator stays global in server views. Values may exceed 100%."
+                "Derived ratio of reported activity to global subscribers, not a proven fraction of subscribers playing. The denominator stays global in server views. Values may exceed 100%."
             }
         }
     }
@@ -766,7 +766,7 @@ pub fn plot(
     let names = servers(history);
     let scope_label = |scope: &Scope| {
         if *metric == Metric::Subscriptions {
-            "Global subscriptions".to_owned()
+            "Global subscribers".to_owned()
         } else {
             scope.label(&names)
         }

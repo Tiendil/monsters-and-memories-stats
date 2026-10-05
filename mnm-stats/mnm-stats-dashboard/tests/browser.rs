@@ -158,7 +158,7 @@ impl Browser {
     // Presentation assertions use the navigation controls directly.
     fn show_metric(&self, metric: &str) {
         let section = match metric {
-            "daily" | "monthly" | "subscriptions" => "activity",
+            "daily" | "monthly" | "subscriptions" => "overview",
             "online" | "starting-zones" => "population",
             m if m.starts_with("zone-") => "population",
             _ => "relationships",
@@ -493,11 +493,33 @@ impl Browser {
 
     fn verify_presentation(&self, expected: &Value, scratch: &Path) {
         let coverage = self.text("#history-status");
+        self.expect_count(".section-nav button", 3);
+        self.expect_count("#nav-activity", 0);
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return Array.from(document.querySelectorAll('.chart-card'), card => card.dataset.metric);","args":[]})), json!(["online", "daily", "monthly", "subscriptions"]));
+        for metric in ["online", "daily", "monthly", "subscriptions"] {
+            self.activate(&format!("[data-summary='{metric}'] a"));
+            assert_eq!(
+                self.request(
+                    Method::POST,
+                    "/execute/sync",
+                    json!({"script":"return document.activeElement.id;","args":[]})
+                ),
+                format!("chart-{metric}")
+            );
+        }
+        for width in [1440, 375] {
+            self.request(
+                Method::POST,
+                "/window/rect",
+                json!({"width":width,"height":900}),
+            );
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const grid=document.querySelector('.chart-grid').getBoundingClientRect(); const cards=Array.from(document.querySelectorAll('.chart-card'), card => card.getBoundingClientRect()); return cards.every((card,i) => Math.abs(card.width-grid.width)<1 && Math.abs(card.left-grid.left)<1 && (i===0 || card.top>cards[i-1].bottom));","args":[]})), true, "Overview charts fill the width and stack in order at {width}px");
+        }
         self.expect_count(".headline", 4);
-        self.expect_count(".chart-card", 1);
-        self.expect_count(".legend li", 1);
+        self.expect_count(".chart-card", 4);
+        self.expect_count(".legend li", 4);
         self.expect_text(".legend li", "All Servers");
-        self.expect_count(".legend li > .swatch + span", 1);
+        self.expect_count(".legend li > .swatch + span", 4);
         let last = expected["snapshots"].as_array().unwrap().last().unwrap();
         let daily: u128 = last["servers"]
             .as_array()
@@ -531,8 +553,8 @@ impl Browser {
         self.ready("zone-zz-archived");
         self.select("#time-range", "7");
         self.select("#zone-scope", "w");
-        self.activate("#nav-activity");
-        self.expect_count(".chart-card", 3);
+        self.activate("#nav-overview");
+        self.expect_count(".chart-card", 4);
         self.click("#nav-population");
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#server-options input:checked').value,document.querySelector('#time-range').dataset.value,document.querySelector('#zone-scope').value];","args":[]})), json!(["server:a","7","w"]));
         self.servers(&["", "a", "b"]);
@@ -567,7 +589,8 @@ impl Browser {
         self.expect_count(".headline", 4);
         // Test chart-engine failure without a network request: data and download survive.
         self.request(Method::POST, "/execute/sync", json!({"script":"window.savedPlot = Plotly.newPlot; Plotly.newPlot = () => Promise.reject(new Error('test failure'));","args":[]}));
-        self.click("#nav-activity");
+        self.click("#nav-population");
+        self.click("#nav-overview");
         self.expect_text(
             "[data-metric='daily'] .interactive-plot .error",
             "Chart unavailable. Download the history or reload to retry the chart engine.",
@@ -576,7 +599,7 @@ impl Browser {
         self.expect_count(".headline", 4);
         self.verify_download(expected, scratch);
         self.request(Method::POST, "/execute/sync", json!({"script":"Plotly.newPlot = window.savedPlot; delete window.savedPlot;","args":[]}));
-        self.click("#nav-activity");
+        self.click("#nav-population");
         self.click("#nav-overview");
         self.ready("online");
         // Keyboard skip link and section controls preserve a useful focus target.
@@ -651,7 +674,7 @@ impl Browser {
             "/window/rect",
             json!({"width":1280,"height":1000}),
         );
-        self.expect_count(".chart-card", 1);
+        self.expect_count(".chart-card", 4);
         self.click("#servers-toggle");
         assert!(self.text("#server-options").contains("Retired server"));
         self.click("#servers-toggle");
@@ -774,7 +797,7 @@ impl Browser {
             self.expect_hover(
                 metric,
                 if metric == "subscriptions" {
-                    "Global subscriptions"
+                    "Global subscribers"
                 } else {
                     "Alpha <island> & West"
                 },
@@ -1131,7 +1154,7 @@ impl Browser {
             self.computed(".chart-grid", "grid-template-columns")
                 .split_whitespace()
                 .count(),
-            2
+            1
         );
         let size = self.computed("[data-metric='daily'] .xtick text", "font-size");
         let size: f64 = size.strip_suffix("px").unwrap().parse().unwrap();
@@ -1158,6 +1181,9 @@ impl Browser {
             self.text("[data-metric='daily'] .hoverlayer")
                 .contains("UTC")
         );
+        // Population retains its responsive two-column layout.
+        self.click("#nav-population");
+        self.ready("online");
         // The changed breakpoint is 900px, so the same 1000px window changes layout.
         self.request(
             Method::POST,
@@ -1699,14 +1725,14 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     );
     browser.expect_count("[data-metric='online'] .hovertext", 1);
 
-    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 1);
+    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 4);
     drop(demo_preview);
     let preview = start_preview(root, scratch, Some(&history), "explicit", preview_port);
     let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
     browser.verify(&origin, &expected, scratch);
     assert_eq!(
         browser.count(".plot-surface[data-ready='true']"),
-        1,
+        4,
         "recent demo values appear in the default range"
     );
     assert_eq!(
@@ -1772,7 +1798,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let expected = json!({"schema_version":1,"snapshots":[retained]});
     browser.verify(&origin, &expected, scratch);
     browser.select("#time-range", "all");
-    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 1);
+    assert_eq!(browser.count(".plot-surface[data-ready='true']"), 4);
     browser.verify_download(&expected, scratch);
     // A second replacement verifies that watching survives atomic file replacement.
     let original = fs::read(&index).unwrap();

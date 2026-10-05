@@ -31,7 +31,7 @@ GitHub jobs reuse `.github/actions/setup/` to build this image with a Docker lay
 
 ## Dashboard views
 
-Overview shows the last counts in the selected interval and the online trend. Activity, Population, and Relationships expose the detailed charts while preserving the selected server, range, and comparison. Population includes a zone selector drawn from the full archive.
+Overview shows the last counts in the selected interval, followed by full-width plots labeled Online, Daily active (DAU), Monthly active (MAU), and Subscribers, in that order. Summary links jump to the corresponding plots. Population and Relationships expose the remaining detailed charts while preserving the selected server, range, and comparison. Population includes a zone selector drawn from the full archive.
 
 Use Servers to toggle individual servers and All Servers independently. Use the date menus to compare the primary range with the previous period, previous year, or custom periods. Chart colors stay attached to the selected series during the session, with each legend entry on its own row. Series-colored solid lines connect observations less than 3 hours apart; subdued gray solid lines connect intervals from 3 hours to less than 24 hours. Longer intervals remain empty. Chart hover provides exact values and UTC observation times to the minute; “Download JSON” always includes the complete archive.
 
