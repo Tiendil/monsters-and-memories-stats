@@ -111,11 +111,36 @@ The dashboard MUST provide three clearly named content sections:
 - Player activity — starting-zone populations, server population shares, and activity by weekday and hour.
 - Engagement — daily participation, online presence, and activity relative to subscribers.
 
-Overview MUST be the initial section.
+Overview MUST be the initial section when the URL has no recognized tab or plot fragment.
 One section MUST be presented at a time so visitors do not need to scan every metric to find a relevant chart.
 Section navigation MUST be visible near the shared controls and MUST have a clear selected state.
 All sections MUST remain directly reachable on mobile without an icon-only navigation menu.
 Section changes MUST NOT reset an open comparison or silently change its meaning.
+
+#### Direct links
+
+The section links MUST use these URL fragments:
+
+- Overview: `#overview`.
+- Player activity: `#player-activity`.
+- Engagement: `#engagement`.
+
+Each plot MUST have a stable `#chart-…` fragment, retaining existing plot identifiers independently of display-title changes.
+Opening a plot fragment MUST select its owning section before scrolling to and focusing the plot.
+Opening a section fragment MUST select that section.
+Initial page visits, refreshes, fragment changes, and browser Back/Forward MUST resolve the same destinations.
+An empty or unknown fragment MUST select Overview without an error; the existing `#content` skip link MUST preserve the selected section.
+Navigation within the page MUST preserve all shared and chart-local selections.
+A fresh visit MUST use default selections; fragments identify destinations rather than saved filter configurations.
+
+Each plot heading MUST have an adjacent native link displaying `#`, with an accessible name and tooltip identifying the plot, such as “Link to Online.”
+The link MUST remain subtly visible on desktop and mobile, with clear hover and keyboard-focus states and an adequate touch target.
+Activating it MUST set the plot fragment in the address bar and navigate to that plot.
+It MUST support native link actions, including copying the link address and opening it in a new tab, without replacing them with clipboard behavior.
+Section navigation and “Now” links MUST use the same fragment-navigation behavior.
+
+**Example:** Opening `#chart-online-presence` selects Engagement and positions the Online presence chart in view.
+Switching to Player activity changes the fragment to `#player-activity`; Back returns to Online presence.
 
 ### Now
 

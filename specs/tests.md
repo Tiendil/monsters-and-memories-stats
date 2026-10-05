@@ -148,6 +148,9 @@ Automated tests MUST cover:
 
 - A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
 - Navigation between Overview, Player activity, and Engagement while retaining the selected scope, range, and comparisons.
+- Direct visits to every tab and plot fragment, plot focus and scrolling after section mounting, refresh, and browser Back/Forward.
+- Native plot-header links with correct destinations and accessible names, keyboard activation, repeated activation of the current fragment, and retained filters during in-page navigation.
+- Empty and unknown fragments selecting Overview, and the content skip link preserving the current section.
 - Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
 - A visible “Now” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count.
 - Unchanged “Now” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.

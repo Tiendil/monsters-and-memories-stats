@@ -532,7 +532,7 @@ impl Browser {
 
     fn verify_presentation(&self, expected: &Value, scratch: &Path) {
         let coverage = self.text("#history-status");
-        self.expect_count(".section-nav button", 3);
+        self.expect_count(".section-nav a", 3);
         self.expect_count("#nav-activity", 0);
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return Array.from(document.querySelectorAll('.chart-card'), card => card.dataset.metric);","args":[]})), json!(["online", "daily", "monthly", "subscriptions"]));
         for (metric, section) in [
@@ -559,7 +559,7 @@ impl Browser {
                 "summary link focuses its plot",
             );
             // Scrolling rounds to whole pixels while layout can have fractional positions.
-            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const chart=document.activeElement.getBoundingClientRect(); return chart.top > -1 && chart.top < innerHeight && document.querySelector('#nav-overview').getAttribute('aria-pressed')==='true';","args":[]})), true, "summary link opens Overview and scrolls to {metric}");
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const chart=document.activeElement.getBoundingClientRect(); return chart.top > -1 && chart.top < innerHeight && document.querySelector('#nav-overview').getAttribute('aria-current')==='page';","args":[]})), true, "summary link opens Overview and scrolls to {metric}");
             self.expect_text(
                 &format!("[data-summary='{metric}'] a"),
                 &self.text(&format!("[data-metric='{metric}'] .chart-heading")),
@@ -1122,6 +1122,99 @@ impl Browser {
         self.click("#nav-overview");
     }
 
+    fn expect_destination(&self, fragment: &str, section: &str) {
+        wait_until(
+            || {
+                self.request(Method::POST, "/execute/sync", json!({
+                "script":"return location.hash === arguments[0] && document.querySelector(arguments[1])?.getAttribute('aria-current') === 'page';",
+                "args":[fragment, format!("#nav-{section}")]
+            })) == true
+            },
+            &format!("fragment {fragment} selects {section}"),
+        );
+        if let Some(target) = fragment.strip_prefix("#chart-") {
+            wait_until(
+                || {
+                    self.request(Method::POST, "/execute/sync", json!({
+                    "script":"const e=document.getElementById(arguments[0]); if (!e) return false; const r=e.getBoundingClientRect(); return document.activeElement === e && r.top >= -1 && r.top < innerHeight;",
+                    "args":[format!("chart-{target}")]
+                })) == true
+                },
+                "plot fragment focuses and scrolls to its chart",
+            );
+        }
+    }
+
+    fn verify_fragment_navigation(&self, url: &str) {
+        for (fragment, section) in [
+            ("#overview", "overview"),
+            ("#player-activity", "population"),
+            ("#engagement", "relationships"),
+            ("#chart-online", "overview"),
+            ("#chart-daily", "overview"),
+            ("#chart-monthly", "overview"),
+            ("#chart-subscriptions", "overview"),
+            ("#chart-starting-zones", "population"),
+            ("#chart-online-share", "population"),
+            ("#chart-activity-heatmap", "population"),
+            ("#chart-daily-monthly", "relationships"),
+            ("#chart-online-presence", "relationships"),
+            ("#chart-subscriber-activity", "relationships"),
+        ] {
+            // Force an initial page load, not just same-document navigation.
+            self.request(Method::POST, "/url", json!({"url":"about:blank"}));
+            self.request(
+                Method::POST,
+                "/url",
+                json!({"url":format!("{url}{fragment}")}),
+            );
+            self.expect_destination(fragment, section);
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+                "script":"return [...document.querySelectorAll('.chart-card')].every(card => { const a=card.querySelector('.chart-permalink'); return a?.getAttribute('href') === '#' + card.id && a.textContent === '#' && a.getAttribute('aria-label') === 'Link to ' + card.querySelector('.chart-heading').textContent; });",
+                "args":[]
+            })), true, "every chart has a named native permalink");
+        }
+        self.request(Method::POST, "/refresh", json!({}));
+        self.expect_destination("#chart-subscriber-activity", "relationships");
+        self.select("#time-range", "30");
+        self.select("#comparison-mode", "previous");
+        self.servers(&["a"]);
+        self.click("#online-metrics-toggle");
+        self.click("#online-metrics-options label:nth-child(2)");
+        self.click("#online-metrics-toggle");
+        self.activate("#chart-online-presence .chart-permalink");
+        self.expect_destination("#chart-online-presence", "relationships");
+        // Clicking a link to the current fragment still reaches its target.
+        self.click("#chart-online-presence .chart-permalink");
+        self.expect_destination("#chart-online-presence", "relationships");
+        self.click("#nav-population");
+        self.expect_destination("#player-activity", "population");
+        self.request(Method::POST, "/back", json!({}));
+        self.expect_destination("#chart-online-presence", "relationships");
+        self.expect_count("#online-metrics-options input:checked", 1);
+        self.expect_count("#servers-options input[value='server:a']:checked", 1);
+        self.expect_text("#time-range-selection", "Last 30 days");
+        self.expect_text("#comparison-mode-selection", "Previous period");
+        self.request(Method::POST, "/forward", json!({}));
+        self.expect_destination("#player-activity", "population");
+        self.activate(".skip-link");
+        self.expect_destination("#content", "population");
+        self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({"script":"location.hash = '#unknown-chart';", "args":[]}),
+        );
+        self.expect_destination("#unknown-chart", "overview");
+        self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({"script":"location.hash = '';", "args":[]}),
+        );
+        self.expect_destination("", "overview");
+        self.verify_requests(url, true);
+        self.request(Method::POST, "/url", json!({"url":url}));
+    }
+
     fn verify_features(&self, url: &str, expected: &Value, scratch: &Path) {
         self.verify_presentation(expected, scratch);
         self.verify_checkbox_labels("w", "a");
@@ -1555,6 +1648,7 @@ impl Browser {
                 .unwrap(),
         )
         .unwrap();
+        self.verify_fragment_navigation(url);
         println!(
             "All metric families, all range presets, exact values, historical entities, three-period/entity comparisons, missing data, and filter-independent downloads verified."
         );

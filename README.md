@@ -110,6 +110,8 @@ An omitted individual zone is unavailable for that server and observation, leavi
 
 Use **Servers** to toggle any number of servers and the independent **All Servers** sum. The selection persists across sections and period comparisons. Clear every checkbox to hide all series; **Show All Servers** restores the default. The dropdown supports keyboard selection, Escape, and clicking outside to close.
 
+Tabs have direct links: `#overview`, `#player-activity`, and `#engagement`. Each plot has a `#` link beside its title; click it to put the plot address in the URL bar, or right-click it and choose **Copy link address**. A plot link, such as `#chart-online-presence`, opens the relevant tab and scrolls to the plot. Refresh and Back/Forward retain the destination. These links identify the tab or plot; a fresh visit uses default filters, while navigation within the page preserves current selections.
+
 Choose a primary **Time range** preset or apply a **Custom range** of inclusive UTC dates. **Today** starts at UTC midnight and ends now; **Yesterday** covers the complete preceding UTC day. Use **Compare** beside it to choose:
 
 - **Previous period:** the same duration immediately before the primary range; Today compares with the same elapsed part of yesterday.

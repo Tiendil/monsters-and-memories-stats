@@ -110,13 +110,70 @@ impl Section {
             Self::Relationships => "relationships",
         }
     }
+
+    fn fragment(self) -> &'static str {
+        match self {
+            Self::Overview => "#overview",
+            Self::Population => "#player-activity",
+            Self::Relationships => "#engagement",
+        }
+    }
+
+    fn from_fragment(fragment: &str) -> Option<Self> {
+        match fragment {
+            ""
+            | "#overview"
+            | "#chart-online"
+            | "#chart-daily"
+            | "#chart-monthly"
+            | "#chart-subscriptions" => Some(Self::Overview),
+            "#player-activity"
+            | "#chart-starting-zones"
+            | "#chart-online-share"
+            | "#chart-activity-heatmap" => Some(Self::Population),
+            "#engagement"
+            | "#chart-daily-monthly"
+            | "#chart-online-presence"
+            | "#chart-subscriber-activity" => Some(Self::Relationships),
+            _ => None,
+        }
+    }
 }
+
+fn apply_fragment(section: RwSignal<Section>) {
+    let fragment = window().location().hash().unwrap_or_default();
+    // The existing skip link stays within whichever section is selected.
+    if fragment == "#content" {
+        return;
+    }
+    let destination = Section::from_fragment(&fragment);
+    let selected = destination.unwrap_or(Section::Overview);
+    if section.get_untracked() != selected {
+        section.set(selected);
+    }
+    if destination.is_some() && fragment.starts_with("#chart-") {
+        // The selected section must mount before its target can be focused.
+        request_animation_frame(move || {
+            if window().location().hash().ok().as_ref() != Some(&fragment) {
+                return;
+            }
+            if let Some(element) = document()
+                .get_element_by_id(&fragment[1..])
+                .and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                let _ = element.focus();
+                element.scroll_into_view();
+            }
+        });
+    }
+}
+
 fn readable(time: DateTime<Utc>) -> String {
     time.format("%d %b %Y, %H:%M UTC").to_string()
 }
 
 #[component]
-fn Summary(history: Arc<History>, section: RwSignal<Section>) -> impl IntoView {
+fn Summary(history: Arc<History>) -> impl IntoView {
     let latest = history.snapshots().last();
     view! {
         <section class="now-summary" aria-labelledby="now-heading">
@@ -128,19 +185,21 @@ fn Summary(history: Arc<History>, section: RwSignal<Section>) -> impl IntoView {
             let value = latest.and_then(|s| metric.value(s, &Scope::All)).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() });
             let target = format!("chart-{key}");
             view! { <article class="headline" data-summary=key>
-                <h3><a class="text-action" href=format!("#{target}") aria-label=link_label on:click=move |_| {
-                    section.set(Section::Overview);
-                    let target = target.clone();
-                    request_animation_frame(move || {
-                        if let Some(element) = document().get_element_by_id(&target).and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) {
-                            let _ = element.focus();
-                            element.scroll_into_view();
-                        }
-                    });
-                }>{label}</a></h3><p class="headline-value">{value}</p>
+                <h3><a class="text-action" href=format!("#{target}") aria-label=link_label>{label}</a></h3><p class="headline-value">{value}</p>
             </article> }
         }).collect_view()}</div>
         </section>
+    }
+}
+
+#[component]
+fn ChartHeading(target: String, title: String) -> impl IntoView {
+    let link_label = format!("Link to {title}");
+    view! {
+        <div class="chart-header">
+            <h3 class="chart-heading">{title}</h3>
+            <a class="chart-permalink" href=format!("#{target}") aria-label=link_label.clone() title=link_label>"#"</a>
+        </div>
     }
 }
 
@@ -382,8 +441,8 @@ fn ChartCard(
         })
     });
     view! {
-        <article class="chart-card" id=format!("chart-{key}") tabindex="-1" data-metric=key>
-            <h3 class="chart-heading">{title.clone()}</h3>
+        <article class="chart-card" id=format!("chart-{key}") tabindex="-1" data-metric=key.clone()>
+            <ChartHeading target=format!("chart-{key}") title=title.clone()/>
             <ChartExplanation metric=explanation_metric/>
             {zone_options.map(|(selected, names)| view! {
                 <ZonePicker names zones=selected/>
@@ -437,7 +496,7 @@ fn ActivityCard(
     });
     view! {
         <article class="chart-card" id="chart-activity-heatmap" data-metric="activity-heatmap" tabindex="-1">
-            <h3 class="chart-heading">"Activity heatmap"</h3>
+            <ChartHeading target="chart-activity-heatmap".into() title="Activity heatmap".into()/>
             <p class="chart-note chart-explanation">"Average online population by weekday and hour (UTC). Darker cells indicate more players; blank cells have no records."</p>
             {move || match maps.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
@@ -621,6 +680,10 @@ pub fn App() -> impl IntoView {
     let history = Arc::new(crate::embedded_history());
     provide_context(Arc::new(Mutex::new(charts::SeriesStyles::default())));
     let section = RwSignal::new(Section::Overview);
+    apply_fragment(section);
+    let hash_listener =
+        window_event_listener_untyped("hashchange", move |_| apply_fragment(section));
+    on_cleanup(move || hash_listener.remove());
     let count = history.snapshots().len();
     let latest = history.snapshots().last().map(|s| s.observed_at);
     let first = history.snapshots().first().map(|s| s.observed_at);
@@ -689,7 +752,7 @@ pub fn App() -> impl IntoView {
                     " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly from "<a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a>
                 </p>
             </section>
-            <Summary history=history.clone() section/>
+            <Summary history=history.clone()/>
             <section class="controls" aria-labelledby="controls-heading">
                 <h2 id="controls-heading" class="visually-hidden">"Explore the archive"</h2>
                 <div class="control-grid">
@@ -698,7 +761,7 @@ pub fn App() -> impl IntoView {
                 </div>
             </section>
             <nav class="section-nav" aria-label="Dashboard sections">{Section::ALL.into_iter().map(|item| view! {
-                <button id=format!("nav-{}", item.key()) aria-pressed=move || (section.get() == item).to_string() on:click=move |_| section.set(item)>{item.label()}</button>
+                <a class="button-link" id=format!("nav-{}", item.key()) href=item.fragment() aria-current=move || (section.get() == item).then_some("page")>{item.label()}</a>
             }).collect_view()}</nav>
             <section id="content" tabindex="-1" class:comparing=move || comparing.get() aria-label=move || section.get().label()>
                 <Show when=move || scopes.get().is_empty()>
