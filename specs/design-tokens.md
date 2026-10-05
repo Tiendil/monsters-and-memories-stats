@@ -72,7 +72,7 @@ Changing the input-padding alias affects inputs only; changing their common scal
 Token categories MUST cover the reusable presentation decisions used by the dashboard:
 
 - surfaces, text, links, borders, and control states.
-- focus, error, stale-data, and unavailable-data presentation.
+- focus, error, and unavailable-data presentation.
 - spacing, radii, and border widths.
 - font families, sizes, weights, line heights, and tracking.
 - opacity and any shadows or stacking layers used by authored presentation.
@@ -195,7 +195,7 @@ The resolved DTCG document MUST contain concrete values without unresolved alias
 ## Accessibility
 
 Token values MUST support readable text, visible focus indicators, and distinguishable controls and chart series at supported viewport sizes.
-Color MUST NOT be the only indication of errors, stale data, unavailable observations, or series identity.
+Color MUST NOT be the only indication of errors, unavailable observations, or series identity.
 The labels and exact-value inspection required by [requirements.md](requirements.md) MUST remain available alongside color cues.
 Token changes MUST be reviewed in the rendered dashboard, including control states, chart labels, and hover details.
 

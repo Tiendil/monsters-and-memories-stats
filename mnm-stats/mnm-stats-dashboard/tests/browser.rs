@@ -396,7 +396,6 @@ impl Browser {
         if count == 0 {
             assert!(status.contains("No statistics collected yet"));
             self.expect_count("#history-status time", 0);
-            self.expect_text("#freshness", "");
         } else {
             let first: chrono::DateTime<chrono::Utc> =
                 records[0]["observed_at"].as_str().unwrap().parse().unwrap();
@@ -409,15 +408,6 @@ impl Browser {
             self.expect_text(
                 "#latest-collection",
                 &latest.format("%d %b %Y, %H:%M UTC").to_string(),
-            );
-            let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
-            self.expect_text(
-                "#freshness",
-                if now - latest > chrono::Duration::hours(3) {
-                    "Stale data: the latest record is more than three hours old."
-                } else {
-                    ""
-                },
             );
         }
         self.request(
@@ -590,7 +580,6 @@ impl Browser {
             "/window/rect",
             json!({"width":1280,"height":1000}),
         );
-        assert!(self.text("#freshness").contains("Stale data"));
         self.expect_count(".chart-card", 1);
         assert!(self.text("#server-scope").contains("Retired server"));
         for (key, days) in [

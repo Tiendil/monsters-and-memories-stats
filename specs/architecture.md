@@ -384,7 +384,8 @@ Pages publication MUST use the official artifact/deployment actions and the requ
 The maintainer MUST configure and verify native Actions failure notifications before unattended collection is considered ready.
 GitHub's [workflow notification rules](https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs) tie scheduled notifications to the schedule editor or the person who re-enables the schedule; a failing check alone does not prove delivery to every repository watcher.
 The README MUST document who receives these alerts and how to recover a failed or disabled collector.
-Repeated source failures MUST keep runs failing until a reviewed fix is in place, and the dashboard MUST expose stale data as specified in [requirements.md](requirements.md).
+Repeated source failures MUST keep runs failing until a reviewed fix is in place.
+The dashboard MUST continue to display the latest collection time from its embedded history as specified in [requirements.md](requirements.md).
 
 GitHub documents [schedule delays and automatic disabling after repository inactivity](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 The README MUST describe these operational limits and manual recovery.

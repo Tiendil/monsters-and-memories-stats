@@ -49,7 +49,7 @@ Empty history MUST show a clear no-statistics message and zero records without i
 
 **Example:** “Statistics from 2 Oct 2026 to 4 Oct 2026, 20:00 UTC · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
 
-Stale-data warnings MUST remain visible near the summary according to [requirements.md](requirements.md#dashboard-behavior); fresh data MUST NOT require a separate positive-status message.
+The summary's latest collection time MUST communicate data age without a separate freshness warning or status message.
 Synthetic-data notices MUST remain visible without opening another view or disclosure.
 Human-readable UTC dates SHOULD be used in the summary to reduce scanning effort; exact original timestamps MUST remain available in point details and downloads.
 
@@ -131,7 +131,7 @@ When chart comparisons use other entities or periods, the correlation block MUST
 Short interpretation labels MUST remain close to affected values, including “Global subscriptions.”
 Detailed methodology, source limitations, all-server aggregation semantics, and archive coverage MUST be documented in the README.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
-Stale-data warnings, active selections, and qualifications needed to interpret a displayed number MUST remain visible.
+Active selections and qualifications needed to interpret a displayed number MUST remain visible.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.
 
 The footer MUST contain only a plain link labeled “Charts by Plotly,” separated from the dashboard content by one subtle divider.
@@ -287,7 +287,6 @@ The interface MUST distinguish:
 - No collected history.
 - No observations in the selected interval.
 - An entity or metric unavailable for the selected observation or comparison.
-- Stale collected data.
 - Chart-engine failure.
 - Invalid comparison input.
 

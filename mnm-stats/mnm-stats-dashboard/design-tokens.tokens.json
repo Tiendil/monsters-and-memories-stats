@@ -120,10 +120,6 @@
         "$value": "{tailwind.color.orange.800}",
         "$description": "Text of navigable links."
       },
-      "stale": {
-        "$value": "{tailwind.color.orange.800}",
-        "$description": "Text indicating that the newest collected observation is stale."
-      },
       "error": {
         "$value": "{tailwind.color.red.700}",
         "$description": "Validation errors and alert text on dashboard surfaces."

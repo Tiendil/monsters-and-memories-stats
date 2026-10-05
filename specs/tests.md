@@ -96,7 +96,7 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Correlation with known expected results and selection of the last jointly available sample per UTC day.
 - Unavailable correlation for insufficient paired days or zero variance.
 - All required time ranges and their UTC boundaries.
-- Stale-data detection and gaps between observations.
+- Gaps between observations.
 - Equal-duration and calendar-period comparison alignment, including unequal month lengths and leap days.
 - Comparisons with more than two periods or entities and with missing observations.
 
@@ -154,7 +154,7 @@ Rendered review MUST cover:
 - Text and essential-graphic contrast from the actual token colors and rendered backgrounds.
 - Distinctions between series without relying solely on color, and matching line, legend, and hover encodings.
 - Visible focus, touch target sizes, control states, and unobscured content when controls are sticky.
-- Stale, empty, unavailable, initialization, and chart-failure states.
+- Empty, unavailable, initialization, and chart-failure states.
 - Reduced-motion behavior and preservation of chart information without decorative animation.
 
 Synthetic fixture values MUST establish expected summary observations and missing-entity cases independently of the presentation implementation.

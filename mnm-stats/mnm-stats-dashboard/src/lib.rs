@@ -11,10 +11,3 @@ pub mod tokens {
 
 #[cfg(target_arch = "wasm32")]
 pub mod app;
-
-pub fn is_stale(
-    observed_at: chrono::DateTime<chrono::Utc>,
-    now: chrono::DateTime<chrono::Utc>,
-) -> bool {
-    now.signed_duration_since(observed_at) > chrono::Duration::hours(3)
-}

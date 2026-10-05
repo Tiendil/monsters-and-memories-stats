@@ -373,7 +373,6 @@ pub fn App() -> impl IntoView {
                     }.into_any())}
                     " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly from "<a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a>
                 </p>
-                <p id="freshness" role="status" class="stale">{move || latest.filter(|t| crate::is_stale(*t, now.get())).map(|_| "Stale data: the latest record is more than three hours old.")}</p>
             </section>
             <section class="controls" aria-labelledby="controls-heading">
                 <h2 id="controls-heading" class="visually-hidden">"Explore the archive"</h2>

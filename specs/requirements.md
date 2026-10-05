@@ -274,7 +274,7 @@ The standard time ranges MUST end at the current UTC time; “last year” MUST 
 The UI MUST state the selected interval and show when it contains no observations.
 
 The UI MUST show the latest collection time and the available history interval.
-It MUST visibly mark data older than three hours as stale, even when an older deployment remains online.
+The displayed latest collection time MUST indicate data age without a separate freshness warning or status label.
 Times MUST be labeled UTC.
 Missing samples MUST NOT be plotted as zeros; line charts MUST break across gaps longer than two hours.
 Charts MUST identify their series, units, and aggregation scope.
@@ -343,7 +343,7 @@ The committed JSONL history MUST be the source for the embedded history.
 Embedding MUST preserve every observation and its order without changing metric values or identities.
 Malformed or unsupported JSONL records MUST fail the build rather than be skipped.
 Displayed data MUST remain consistent with the history embedded in the loaded frontend build.
-The existing latest-collection-time and stale-data rules MUST apply to that history, even if newer observations have since been collected.
+The displayed latest collection time MUST describe that embedded history, even if newer observations have since been collected.
 
 ### History download
 

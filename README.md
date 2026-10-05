@@ -111,7 +111,7 @@ Hover a plotted point to see its series, exact value, and original UTC collectio
 
 Correlations use Pearson's r on the last jointly available observation per UTC day, show the paired-day count, and require at least three days with variation in both metrics. Correlation does not establish causation, and overlapping source activity windows limit interpretation.
 
-**Download JSON** always includes every observation in the loaded build, regardless of filters or comparisons. The header summarizes the complete history's first date, latest UTC date and time, and record count, with a link to M&M’s public statistics and collection described as roughly hourly. A warning appears when the latest record is more than three hours old. An empty repository history produces an empty dashboard until observations are collected.
+**Download JSON** always includes every observation in the loaded build, regardless of filters or comparisons. The header summarizes the complete history's first date, latest UTC date and time, and record count, with a link to M&M’s public statistics and collection described as roughly hourly. An empty repository history produces an empty dashboard until observations are collected.
 
 ## Collection
 
@@ -204,7 +204,7 @@ To verify delivery, that maintainer should manually run **Collect metrics** on `
 
 Schedules are best-effort: runs can be delayed or dropped, and public repositories' schedules may be disabled after 60 days without repository activity. The minute-17 offset avoids the documented start-of-hour load peak but does not guarantee timely execution. Re-enable a disabled **Collect metrics** workflow from the Actions tab and run it manually once; review the notification recipient after re-enabling. Missed intervals remain gaps. [Schedule limits and recovery](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
-For source or validation failures, inspect the failing step, review the source contract and fixtures, and ship the fix through ordinary code review. Repeated failures stay visible until fixed. Do not bypass validation or replace earlier observations. The existing dashboard remains usable and marks data stale after three hours.
+For source or validation failures, inspect the failing step, review the source contract and fixtures, and ship the fix through ordinary code review. Repeated failures stay visible until fixed. Do not bypass validation or replace earlier observations. The existing dashboard remains usable and shows the latest collection time from its embedded history.
 
 For a rejected history push, the run fails without force-pushing and retains `collection-history-RUN_ID-ATTEMPT` for 30 days. The artifact contains the complete local history, including the unpublished observation. Download it before retrying. Compare it with the latest branch history; preserve any missing observation in chronological order, retain existing records, reject duplicate UTC hours, and validate the result with `./bin/validate-history.sh PATH` before a reviewed recovery commit. Never replace the branch's history wholesale with the artifact. An ordinary retry collects the current hour and cannot recreate a lost earlier sample.
 
