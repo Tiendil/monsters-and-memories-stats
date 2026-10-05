@@ -27,7 +27,8 @@ The [layout illustration](../docs/dashboard-layout.svg) demonstrates the hierarc
 
 ### Masthead and collection status
 
-The masthead MUST contain the game name and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
+The masthead MUST use the heading “Statistics for Monsters & Memories” and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
+The browser page title MUST use the same wording as the heading.
 The name “Tiendil” MUST link to `https://tiendil.org`, open in a new tab, and be visibly identifiable as a link.
 Its action group MUST provide “Download JSON,” “Star on GitHub,” and “Request a feature.”
 It MUST remain compact rather than use a promotional hero layout.

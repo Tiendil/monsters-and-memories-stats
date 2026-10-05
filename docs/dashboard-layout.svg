@@ -18,7 +18,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <rect x="28" y="85" width="1090" height="937" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
 <text x="56" y="115" class="label muted">DESKTOP · OVERVIEW</text>
 <text x="57" y="139" class="body muted">Made with love and curiosity by <a href="https://tiendil.org" target="_blank" rel="noopener" text-decoration="underline">Tiendil</a></text>
-<text x="56" y="176" class="display" font-size="32">Monsters &amp; Memories</text>
+<text x="56" y="176" class="display" font-size="32">Statistics for Monsters &amp; Memories</text>
 <rect x="870" y="134" width="218" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
 <text x="887" y="161" class="body">Download history (JSON)</text>
 <text x="57" y="220" class="small muted">Statistics from 4 Sep 2026 to 4 Oct 2026, 10:00 UTC · 712 records · collected roughly hourly from <a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener" class="accent" text-decoration="underline">M&amp;M’s public statistics</a></text>
@@ -85,7 +85,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <rect x="1160" y="85" width="412" height="937" rx="12" fill="#f5f1e8" stroke="#c9c2b4"/>
 <text x="1180" y="115" class="label muted">NARROW SCREEN · OVERVIEW</text>
 <text x="1180" y="137" class="small muted">Made with love and curiosity by <a href="https://tiendil.org" target="_blank" rel="noopener" text-decoration="underline">Tiendil</a></text>
-<text x="1180" y="174" class="display" font-size="28">Monsters &amp; Memories</text>
+<text x="1180" y="161" class="display" font-size="28">Statistics for<tspan x="1180" dy="28">Monsters &amp; Memories</tspan></text>
 <text x="1180" y="210" class="small muted">Statistics from 4 Sep 2026 to 4 Oct 2026, 10:00 UTC</text>
 <text x="1180" y="239" class="small muted">712 records · collected roughly hourly<tspan x="1180" dy="18">from <a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener" class="accent" text-decoration="underline">M&amp;M’s public statistics</a></tspan></text>
 <text x="1453" y="239" class="small accent">Download JSON</text>
