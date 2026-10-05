@@ -117,8 +117,8 @@ Publishing newly collected observations MUST include rebuilding and deploying th
 
 ### R19: History download
 
-The dashboard MUST provide a downloadable JSON file containing all historical data included in that dashboard build.
-The download MUST use the JSON export schema and preserve all observations, independently of the selected time range, entity scope, or comparisons.
+The dashboard MUST provide a static JSONL file alongside its published assets containing all historical data included in that dashboard build.
+The download MUST preserve the original versioned JSONL records, independently of the selected time range, entity scope, or comparisons.
 
 ### R20: Tests without source access
 
@@ -311,7 +311,7 @@ Connections MUST be straight visual guides between observations, without adding 
 
 Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
-Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSON.
+Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSONL.
 Hovering a plotted observation with the mouse MUST show its exact value followed by its series name on the first line and its collection date and time on the second line.
 The displayed time MUST use the original observation's UTC date, hour, and minute, omitting seconds and fractional seconds.
 It MUST use a readable date and end with `UTC`, without an ISO `T` separator or `Z` suffix.
@@ -464,12 +464,16 @@ The displayed latest collection time MUST describe that embedded history, even i
 
 ### History download
 
-The UI MUST provide a clearly labeled control for downloading the complete history as `history.json`.
-The download MUST be produced from the complete embedded history and MUST NOT request metrics data from a separate endpoint.
-A valid empty history MUST remain downloadable as a valid history document with no snapshots.
+The UI MUST provide a native link labeled “Download JSONL” to the static `history.jsonl` file alongside the dashboard.
+The link MUST support downloading the file and copying its address for sharing.
+The file MUST be directly accessible without running the dashboard or opening a repository website.
+Each successful build MUST package the complete validated input file unchanged, including in local previews and under repository subpaths.
+The stable URL MUST serve the archive from the latest published build; an already open dashboard can retain older embedded data until reloaded.
+Initialization and plot interactions MUST continue using embedded data without fetching the archive; an explicit download or direct file visit MAY request it.
+A valid empty history MUST remain downloadable as an empty file.
 The complete history means all project-collected snapshots, not the rolling historical series exposed by the source.
 
-**Example:** Selecting one server and the last seven days changes the charts but leaves the download containing all servers and all recorded times in the loaded dashboard build.
+**Example:** Selecting one server and the last seven days changes the charts but leaves the download containing all servers and all recorded times in the published dashboard build.
 
 ## Acceptance evidence
 
@@ -552,9 +556,10 @@ Review of dependencies and a subtraction pass over each component; no unnecessar
 
 ### History download (R19)
 
-- Downloaded JSON follows the export schema and preserves all embedded observations under different filters and comparison selections.
+- Downloaded JSONL is byte-for-byte identical to the build input under different filters and comparison selections.
 - Downloads work for both populated and valid empty history.
-- Downloads work in local preview and under the GitHub Pages repository subpath without requesting metrics data separately.
+- The file is directly accessible through a shareable static URL in local preview and under the GitHub Pages repository subpath.
+- History-only rebuilds update the static archive alongside the embedded data; failed builds preserve both previous outputs.
 
 ### Tests without source access (R20)
 

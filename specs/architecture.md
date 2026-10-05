@@ -48,7 +48,7 @@ The collector retains one append-only logical history in `data/history.jsonl` on
 Each snapshot occupies one JSONL line with its own schema version, so a new observation adds one record to the Git diff.
 Each snapshot MUST contain only the current reported state selected under the [collection contract](requirements.md#history-and-collection).
 Source-provided rolling history MUST NOT be stored in snapshots or imported as additional observations.
-The frontend build validates and embeds the complete JSONL history, and the dashboard provides a JSON export of that embedded history.
+The frontend build validates and embeds the complete JSONL history and packages an unchanged copy alongside the dashboard for download.
 
 ### Frontend
 
@@ -62,10 +62,10 @@ Rust browser bindings MUST initialize charts after their DOM nodes mount, report
 Charts MUST resize with the viewport, with horizontal scrolling confined to chart regions where needed under [dashboard-design.md](dashboard-design.md#responsive-and-accessible-interaction).
 Chart height MUST accommodate simultaneous hover labels as comparison series are added; the renderer MUST NOT silently drop series details to fit a fixed chart height.
 The shared range controls govern the visible interval; chart-local zoom and the Plotly toolbar are disabled.
-This supports static GitHub Pages deployment with no backend or handwritten JavaScript application logic; the Rust UI provides complete-history JSON downloads alongside native hover labels.
+This supports static GitHub Pages deployment with no backend or handwritten JavaScript application logic; the Rust UI provides complete-history JSONL downloads alongside native hover labels.
 The UI MUST support the time-frame and entity comparisons defined by [R17](requirements.md#r17-plot-comparisons), including more than two series per comparison.
-The complete history MUST be embedded in the compiled frontend and used for both visualization and JSON download, as required by [R18](requirements.md#r18-embedded-history) and [R19](requirements.md#r19-history-download).
-This keeps the displayed data and downloaded history tied to the same frontend build.
+The complete history MUST be embedded in the compiled frontend for visualization and packaged as a static JSONL file for download, as required by [R18](requirements.md#r18-embedded-history) and [R19](requirements.md#r19-history-download).
+Both representations MUST use the same validated history input for each build.
 
 ### Design tokens
 
@@ -120,18 +120,17 @@ The data flow is:
 Public metrics page and its connected LiveView updates
     -> Rust HTTP and WebSocket collector in hourly GitHub Actions
     -> data/history.jsonl committed to the default branch
-    -> frontend build validates JSONL and embeds the complete history in WASM
+    -> frontend build validates JSONL, embeds the history in WASM, and packages history.jsonl
     -> GitHub Actions publishes the Pages artifact
-    -> Leptos dashboard uses shared Rust snapshot values and exports them as history.json on download
+    -> Leptos dashboard uses shared Rust snapshot values and links to the static history.jsonl
 ```
 
-The shared `mnm-stats-model` library MUST own the snapshot data types, the JSONL storage and JSON export contracts, and domain validation.
-It MUST also own serialization of shared history values into the JSON export so all consumers use the same mapping.
+The shared `mnm-stats-model` library MUST own the snapshot data types, versioned JSONL serialization and parsing, and domain validation.
 Both applications MUST depend on this workspace-local library and use its contract as follows:
 
 - The collector constructs and validates shared snapshots before serializing versioned JSONL records.
 - The dashboard build uses the shared library to read and validate JSONL history before embedding its observations.
-- The dashboard uses the embedded history through shared snapshot types and the shared JSON serializer for downloads.
+- The dashboard uses the embedded history through shared snapshot types and links to the packaged JSONL archive for downloads.
 
 The shared library MUST build for both the native collector and WebAssembly dashboard targets.
 Calculations needed by both applications MAY be owned by the shared library.
@@ -150,7 +149,7 @@ The `mnm-stats-dashboard` package MUST own:
 - filtering.
 - ratio calculations.
 - comparison alignment.
-- downloading the complete embedded history as JSON.
+- linking to the complete static JSONL archive.
 
 To keep the runtime limited to the requested GitHub capabilities, the architecture MUST NOT introduce:
 
@@ -164,7 +163,7 @@ To keep the runtime limited to the requested GitHub capabilities, the architectu
 
 The application uses the following libraries and build tools:
 
-- `serde`, `serde_json` — shared typed JSONL records and JSON export serialization.
+- `serde`, `serde_json` — shared typed JSONL records and serialization.
 - `chrono` — UTC timestamps and date/range calculations.
 - `reqwest` with blocking support and Rustls — HTTP initialization, session cookies, explicit timeout, and status handling.
 - `tungstenite` with Rustls — synchronous WebSocket connection and message transport for the LiveView session.
@@ -234,8 +233,8 @@ Application files MUST gain appropriate `governed_by` and reverse `governs` rule
 
 The [project dictionary](dictionary.md) defines observations and their stored snapshots.
 Repository history uses JSONL: separate versioned snapshot objects, one per line, without an enclosing root object or `snapshots` array.
-The dashboard uses history embedded during its build and provides an ordinary JSON document for download.
-The internal embedded representation is independent of the JSONL storage and JSON export formats.
+The dashboard uses history embedded during its build and provides the unchanged JSONL input for download.
+The internal embedded representation is independent of the JSONL storage format.
 
 ### Repository history
 
@@ -273,22 +272,22 @@ Embedding MUST preserve every snapshot field and value without filtering, aggreg
 The internal embedded representation is an implementation choice; an intermediate JSON document and JSON parsing during dashboard initialization are not required.
 
 **Example:** The build can generate Rust data declarations from validated JSONL records and compile them into WASM.
-The dashboard then uses those values directly for charts and serializes the complete history to JSON when the user requests a download.
+The dashboard then uses those values directly for charts and links to the original JSONL records for download.
 
-#### JSON export
+#### Static archive
 
-The downloadable JSON document MUST have `schema_version: 1` at its root and a `snapshots` array containing all snapshot payloads in collection order.
-The per-record `schema_version` field MUST be represented by the document's root version rather than repeated in each array entry.
-Export MUST preserve every snapshot field and value without filtering, aggregation, or resampling.
-An empty embedded history MUST produce `{"schema_version":1,"snapshots":[]}` when downloaded.
-The document MUST be produced from the complete history embedded in the loaded frontend and offered for download as `history.json`.
-The JSON export schema defines the download format only.
-Generated embedded data and JSON exports MUST NOT be committed as a second source of history.
+The build MUST package a byte-for-byte copy of its validated JSONL input as `history.jsonl` beside the dashboard assets.
+This file MUST retain the repository history format: one snapshot object per line, each with `schema_version: 1`, without an enclosing object or array.
+An empty history MUST produce an empty downloadable file.
+The file MUST be served at a stable URL relative to the dashboard's deployment directory and remain accessible without executing the frontend.
+The download control MUST use an ordinary hyperlink with a download filename, without generating a browser object URL.
+The stable URL MUST identify the latest published archive rather than a version pinned to an already open page.
+The existing build and preview pipeline MUST package the archive, including custom history inputs, without introducing a separate application service.
+Failed builds MUST leave the previous dashboard and archive intact.
+Generated embedded data and packaged archive copies MUST NOT be committed as a second source of history.
 
-**Example:** Two JSONL lines each contain an observation and their own `schema_version: 1`.
-The build embeds both observations, and a download produces one JSON object with a root `schema_version: 1` and two entries in `snapshots`; those entries contain the original snapshot fields without repeating `schema_version`.
-Observation order, timestamps, and metric values remain unchanged.
-The download contains that entire document even when only one observation is in the selected chart range.
+**Example:** Two input lines contain two observations, each with its own `schema_version: 1`.
+The downloadable file contains exactly those two lines, even when only one observation is in the selected chart range.
 
 ### Validation
 
@@ -376,7 +375,8 @@ Concurrent deployments MUST NOT allow an older data build to replace a newer pub
 The frontend build MUST read and validate `data/history.jsonl` using the shared model library and embed all observations in the compiled WASM artifact.
 Invalid history MUST fail the build without replacing the last valid published dashboard.
 A history change MUST invalidate cached frontend output that would otherwise retain older embedded data.
-The dashboard MUST use that embedded history for visualization and JSON export without a separate metrics-data request.
+The dashboard MUST use that embedded history for visualization without a separate metrics-data request.
+The Pages artifact MUST include the static JSONL archive from the same build input; downloading it is a separate user action.
 The build MUST support the GitHub Pages repository subpath as well as local preview.
 Pages publication MUST use the official artifact/deployment actions and the required `pages: write` and `id-token: write` permissions only for deployment.
 

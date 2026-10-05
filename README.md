@@ -2,7 +2,7 @@
 
 A Rust collector and static dashboard for the public [Monsters & Memories metrics](https://account.monstersandmemories.com/metrics), using repository JSONL storage, GitHub Actions, and GitHub Pages.
 
-The workspace provides the Rust HTTP/WebSocket collector, shared history model, local history-validation CLI, and a Leptos dashboard. The dashboard embeds validated history in WASM and presents metric plots, comparisons, ratios, and complete-history JSON downloads. Workflows provide code checks, hourly collection, and Pages deployment; repository setup and live acceptance are described below. The committed history starts empty.
+The workspace provides the Rust HTTP/WebSocket collector, shared history model, local history-validation CLI, and a Leptos dashboard. The dashboard embeds validated history in WASM and presents metric plots, comparisons, ratios, and complete-history JSONL downloads. Workflows provide code checks, hourly collection, and Pages deployment; repository setup and live acceptance are described below. The committed history starts empty.
 
 - [Specification index](specs/intro.md)
 - [Requirements](specs/requirements.md)
@@ -37,7 +37,7 @@ Player activity also includes **Server population share** and an **Activity heat
 
 The heatmap shows mean observed online counts for each weekday/hour UTC bucket in the selected interval. Each selected server scope and comparison period has its own panel, using a shared color scale. All Servers uses summed online counts. Hover shows the mean, exact sum, and sample count. These are equally weighted sampled averages with potentially uneven coverage, not continuous or time-weighted population measurements. Missing cells stay blank, measured zeros stay zero, and period comparisons retain each sample's actual UTC weekday and hour. Show zones only controls the starting-zone chart.
 
-Use Servers to toggle individual servers and All Servers independently. Use the date menus to compare the primary range with the previous period, previous year, or custom periods. Chart colors stay attached to the selected series during the session, with each legend entry on its own row. Series-colored solid lines connect observations less than 3 hours apart; subdued gray solid lines connect intervals from 3 hours to less than 24 hours. Longer intervals remain empty. Chart hover provides exact values and UTC observation times to the minute; “Download JSON” always includes the complete archive.
+Use Servers to toggle individual servers and All Servers independently. Use the date menus to compare the primary range with the previous period, previous year, or custom periods. Chart colors stay attached to the selected series during the session, with each legend entry on its own row. Series-colored solid lines connect observations less than 3 hours apart; subdued gray solid lines connect intervals from 3 hours to less than 24 hours. Longer intervals remain empty. Chart hover provides exact values and UTC observation times to the minute; “Download JSONL” always includes the complete archive.
 
 Presentation follows [the dashboard design](specs/dashboard-design.md) and [design tokens](specs/design-tokens.md). IM Fell English is distributed locally with its [SIL Open Font License](mnm-stats/mnm-stats-dashboard/fonts/OFL.txt) and [source attribution](mnm-stats/mnm-stats-dashboard/fonts/README.txt).
 
@@ -68,7 +68,7 @@ Source, history, and design-token changes rebuild the preview and reload the bro
 ./bin/build-dashboard.sh --public-url /monsters-and-memories-stats/
 ```
 
-Release assets go to ignored `dist/`. `MNM_STATS_HISTORY` also selects a different build input. Build output and JSON downloads preserve all observations, with no separate runtime metrics request. Paths passed to general container commands should be repository-relative; preview history paths may be outside the repository.
+Release assets go to ignored `dist/`. `MNM_STATS_HISTORY` also selects a different build input. The build copies the selected input unchanged to `dist/history.jsonl` alongside the dashboard. Charts use embedded data without a separate runtime metrics request; the static archive is requested only when downloaded or opened directly. Paths passed to general container commands should be repository-relative; preview history paths may be outside the repository.
 
 ## Browser inspection
 
@@ -125,9 +125,9 @@ Changing the primary range updates automatic comparisons; custom selections pers
 
 Period comparisons plot each selected server for each period, with global subscriptions once per period. Incomplete periods are not extrapolated. Connections use the same interval styles as ordinary charts, breaking at unavailable values, absent calendar dates, and intervals of 24 hours or more. Lines are visual guides; they add no observations to hover details, calculations, or downloads.
 
-Hover a plotted point to see its exact value and series name on the first line, with its original UTC collection date and time to the minute on the second, including in comparisons. Overlapping points show their individual details. The **Download JSON** action provides all recorded observations with full timestamp precision. Counts are exact; ratios show percentages rounded to two decimal places. Time-series tooltips contain only the value, series name, and timestamp, without calculation or sample-coverage details. Tooltip names stay on one line without an authored width or character limit, including on heatmaps. Zero denominators produce gaps, and ratios may exceed 100 percent. Narrow screens can scroll comparison charts horizontally when needed.
+Hover a plotted point to see its exact value and series name on the first line, with its original UTC collection date and time to the minute on the second, including in comparisons. Overlapping points show their individual details. The **Download JSONL** action provides all recorded observations with full timestamp precision. Counts are exact; ratios show percentages rounded to two decimal places. Time-series tooltips contain only the value, series name, and timestamp, without calculation or sample-coverage details. Tooltip names stay on one line without an authored width or character limit, including on heatmaps. Zero denominators produce gaps, and ratios may exceed 100 percent. Narrow screens can scroll comparison charts horizontally when needed.
 
-**Download JSON** always includes every observation in the loaded build, regardless of filters or comparisons. The header summarizes the complete history's first date, latest UTC date and time, and record count, with a link to M&M’s public statistics and collection described as roughly hourly. An empty repository history produces an empty dashboard until observations are collected.
+**Download JSONL** links directly to `history.jsonl` alongside the dashboard, containing every observation from the latest published build regardless of filters or comparisons. Right-click the button and choose **Copy link address** to share it; the file is accessible without loading the dashboard or opening GitHub. It uses the repository JSONL format: one snapshot per line, each with `schema_version: 1`, with an empty file for an empty archive. The address stays the same after deployments, so a page left open across a deployment can show older data than the download until reloaded. The header summarizes the complete history's first date, latest UTC date and time, and record count, with a link to M&M’s public statistics and collection described as roughly hourly. An empty repository history produces an empty dashboard until observations are collected.
 
 ## Collection
 
@@ -169,7 +169,7 @@ mkdir -p .session/manual-replay
 ./bin/build-dashboard.sh
 ```
 
-Native tests cover JSONL validation and exports, collection and history preservation, dashboard aggregation, ratios, range boundaries, calendar alignment, and missing observations. Browser tests exercise every chart family, all range presets, exact values, historical servers, comparisons with more than two series, and complete downloads under filters. They also verify root/subpath hosting, runtime asset requests, history-only cached rebuilds, failed builds preserving the last site, and the development preview with watched history updates. The browser clock is fixed by a small test-only clock stub; application logic and test assertions are Rust. Tests use loopback servers and keep scratch inputs, browser profiles, and logs under ignored `.session/tests/`. They never modify `data/history.jsonl` or captured source fixtures.
+Native tests cover JSONL validation and serialization, collection and history preservation, dashboard aggregation, ratios, range boundaries, calendar alignment, and missing observations. Browser tests exercise every chart family, all range presets, exact values, historical servers, comparisons with more than two series, and complete downloads under filters. They also verify root/subpath hosting, runtime asset requests, history-only cached rebuilds, failed builds preserving the last site, and the development preview with watched history updates. The browser clock is fixed by a small test-only clock stub; application logic and test assertions are Rust. Tests use loopback servers and keep scratch inputs, browser profiles, and logs under ignored `.session/tests/`. They never modify `data/history.jsonl` or captured source fixtures.
 
 The notification-probe test uses a local malformed fixture. `check-actions.sh` uses actionlint to check workflow syntax, expressions, and action inputs without running a workflow.
 
@@ -245,5 +245,5 @@ Local checks do not establish hosted operation. Before leaving collection unatte
 - A passing manual **Collect metrics** run and its history-only commit.
 - A passing scheduled collection and preservation of earlier observations.
 - An automatically triggered **Publish dashboard** run containing the bot's committed observation.
-- The hosted dashboard's latest collection time and downloaded `history.json` matching the complete committed history used by that build, including after a history-only update.
+- The hosted dashboard's latest collection time and downloaded `history.jsonl` matching the complete committed history used by that build, including after a history-only update.
 - A received notification from the controlled failure probe, with the last valid page still available.

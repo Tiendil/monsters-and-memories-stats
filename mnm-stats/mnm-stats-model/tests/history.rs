@@ -14,17 +14,13 @@ fn record() -> Value {
 }
 
 #[test]
-fn empty_history_and_export() {
+fn empty_history() {
     let history = History::from_jsonl("").unwrap();
     assert!(history.snapshots().is_empty());
-    assert_eq!(
-        history.to_json().unwrap(),
-        r#"{"schema_version":1,"snapshots":[]}"#
-    );
 }
 
 #[test]
-fn preserves_every_snapshot_value_and_maps_versions_to_export_root() {
+fn preserves_every_snapshot_value() {
     let first = record();
     let mut second = first.clone();
     second["observed_at"] = json!("2026-03-01T01:03:00Z");
@@ -32,7 +28,7 @@ fn preserves_every_snapshot_value_and_maps_versions_to_export_root() {
     second["active_subscriptions"] = json!(u64::MAX);
     let input = format!("{first}\n{second}\n");
     let history = History::from_jsonl(&input).unwrap();
-    let export: Value = serde_json::from_str(&history.to_json().unwrap()).unwrap();
+    let snapshots = serde_json::to_value(history.snapshots()).unwrap();
     let expected: Vec<_> = [first, second]
         .into_iter()
         .map(|mut v| {
@@ -40,7 +36,7 @@ fn preserves_every_snapshot_value_and_maps_versions_to_export_root() {
             v
         })
         .collect();
-    assert_eq!(export, json!({"schema_version": 1, "snapshots": expected}));
+    assert_eq!(snapshots, json!(expected));
     assert_eq!(
         history.snapshots()[0].servers[0].starting_zones[0].online,
         0

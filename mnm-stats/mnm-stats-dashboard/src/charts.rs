@@ -449,7 +449,7 @@ pub mod browser {
     #[component]
     pub fn InteractivePlot(plot: Arc<Plot>, metric: Metric) -> impl IntoView {
         let label = format!(
-            "{}; {}. {} Hover a point for its exact value and UTC timestamp, or use Download JSON for all recorded observations.",
+            "{}; {}. {} Hover a point for its exact value and UTC timestamp, or use Download JSONL for all recorded observations.",
             metric.title(),
             metric.unit(),
             metric.description()
@@ -460,7 +460,7 @@ pub mod browser {
     #[component]
     pub fn InteractiveHeatmap(map: ActivityHeatmap, maximum: f64) -> impl IntoView {
         let label = format!(
-            "Activity heatmap; {}. Average online population by day of the week and hour (UTC). Hover for the average, total and number of records used. Blank cells mean no data. Download JSON contains the original records.",
+            "Activity heatmap; {}. Average online population by day of the week and hour (UTC). Hover for the average, total and number of records used. Blank cells mean no data. Download JSONL contains the original records.",
             map.label
         );
         view! { <PlotSurface figure=render_heatmap(&map, maximum) height=tokens::T_CHART_HEATMAP_HEIGHT.pixels() as usize label/> }

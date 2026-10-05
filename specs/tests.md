@@ -47,13 +47,12 @@ Test coverage MUST include successful behavior and relevant failure or boundary 
 
 Tests for `mnm-stats-model` MUST cover:
 
-- Serialization and deserialization of versioned JSONL records and serialization of shared history values into JSON exports.
-- Valid empty and populated histories loaded from JSONL and their corresponding JSON exports.
+- Serialization and deserialization of versioned JSONL records.
+- Valid empty and populated histories loaded from JSONL.
 - Rejection of unknown schema versions and malformed records, including blank lines and a truncated final JSONL record.
 - Count and identity validation.
 - Timestamp validity, chronological ordering, and duplicate-hour rejection.
-- Preservation of all observations, their order, source values, and identities when reading JSONL into shared history values and exporting those values as JSON.
-- Mapping of per-record schema versions to the JSON export's root version.
+- Preservation of all observations, their order, source values, and identities when reading JSONL into shared history values.
 
 ### Collector
 
@@ -92,7 +91,7 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Server and starting-zone aggregation without claiming deduplicated global activity.
 - Unavailable individual-zone values and chart gaps when a server omits a zone, including all-server views that would otherwise show a partial sum.
 - Combined starting-zone series for each selected zone/total, server scope, and period, with consistent axes, stable distinct identities, and no observations for empty selections.
-- Zero starting-zone totals for validated empty lists, historical zone discovery, and complete JSON exports preserving differing per-server zone membership.
+- Zero starting-zone totals for validated empty lists, historical zone discovery, and preservation of differing per-server zone membership in the original observations.
 - Server population shares with the complete snapshot denominator, individual selections, All Servers expansion without duplicate lines, missing servers, and zero denominators.
 - Weekday/hour UTC means with exact sums and sample counts, uneven sampling, missing cells, published zeros, boundary timestamps, and absent servers.
 - Separate heatmaps for selected entities and periods, using original UTC buckets and common displayed color bounds, including more than two selections and empty ranges.
@@ -130,16 +129,18 @@ Browser coverage MUST include:
 - Enabling and disabling comparison from both menus, changing the primary range, choosing Previous period or Year over year, and switching between exact dates and weekdays.
 - Applying custom primary dates, adding and removing multiple custom comparisons, and validation without changing the applied range.
 - Closing menus through Escape and outside interaction, focus restoration, section persistence, and usable date menus at narrow widths.
-- Complete-history JSON downloads independent of filters, including valid empty history.
+- Complete-history static JSONL downloads independent of filters, including valid empty history.
+- Native download links with shareable addresses and direct HTTP access without frontend execution or repository-page redirects.
 - Operation under a repository subpath.
-- Absence of separate runtime requests for metrics data.
+- Absence of archive requests during initialization and chart interactions; explicit downloads MAY request the static file.
 - Charts and downloads containing only the collected current-state snapshots, with interval styling for missed collections and no synthetic records.
 
-Build integration tests MUST verify that a history-only change updates the embedded dataset even when caches are reused.
+Build integration tests MUST verify that a history-only change updates both the embedded dataset and static archive even when caches are reused.
 They MUST verify that empty and populated JSONL fixtures become equivalent embedded history available through the dashboard's shared Rust snapshot types.
 These tests MUST verify preserved observations without depending on a particular internal embedded representation.
 Invalid JSONL history MUST fail the build without silently omitting records.
-The downloaded `history.json` MUST be a valid JSON document matching the complete embedded history and preserving every observation from the build's JSONL input.
+The packaged and downloaded `history.jsonl` MUST be byte-for-byte identical to the validated build input, preserving per-record schema versions and timestamp precision.
+Coverage MUST include empty files, history paths containing spaces, root and repository-subpath hosting, and failed builds preserving the previous archive alongside the dashboard.
 
 ### Dashboard presentation
 
@@ -218,8 +219,8 @@ Invalid token input MUST fail the build rather than silently reuse previous gene
 ### Local preview
 
 Browser integration tests MUST exercise the supported preview launcher as well as release assets.
-They MUST verify explicit history selection, populated charts, and complete JSON downloads.
-A history-only change outside the dashboard crate MUST trigger a rebuild and update the running page without restarting the preview.
+They MUST verify explicit history selection, populated charts, and complete JSONL downloads.
+A history-only change outside the dashboard crate MUST trigger a rebuild and update both the running page and static archive without restarting the preview.
 A token-only change outside the dashboard crate MUST also rebuild the preview and update both CSS and chart presentation without restarting it.
 Coverage MUST include valid empty history, invalid input diagnostics, and changing between demo and ordinary history without retaining the previous dataset.
 Demo generation MUST be checked using a fixed timestamp; interactive demos MAY use the current time.

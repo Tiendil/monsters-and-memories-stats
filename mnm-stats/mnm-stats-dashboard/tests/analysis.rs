@@ -85,7 +85,7 @@ fn aggregation_ratios_and_missing_entities_preserve_their_semantics() {
 }
 
 #[test]
-fn changing_zone_membership_preserves_gaps_totals_and_exported_rows() {
+fn changing_zone_membership_preserves_gaps_totals_and_original_rows() {
     let first = snapshot("2024-01-01T00:00:00Z", 1, 2, 3);
     let mut missing = snapshot("2024-01-01T01:00:00Z", 1, 2, 3);
     missing.servers[0].starting_zones.clear();
@@ -137,13 +137,13 @@ fn changing_zone_membership_preserves_gaps_totals_and_exported_rows() {
         assert_eq!(series.segments().len(), 2);
     }
     assert_eq!(chart.series[2].segments().len(), 1);
-    let exported: serde_json::Value = serde_json::from_str(&history.to_json().unwrap()).unwrap();
+    let snapshots = serde_json::to_value(history.snapshots()).unwrap();
     assert_eq!(
-        exported["snapshots"][1]["servers"][0]["starting_zones"],
+        snapshots[1]["servers"][0]["starting_zones"],
         serde_json::json!([])
     );
     assert_eq!(
-        exported["snapshots"][2]["servers"][0]["starting_zones"][1]["id"],
+        snapshots[2]["servers"][0]["starting_zones"][1]["id"],
         "new-zone"
     );
 }

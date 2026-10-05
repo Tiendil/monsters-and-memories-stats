@@ -1,4 +1,4 @@
-//! Shared current-state observations, JSONL storage, and full-history JSON export.
+//! Shared current-state observations, JSONL storage, and history validation.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, de};
@@ -173,19 +173,5 @@ impl History {
             });
         }
         Self::new(snapshots)
-    }
-
-    /// Export every observation; per-record versions become one root version.
-    pub fn to_json(&self) -> Result<String, Error> {
-        #[derive(Serialize)]
-        struct Export<'a> {
-            schema_version: u32,
-            snapshots: &'a [Snapshot],
-        }
-        serde_json::to_string(&Export {
-            schema_version: SCHEMA_VERSION,
-            snapshots: &self.0,
-        })
-        .map_err(|e| Error(e.to_string()))
     }
 }

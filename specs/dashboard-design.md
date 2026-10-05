@@ -30,13 +30,14 @@ The [layout illustration](../docs/dashboard-layout.svg) demonstrates the hierarc
 The masthead MUST use the heading “Statistics for Monsters & Memories” and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
 The browser page title MUST use the same wording as the heading.
 The name “Tiendil” MUST link to `https://tiendil.org`, open in a new tab, and be visibly identifiable as a link.
-Its action group MUST provide “Download JSON,” “Star on GitHub,” and “Request a feature.”
+Its action group MUST provide “Download JSONL,” “Star on GitHub,” and “Request a feature.”
 It MUST remain compact rather than use a promotional hero layout.
 On wide screens, the action group MUST sit beside the title; on narrow screens, the title MUST precede a compact action row.
 On wide screens, the actions MUST share a control height, neutral surfaces, and subtle borders.
 On narrow screens, “Request a feature” MUST use a compact text link below “Star on GitHub” to preserve space for the metrics.
 The actions MUST wrap when needed for narrow widths or enlarged text.
 The repository action required by [requirements.md](requirements.md#dashboard-behavior) MUST retain link navigation and pair its text with a decorative scalable star icon.
+The download action MUST retain native link behavior so users can copy and share the static archive address.
 All masthead actions MUST remain available from every content section.
 
 One visible summary near the masthead MUST show the first observation's date and the latest observation's date and time in UTC.
@@ -355,7 +356,7 @@ Chart height MUST accommodate simultaneous two-line time-series labels.
 
 **Example:** “429 All Servers” on the first line and “02 Oct 2026, 10:00 UTC” on the second.
 
-The complete-history JSON download MUST remain available independently of chart hover, including to touch and keyboard users.
+The complete-history JSONL download MUST remain available independently of chart hover, including to touch and keyboard users.
 
 ## Visual language
 

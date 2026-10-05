@@ -10,7 +10,7 @@ use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
 };
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsCast;
 
 const REPOSITORY_URL: &str = "https://github.com/Tiendil/monsters-and-memories-stats";
 const ONLINE_METRICS: [Metric; 2] = [Metric::OnlineDaily, Metric::OnlineMonthly];
@@ -60,28 +60,6 @@ fn ChartExplanation(metric: Metric) -> impl IntoView {
             {text}
         </p>
     }
-}
-
-fn download(history: &History) -> Result<(), JsValue> {
-    let json = history
-        .to_json()
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-    let parts = js_sys::Array::of1(&JsValue::from_str(&json));
-    let options = web_sys::BlobPropertyBag::new();
-    options.set_type("application/json");
-    let blob = web_sys::Blob::new_with_str_sequence_and_options(&parts, &options)?;
-    let url = web_sys::Url::create_object_url_with_blob(&blob)?;
-    let result = (|| {
-        let link = document()
-            .create_element("a")?
-            .dyn_into::<web_sys::HtmlAnchorElement>()?;
-        link.set_href(&url);
-        link.set_download("history.json");
-        link.click();
-        Ok(())
-    })();
-    web_sys::Url::revoke_object_url(&url)?;
-    result
 }
 
 fn utc(time: DateTime<Utc>) -> String {
@@ -705,7 +683,6 @@ pub fn App() -> impl IntoView {
     let mode = RwSignal::new(ComparisonMode::default());
     let matching = RwSignal::new(DateMatching::default());
     let custom = RwSignal::new(Vec::<Period>::new());
-    let download_error = RwSignal::new(None::<String>);
     let comparison_history = history.clone();
     let comparison = Memo::new(move |_| {
         comparison_for(
@@ -717,7 +694,6 @@ pub fn App() -> impl IntoView {
             &custom.get(),
         )
     });
-    let download_history = history.clone();
     let empty_history = history.clone();
     let empty_range =
         Memo::new(move |_| latest_in_range(&empty_history, range.get(), now.get()).is_none());
@@ -733,7 +709,7 @@ pub fn App() -> impl IntoView {
             <header class="page-header">
                 <div><p class="eyebrow">"Made with love and curiosity by "<a href="https://tiendil.org" target="_blank" rel="noopener">"Tiendil"</a></p><h1>"Statistics for Monsters & Memories"</h1></div>
                 <div class="header-actions">
-                    <button class="secondary" id="download-history" on:click=move |_| download_error.set(download(&download_history).err().map(|_| "The history download could not be created. Please try again.".into()))>"Download JSON"</button>
+                    <a class="button-link secondary" id="download-history" href="history.jsonl" download="history.jsonl">"Download JSONL"</a>
                     <div class="community-actions">
                         <a class="button-link secondary" href=REPOSITORY_URL>
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 3 14.8 8.7 21 9.6 16.5 14 17.6 20.2 12 17.3 6.4 20.2 7.5 14 3 9.6 9.2 8.7"/></svg>
@@ -743,7 +719,6 @@ pub fn App() -> impl IntoView {
                     </div>
                 </div>
             </header>
-            <p class="error" role="alert">{move || download_error.get()}</p>
             <section class="history-summary" aria-label="Statistics coverage">
                 <p id="history-status">
                     {first.zip(latest).map_or_else(|| "No statistics collected yet".into_any(), |(first, last)| view! {

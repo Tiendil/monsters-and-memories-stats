@@ -5,6 +5,7 @@
 use reqwest::{Method, blocking::Client};
 use serde_json::{Value, json};
 use std::{
+    cell::Cell,
     env, fs,
     net::TcpListener,
     path::{Path, PathBuf},
@@ -37,38 +38,12 @@ fn wait_until(mut ready: impl FnMut() -> bool, description: &str) {
     }
 }
 
-fn completed_download(path: &Path) -> Option<Value> {
-    // Chrome may create the destination before it finishes writing the JSON.
-    let bytes = fs::read(path).ok()?;
-    serde_json::from_slice(&bytes).ok()
-}
-
-#[test]
-fn download_readiness_requires_complete_json() {
-    let scratch = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!(
-        "../../.session/tests/download-readiness-{}",
-        std::process::id()
-    ));
-    fs::create_dir_all(&scratch).unwrap();
-    let path = scratch.join("history.json");
-    assert!(completed_download(&path).is_none());
-    for incomplete in ["", "{\"schema_version\":1,\"snapshots\":["] {
-        fs::write(&path, incomplete).unwrap();
-        assert!(completed_download(&path).is_none());
-    }
-    fs::write(&path, r#"{"schema_version":1,"snapshots":[]}"#).unwrap();
-    assert_eq!(
-        completed_download(&path),
-        Some(json!({"schema_version":1,"snapshots":[]}))
-    );
-    fs::remove_dir_all(scratch).unwrap();
-}
-
 struct Browser {
     client: Client,
     endpoint: String,
     session: String,
     _driver: Process,
+    pending_downloads: Cell<usize>,
 }
 
 impl Browser {
@@ -126,6 +101,7 @@ impl Browser {
             endpoint,
             session,
             _driver: driver,
+            pending_downloads: Cell::new(0),
         };
         // Fix the browser clock; fixtures and assertions stay in Rust.
         // Pausing all Chrome timers stalls navigation.
@@ -413,17 +389,61 @@ impl Browser {
     }
 
     fn verify_download(&self, expected: &Value, scratch: &Path) {
-        let download = scratch.join("downloads/history.json");
-        self.activate("#download-history");
-        let mut actual = None;
-        wait_until(
-            || {
-                actual = completed_download(&download);
-                actual.is_some()
-            },
-            "complete history.json download",
+        self.expect_text(
+            "a#download-history[download='history.jsonl']",
+            "Download JSONL",
         );
-        assert_eq!(actual.unwrap(), *expected);
+        let url = self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({
+                "script":"return document.querySelector('#download-history').href;", "args":[]
+            }),
+        );
+        let url = url.as_str().unwrap();
+        let page = self.request(Method::GET, "/url", Value::Null);
+        let expected_url = reqwest::Url::parse(page.as_str().unwrap())
+            .unwrap()
+            .join("history.jsonl")
+            .unwrap();
+        assert_eq!(
+            url,
+            expected_url.as_str(),
+            "shareable link beside the dashboard"
+        );
+        // A plain HTTP client can retrieve the shared link without loading the app.
+        let response = self
+            .client
+            .get(url)
+            .send()
+            .unwrap()
+            .error_for_status()
+            .unwrap();
+        assert_eq!(response.url().as_str(), url, "no repository-page redirect");
+        let bytes = response.bytes().unwrap();
+        let input = std::str::from_utf8(&bytes).unwrap();
+        mnm_stats_model::History::from_jsonl(input).unwrap();
+        let snapshots: Vec<Value> = input
+            .lines()
+            .map(|line| {
+                let mut record: Value = serde_json::from_str(line).unwrap();
+                assert_eq!(
+                    record.as_object_mut().unwrap().remove("schema_version"),
+                    Some(json!(1))
+                );
+                record
+            })
+            .collect();
+        assert_eq!(json!(snapshots), expected["snapshots"]);
+
+        let download = scratch.join("downloads/history.jsonl");
+        self.pending_downloads.set(self.pending_downloads.get() + 1);
+        self.activate("#download-history");
+        // Compare complete bytes: an empty JSONL archive is also a valid download.
+        wait_until(
+            || fs::read(&download).is_ok_and(|actual| actual == bytes),
+            "complete history.jsonl download",
+        );
         fs::remove_file(download).unwrap();
     }
 
@@ -464,6 +484,7 @@ impl Browser {
         // profile can otherwise include its internal new-tab startup assets.
         self.request(Method::POST, "/url", json!({"url":"about:blank"}));
         self.request(Method::POST, "/log", json!({"type":"performance"}));
+        self.pending_downloads.set(0);
         self.request(Method::POST, "/log", json!({"type":"browser"}));
         self.request(Method::POST, "/url", json!({"url":url}));
         let records = expected["snapshots"].as_array().unwrap();
@@ -526,8 +547,9 @@ impl Browser {
             self.ready("online");
             self.expect_count(".empty-selection", 0);
         }
-        self.verify_download(expected, scratch);
         self.verify_requests(url, true);
+        self.verify_download(expected, scratch);
+        self.verify_requests(url, false);
     }
 
     fn verify_presentation(&self, expected: &Value, scratch: &Path) {
@@ -1564,7 +1586,7 @@ impl Browser {
             self.expect_count(
                 &format!("[data-metric='{metric}'] .legend li"),
                 if metric == "subscriber-activity" {
-                    6
+                    9
                 } else {
                     3
                 },
@@ -1875,6 +1897,7 @@ impl Browser {
             .find(|url| url.starts_with("https://cdn.plot.ly/"))
             .expect("Plotly CDN URL in frontend HTML");
         let log = self.request(Method::POST, "/log", json!({"type":"performance"}));
+        let mut downloads = self.pending_downloads.replace(0);
         let mut wasm_requested = false;
         let mut plotly_requested = false;
         for entry in log.as_array().unwrap() {
@@ -1896,6 +1919,11 @@ impl Browser {
                 request.starts_with(url),
                 "unexpected runtime request: {request}"
             );
+            if request == format!("{url}history.jsonl") {
+                assert!(downloads > 0, "archive fetched without a download action");
+                downloads -= 1;
+                continue;
+            }
             assert!(
                 request == url
                     || request.ends_with("/fonts/IMFellEnglish-Regular.ttf")
@@ -1963,7 +1991,13 @@ fn build_with_tokens(
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    if !success {
+    if success {
+        assert_eq!(
+            fs::read(dist.join("history.jsonl")).unwrap(),
+            fs::read(history).unwrap(),
+            "static archive preserves the selected input byte for byte"
+        );
+    } else {
         let diagnostic = format!(
             "{}{}",
             String::from_utf8_lossy(&output.stdout),
@@ -2073,11 +2107,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
             .to_string_lossy()
             .starts_with("plotly-")
     }));
-    browser.verify(
-        &origin,
-        &json!({"schema_version":1,"snapshots":[]}),
-        &scratch,
-    );
+    browser.verify(&origin, &json!({"snapshots":[]}), &scratch);
     println!("Empty history renders and downloads at the site root.");
 
     let first = json!({"schema_version":1,"observed_at":"2026-02-28T23:10:00.123Z","active_subscriptions":40,
@@ -2105,7 +2135,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
         build(&root, &history, &scratch.join("site/mnm"), "/mnm/", true);
         browser.verify(
             &format!("{origin}mnm/"),
-            &json!({"schema_version":1,"snapshots":snapshots}),
+            &json!({"snapshots":snapshots}),
             &scratch,
         );
         browser.show_metric("activity-heatmap");
@@ -2141,7 +2171,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     fs::write(scratch.join("comparison-history.jsonl"), &input).unwrap();
     fs::write(&history, input).unwrap();
     build(&root, &history, &scratch.join("site/mnm"), "/mnm/", true);
-    let expected = json!({"schema_version":1,"snapshots":snapshots});
+    let expected = json!({"snapshots":snapshots});
     let url = format!("{origin}mnm/");
     browser.verify(&url, &expected, &scratch);
     browser.verify_features(&url, &expected, &scratch);
@@ -2162,6 +2192,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     browser.verify(&url, &expected, &scratch);
     browser.verify_token_styles(true);
     let previous_tokens_site = fs::read(scratch.join("site/mnm/index.html")).unwrap();
+    let previous_archive = fs::read(scratch.join("site/mnm/history.jsonl")).unwrap();
     let mut invalid = changed;
     invalid["chart"]["series"]["palette"]["01"]["$value"] = json!("{tailwind.color.absent.700}");
     fs::write(&tokens, invalid.to_string()).unwrap();
@@ -2177,6 +2208,10 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
         fs::read(scratch.join("site/mnm/index.html")).unwrap(),
         previous_tokens_site
     );
+    assert_eq!(
+        fs::read(scratch.join("site/mnm/history.jsonl")).unwrap(),
+        previous_archive
+    );
     browser.verify(&url, &expected, &scratch);
     browser.verify_token_styles(true);
     println!(
@@ -2190,9 +2225,13 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
         fs::read(scratch.join("site/mnm/index.html")).unwrap(),
         previous
     );
+    assert_eq!(
+        fs::read(scratch.join("site/mnm/history.jsonl")).unwrap(),
+        previous_archive
+    );
     browser.verify(
         &format!("{origin}mnm/"),
-        &json!({"schema_version":1,"snapshots":snapshots}),
+        &json!({"snapshots":snapshots}),
         &scratch,
     );
     println!("Invalid history fails the build and leaves the last valid site usable.");
@@ -2269,7 +2308,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let origin = format!("http://127.0.0.1:{preview_port}/");
     // Exercise --demo first, then explicit input with the same Cargo cache.
     let demo_preview = start_preview(root, scratch, None, "demo", preview_port);
-    let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
+    let expected = json!({"snapshots":parsed.snapshots()});
     browser.verify(&origin, &expected, scratch);
     assert!(browser.text("#demo-notice").contains("synthetic"));
     browser.verify_checkbox_labels("harbor", "demo-0");
@@ -2335,7 +2374,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     assert_eq!(browser.count(".plot-surface[data-ready='true']"), 4);
     drop(demo_preview);
     let preview = start_preview(root, scratch, Some(&history), "explicit", preview_port);
-    let expected: Value = serde_json::from_str(&parsed.to_json().unwrap()).unwrap();
+    let expected = json!({"snapshots":parsed.snapshots()});
     browser.verify(&origin, &expected, scratch);
     assert_eq!(
         browser.count(".plot-surface[data-ready='true']"),
@@ -2402,7 +2441,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     fs::write(&updated, retained.to_jsonl_record().unwrap()).unwrap();
     fs::rename(&updated, &history).unwrap();
     wait_for_preview_rebuild(&index, &original);
-    let expected = json!({"schema_version":1,"snapshots":[retained]});
+    let expected = json!({"snapshots":[retained]});
     browser.verify(&origin, &expected, scratch);
     browser.select("#time-range", "all");
     assert_eq!(browser.count(".plot-surface[data-ready='true']"), 4);
@@ -2412,11 +2451,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     fs::write(&updated, "").unwrap();
     fs::rename(&updated, &history).unwrap();
     wait_for_preview_rebuild(&index, &original);
-    browser.verify(
-        &origin,
-        &json!({"schema_version":1,"snapshots":[]}),
-        scratch,
-    );
+    browser.verify(&origin, &json!({"snapshots":[]}), scratch);
     drop(preview);
     fs::write(&history, "broken JSON").unwrap();
     let failed = Command::new(root.join("bin/serve-dashboard.sh"))
