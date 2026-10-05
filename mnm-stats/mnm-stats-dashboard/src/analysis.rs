@@ -62,6 +62,7 @@ pub enum Metric {
     Monthly,
     Subscriptions,
     Online,
+    OnlineShare,
     StartingZones,
     Zone(String, String),
     DailyMonthly,
@@ -76,6 +77,7 @@ impl Metric {
             Self::Monthly => "monthly",
             Self::Subscriptions => "subscriptions",
             Self::Online => "online",
+            Self::OnlineShare => "online-share",
             Self::StartingZones => "starting-zones",
             Self::Zone(id, _) => return format!("zone-{id}"),
             Self::DailyMonthly => "daily-monthly",
@@ -91,6 +93,7 @@ impl Metric {
             Self::Monthly => "Monthly active (MAU)",
             Self::Subscriptions => "Subscribers",
             Self::Online => "Online",
+            Self::OnlineShare => "Server population share",
             Self::StartingZones => "Starting-zone population",
             Self::Zone(id, name) => return display_name(id, name),
             Self::DailyMonthly => "Daily / monthly activity",
@@ -103,7 +106,10 @@ impl Metric {
     pub fn is_ratio(&self) -> bool {
         matches!(
             self,
-            Self::DailyMonthly | Self::DailySubscriptions | Self::MonthlySubscriptions
+            Self::OnlineShare
+                | Self::DailyMonthly
+                | Self::DailySubscriptions
+                | Self::MonthlySubscriptions
         )
     }
 
@@ -126,6 +132,9 @@ impl Metric {
             Self::Online => {
                 "Source-reported concurrent population; all-server values sum the observed servers."
             }
+            Self::OnlineShare => {
+                "Server online count divided by the complete snapshot online total. Missing servers and zero totals are unavailable."
+            }
             Self::StartingZones | Self::Zone(..) => {
                 "Current population in starting areas, not new players or character creations. Totals sum the selected zones and servers."
             }
@@ -143,6 +152,7 @@ impl Metric {
             return Some(MetricValue::Count(snapshot.active_subscriptions.into()));
         }
         let ratio = match self {
+            Self::OnlineShare => Some((Self::Online, Self::Online)),
             Self::DailyMonthly => Some((Self::Daily, Self::Monthly)),
             Self::DailySubscriptions => Some((Self::Daily, Self::Subscriptions)),
             Self::MonthlySubscriptions => Some((Self::Monthly, Self::Subscriptions)),
@@ -152,7 +162,15 @@ impl Metric {
             let MetricValue::Count(numerator) = numerator.value(snapshot, scope)? else {
                 return None;
             };
-            let MetricValue::Count(denominator) = denominator.value(snapshot, scope)? else {
+            let MetricValue::Count(denominator) = denominator.value(
+                snapshot,
+                if *self == Self::OnlineShare {
+                    &Scope::All
+                } else {
+                    scope
+                },
+            )?
+            else {
                 return None;
             };
             return (denominator != 0).then_some(MetricValue::Ratio {
@@ -797,7 +815,11 @@ pub fn plot(
         result.note = "Select servers to show their data.".into();
         return Ok(result);
     }
-    let scopes = if *metric == Metric::Subscriptions {
+    let share_scopes;
+    let scopes = if *metric == Metric::OnlineShare && scopes.contains(&Scope::All) {
+        share_scopes = names.keys().cloned().map(Scope::Server).collect::<Vec<_>>();
+        &share_scopes[..]
+    } else if *metric == Metric::Subscriptions {
         &[Scope::All][..]
     } else {
         scopes
@@ -1004,4 +1026,63 @@ pub fn grouped_count(value: u128) -> String {
             result.push(digit);
             result
         })
+}
+
+/// An unweighted bucket of observed online counts; zero samples means unavailable.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ActivityCell {
+    pub total: u128,
+    pub samples: usize,
+}
+
+impl ActivityCell {
+    pub fn mean(self) -> Option<f64> {
+        (self.samples > 0).then(|| self.total as f64 / self.samples as f64)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ActivityHeatmap {
+    pub label: String,
+    /// Monday first, then UTC hour 00 through 23.
+    pub cells: [[ActivityCell; 24]; 7],
+}
+
+pub fn activity_heatmaps(
+    history: &History,
+    scopes: &[Scope],
+    range: TimeRange,
+    now: DateTime<Utc>,
+    comparison: &Comparison,
+) -> Result<Vec<ActivityHeatmap>, String> {
+    plot(history, &Metric::Online, scopes, range, now, comparison)?
+        .series
+        .into_iter()
+        .map(|series| {
+            let mut cells = [[ActivityCell::default(); 24]; 7];
+            for point in series.points {
+                if let Some(MetricValue::Count(value)) = point.value {
+                    // Comparison x coordinates may be shifted. Bucket by original UTC time.
+                    let cell = &mut cells[point.at.weekday().num_days_from_monday() as usize]
+                        [point.at.hour() as usize];
+                    cell.total = cell
+                        .total
+                        .checked_add(value)
+                        .ok_or("Online sample total is too large.")?;
+                    cell.samples += 1;
+                }
+            }
+            Ok(ActivityHeatmap {
+                label: series.label,
+                cells,
+            })
+        })
+        .collect()
+}
+
+pub fn heatmap_maximum(maps: &[ActivityHeatmap]) -> f64 {
+    maps.iter()
+        .flat_map(|map| map.cells.iter().flatten())
+        .filter_map(|cell| cell.mean())
+        .fold(0.0, f64::max)
 }

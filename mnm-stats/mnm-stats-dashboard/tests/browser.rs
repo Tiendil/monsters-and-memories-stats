@@ -159,7 +159,7 @@ impl Browser {
     fn show_metric(&self, metric: &str) {
         let section = match metric {
             "online" | "daily" | "monthly" | "subscriptions" => "overview",
-            "starting-zones" => "population",
+            "starting-zones" | "online-share" | "activity-heatmap" => "population",
             _ => "relationships",
         };
         let present = self.request(
@@ -586,7 +586,7 @@ impl Browser {
         self.select("#time-range", "7");
         assert_eq!(self.text("#history-status"), coverage);
         self.click("#nav-population");
-        self.expect_count(".chart-card", 1);
+        self.expect_count(".chart-card", 3);
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('[data-metric=online]') === null;","args":[]})), true);
         self.zones(&["zz-archived"]);
         self.expect_text(
@@ -773,7 +773,7 @@ impl Browser {
         self.select("#time-range", "7");
         self.servers(&["a"]);
         self.zones(&["", "w", "z"]);
-        self.expect_count(".chart-card", 1);
+        self.expect_count(".chart-card", 3);
         self.expect_count("[data-metric='starting-zones'] .legend li", 3);
         self.expect_text("#zones-selection", "All Zones + 2");
         assert_eq!(
@@ -783,7 +783,7 @@ impl Browser {
             1
         );
         let colors = self.request(Method::POST, "/execute/sync", json!({
-            "script":"return Object.fromEntries(Array.from(document.querySelectorAll('.legend li'),e=>[e.textContent,getComputedStyle(e.querySelector('line')).stroke]));", "args":[]
+            "script":"return Object.fromEntries(Array.from(document.querySelectorAll('[data-metric=\"starting-zones\"] .legend li'),e=>[e.textContent,getComputedStyle(e.querySelector('line')).stroke]));", "args":[]
         }));
         assert_eq!(
             colors
@@ -799,7 +799,7 @@ impl Browser {
         self.expect_text("#zones-selection", "2 zones");
         self.ready("starting-zones");
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({
-            "script":"return Array.from(document.querySelectorAll('.legend li')).every(e=>getComputedStyle(e.querySelector('line')).stroke===arguments[0][e.textContent]);", "args":[colors]
+            "script":"return Array.from(document.querySelectorAll('[data-metric=\"starting-zones\"] .legend li')).every(e=>getComputedStyle(e.querySelector('line')).stroke===arguments[0][e.textContent]);", "args":[colors]
         })), true);
         let first = expected["snapshots"]
             .as_array()
@@ -849,7 +849,7 @@ impl Browser {
         self.click("#time-range");
         self.zones(&[]);
         self.expect_count(".empty-zones", 1);
-        self.expect_count(".plot-surface", 0);
+        self.expect_count("[data-metric='starting-zones'] .plot-surface", 0);
         self.expect_text("#zones-selection", "Choose zones");
         self.click(".empty-zones button");
         self.expect_text("#zones-selection", "All Zones");
@@ -860,10 +860,143 @@ impl Browser {
         self.select("#time-range", "30");
     }
 
+    fn verify_population_insights(&self, expected: &Value) {
+        use chrono::{Datelike, Timelike};
+        self.select("#time-range", "7");
+        self.servers(&["a"]);
+        self.show_metric("online-share");
+        self.ready("online-share");
+        self.ready("activity-heatmap");
+        let records = expected["snapshots"].as_array().unwrap();
+        let start: chrono::DateTime<chrono::Utc> = "2026-05-25T12:00:00Z".parse().unwrap();
+        let end: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
+        let first = records
+            .iter()
+            .find(|s| s["observed_at"] == "2026-05-25T12:00:00Z")
+            .unwrap();
+        let numerator = first["servers"][0]["online"].as_u64().unwrap();
+        let denominator: u64 = first["servers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|server| server["online"].as_u64().unwrap())
+            .sum();
+        self.hover("[data-metric='online-share'] .scatterlayer .point");
+        self.expect_hover(
+            "online-share",
+            "Alpha <island> & West",
+            "2026-05-25T12:00:00Z",
+            &format!(
+                "{:.2}% ({numerator} / {denominator})",
+                numerator as f64 * 100.0 / denominator as f64
+            ),
+        );
+        let mut sums = [[0_u64; 24]; 7];
+        let mut counts = [[0_usize; 24]; 7];
+        for record in records {
+            let at: chrono::DateTime<chrono::Utc> =
+                record["observed_at"].as_str().unwrap().parse().unwrap();
+            if at < start || at > end {
+                continue;
+            }
+            let day = at.weekday().num_days_from_monday() as usize;
+            let hour = at.hour() as usize;
+            sums[day][hour] += record["servers"][0]["online"].as_u64().unwrap();
+            counts[day][hour] += 1;
+        }
+        let cells = self.request(Method::POST, "/execute/sync", json!({"script":"const p=document.querySelector('[data-metric=\"activity-heatmap\"] .plot-surface'); return p.data[0].z;", "args":[]}));
+        for day in 0..7 {
+            for hour in 0..24 {
+                if counts[day][hour] == 0 {
+                    assert!(cells[day][hour].is_null());
+                } else {
+                    assert_eq!(
+                        cells[day][hour].as_f64().unwrap(),
+                        sums[day][hour] as f64 / counts[day][hour] as f64
+                    );
+                }
+            }
+        }
+        for width in [1280, 320] {
+            self.request(
+                Method::POST,
+                "/window/rect",
+                json!({"width":width,"height":900}),
+            );
+            // Native pointer hover over Monday noon, after the chart has resized.
+            wait_until(
+                || {
+                    self.request(Method::POST, "/execute/sync", json!({"script":"const p=document.querySelector('[data-metric=\"activity-heatmap\"] .plot-surface'); return Math.abs(p._fullLayout.width-p.clientWidth)<1;", "args":[]})) == true
+                },
+                "heatmap resize",
+            );
+            let point = self.request(Method::POST, "/execute/sync", json!({"script":"const p=document.querySelector('[data-metric=\"activity-heatmap\"] .plot-surface'); p.scrollIntoView({block:'center'}); const r=p.getBoundingClientRect(), l=p._fullLayout; return {x:r.x+l.xaxis._offset+l.xaxis.l2p(12), y:r.y+l.yaxis._offset+l.yaxis.l2p(0)};", "args":[]}));
+            self.request(Method::POST, "/goog/cdp/execute", json!({"cmd":"Input.dispatchMouseEvent","params":{"type":"mouseMoved","x":point["x"],"y":point["y"]}}));
+            self.expect_count("[data-metric='activity-heatmap'] .hovertext", 1);
+            let hover = self.text("[data-metric='activity-heatmap'] .hovertext");
+            assert!(
+                hover.contains(&format!(
+                    "{:.2} mean onlineAlpha <island> & West",
+                    sums[0][12] as f64 / counts[0][12] as f64
+                )),
+                "{hover}"
+            );
+            assert!(hover.contains("Mon 12:00–13:00 UTC"), "{hover}");
+            assert!(
+                hover.contains(&format!("{} records · sum {}", counts[0][12], sums[0][12])),
+                "{hover}"
+            );
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.documentElement.scrollWidth <= innerWidth;", "args":[]})), true);
+        }
+        self.zones(&[]);
+        self.ready("online-share");
+        self.ready("activity-heatmap");
+        self.zones(&[""]);
+        self.servers(&["", "a", "b"]);
+        self.expect_count("[data-metric='online-share'] .legend li", 4);
+        self.select("#comparison-mode", "previous");
+        self.expect_count(".heatmap-panel", 6);
+        wait_until(
+            || self.count(".heatmap-panel .plot-surface[data-ready='true']") == 6,
+            "compared heatmaps",
+        );
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const data=Array.from(document.querySelectorAll('.heatmap-panel .plot-surface'),p=>p.data[0]); return data.every(d=>d.zmin===0 && d.zmax===data[0].zmax);", "args":[]})), true);
+        self.expect_count("[data-metric='online-share'] .legend li", 8);
+        self.click("#comparison-mode");
+        self.click("#match-date");
+        self.custom_periods(&[
+            ("2024-02-01", "2024-02-29"),
+            ("2024-03-01", "2024-03-31"),
+            ("2024-04-01", "2024-04-30"),
+        ]);
+        self.expect_count(".heatmap-panel", 9);
+        wait_until(
+            || self.count(".heatmap-panel .plot-surface[data-ready='true']") == 9,
+            "three-period heatmaps",
+        );
+        self.expect_count("[data-metric='online-share'] .legend li", 12);
+        self.select("#comparison-mode", "disabled");
+        self.servers(&["retired"]);
+        self.expect_count("[data-metric='activity-heatmap'] .empty-chart", 1);
+        self.expect_count("[data-metric='online-share'] .empty-chart", 1);
+        self.servers(&[]);
+        self.expect_count(".heatmap-panel", 0);
+        self.expect_count("[data-metric='online-share'] .plot-surface", 0);
+        self.servers(&[""]);
+        self.select("#time-range", "30");
+        self.click("#nav-overview");
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
+        );
+    }
+
     fn verify_features(&self, url: &str, expected: &Value, scratch: &Path) {
         self.verify_presentation(expected, scratch);
         self.verify_checkbox_labels("w", "a");
         self.verify_population(expected);
+        self.verify_population_insights(expected);
         let metrics = [
             "daily",
             "monthly",
@@ -1699,13 +1832,15 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     println!("Empty history renders and downloads at the site root.");
 
     let first = json!({"schema_version":1,"observed_at":"2026-02-28T23:10:00.123Z","active_subscriptions":40,
-        "servers":[{"id":"new-server","name":"Server Ω \"West\"\nTwo","daily_active":0,"monthly_active":20,"online":5,
-        "starting_zones":[{"id":"zone","name":"Starting zone","online":2}]}]});
+        "servers":[{"id":"new-server","name":"Server Ω \"West\"\nTwo","daily_active":0,"monthly_active":20,"online":0,
+        "starting_zones":[{"id":"zone","name":"Starting zone","online":0}]}]});
     let mut second = first.clone();
-    second["observed_at"] = json!("2026-03-01T01:10:00Z");
+    second["observed_at"] = json!("2026-03-07T23:10:00Z");
+    second["servers"][0]["online"] = json!(1);
     second["active_subscriptions"] = json!(42);
     second["servers"][0]["id"] = json!("another-server");
     for records in [vec![first.clone()], vec![first, second]] {
+        let mean = if records.len() == 1 { 0.0 } else { 0.5 };
         fs::write(
             &history,
             records.iter().map(|v| format!("{v}\n")).collect::<String>(),
@@ -1723,6 +1858,22 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
             &format!("{origin}mnm/"),
             &json!({"schema_version":1,"snapshots":snapshots}),
             &scratch,
+        );
+        browser.show_metric("activity-heatmap");
+        browser.ready("activity-heatmap");
+        let cells = browser.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('.heatmap-panel .plot-surface').data[0].z;","args":[]}));
+        assert_eq!(cells[5][23], mean);
+        assert!(cells[5][22].is_null());
+        if mean > 0.0 {
+            assert_eq!(browser.request(Method::POST, "/execute/sync", json!({"script":"return Array.from(document.querySelectorAll('.heatmap-panel .cbaxis text'), t=>Number(t.textContent)).some(v=>v>0 && v<1);","args":[]})), true, "fractional means retain readable fractional scale labels");
+        }
+        let point = browser.request(Method::POST, "/execute/sync", json!({"script":"const p=document.querySelector('.heatmap-panel .plot-surface');p.scrollIntoView({block:'center'});const r=p.getBoundingClientRect(),l=p._fullLayout;return [r.x+l.xaxis._offset+l.xaxis.l2p(23),r.y+l.yaxis._offset+l.yaxis.l2p(5)];","args":[]}));
+        browser.pointer_at(&point);
+        browser.expect_count("[data-metric='activity-heatmap'] .hovertext", 1);
+        assert!(
+            browser
+                .text("[data-metric='activity-heatmap'] .hovertext")
+                .contains(&format!("{mean:.2} mean online"))
         );
     }
     println!(

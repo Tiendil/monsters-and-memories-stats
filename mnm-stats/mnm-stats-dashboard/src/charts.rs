@@ -1,11 +1,14 @@
 //! Plotly figure construction from Rust-owned observations and presentation tokens.
 use crate::{
-    analysis::{Alignment, Connection, Metric, Plot},
+    analysis::{ActivityHeatmap, Alignment, Connection, Metric, Plot},
     tokens,
 };
 use plotly::{
-    Configuration, Layout, Plot as Figure, Scatter,
-    common::{DashType, Font, HoverInfo, Label, Line, Marker, Mode, Title},
+    Configuration, HeatMap, Layout, Plot as Figure, Scatter,
+    common::{
+        ColorBar, ColorScale, ColorScaleElement, DashType, Font, HoverInfo, Label, Line, Marker,
+        Mode, Orientation, Title,
+    },
     configuration::DisplayModeBar,
     layout::{Axis, AxisType, HoverMode, Margin},
 };
@@ -269,7 +272,14 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             .y_axis(
                 axis()
                     .title(Title::with_text(metric.unit()).font(font.clone()))
-                    .range(vec![0.0, (maximum * 1.12).max(1.0)])
+                    .range(vec![
+                        0.0,
+                        if *metric == Metric::OnlineShare {
+                            100.0
+                        } else {
+                            (maximum * 1.12).max(1.0)
+                        },
+                    ])
                     .n_ticks(5)
                     .tick_format(",.0f")
                     .tick_suffix(if metric.is_ratio() { "%" } else { "" }),
@@ -278,6 +288,150 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             .hover_distance(tokens::T_CHART_HOVER_HIT_RADIUS.pixels() as i32),
     );
     // Range selection is shared by all charts. Hover remains interactive.
+    figure.set_configuration(
+        Configuration::new()
+            .responsive(true)
+            .display_mode_bar(DisplayModeBar::False)
+            .display_logo(false)
+            .scroll_zoom(false),
+    );
+    figure
+}
+
+fn heatmap_label(label: &str) -> String {
+    let limit = tokens::T_CHART_HEATMAP_HOVER_LINE_LENGTH as usize;
+    let mut result = String::new();
+    let mut column = 0;
+    for word in label.split_whitespace() {
+        if column > 0 {
+            result.push(' ');
+            column += 1;
+            if column + word.chars().count() > limit {
+                result.push_str("<br>");
+                column = 0;
+            }
+        }
+        for character in word.chars() {
+            if column >= limit {
+                result.push_str("<br>");
+                column = 0;
+            }
+            result.push_str(&escape(&character.to_string()));
+            column += 1;
+        }
+    }
+    result
+}
+
+/// Render an observed weekday/hour mean without interpolation or hover on empty buckets.
+pub fn render_heatmap(map: &ActivityHeatmap, maximum: f64) -> Figure {
+    let weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    let mut figure = Figure::new();
+    let font = Font::new()
+        .family(tokens::T_CHART_AXIS_LABEL_FONT_FAMILY_CSS)
+        .size(tokens::T_CHART_AXIS_LABEL_FONT_SIZE.pixels() as usize)
+        .color(tokens::T_CHART_AXIS_LABEL_COLOR);
+    let values = map
+        .cells
+        .iter()
+        .map(|row| row.iter().map(|cell| cell.mean()).collect::<Vec<_>>())
+        .collect();
+    let text = map
+        .cells
+        .iter()
+        .enumerate()
+        .map(|(day, row)| {
+            row.iter()
+                .enumerate()
+                .map(|(hour, cell)| {
+                    cell.mean().map_or_else(String::new, |mean| {
+                        format!(
+                            "<b>{mean:.2} mean online</b><br>{}<br>{} {hour:02}:00–{:02}:00 UTC<br>{} {} · sum {}",
+                            heatmap_label(&map.label), weekdays[day], hour + 1, cell.samples,
+                            if cell.samples == 1 { "record" } else { "records" }, cell.total
+                        )
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    figure.add_trace(
+        HeatMap::new(
+            (0..24).collect::<Vec<_>>(),
+            (0..7).collect::<Vec<_>>(),
+            values,
+        )
+        .text_matrix(text)
+        .hover_template("%{text}<extra></extra>")
+        .hover_on_gaps(false)
+        .connect_gaps(false)
+        .zauto(false)
+        .zmin(0.0)
+        // A positive upper bound also keeps an all-zero selection visibly measured.
+        .zmax(if maximum > 0.0 { maximum } else { 1.0 })
+        .color_scale(ColorScale::Vector(vec![
+            ColorScaleElement(0.0, tokens::T_CHART_HEATMAP_COLOR_LOW.into()),
+            ColorScaleElement(1.0, tokens::T_CHART_HEATMAP_COLOR_HIGH.into()),
+        ]))
+        .x_gap(tokens::T_CHART_HEATMAP_CELL_GAP.pixels())
+        .y_gap(tokens::T_CHART_HEATMAP_CELL_GAP.pixels())
+        .color_bar(
+            ColorBar::new()
+                .orientation(Orientation::Horizontal)
+                .title(Title::with_text("Mean online").font(font.clone()))
+                .tick_font(font.clone())
+                .tick_format(",.3~g")
+                .n_ticks(3)
+                .thickness(tokens::T_CHART_HEATMAP_SCALE_THICKNESS.pixels() as usize)
+                .outline_width(0)
+                .y(1.05),
+        )
+        .hover_label(
+            Label::new()
+                .background_color(tokens::T_COLOR_SURFACE_CHART)
+                .border_color(tokens::T_CHART_HEATMAP_COLOR_HIGH)
+                .font(font.clone()),
+        ),
+    );
+    let axis = || {
+        Axis::new()
+            .type_(AxisType::Linear)
+            .fixed_range(true)
+            .auto_margin(true)
+            .zero_line(false)
+            .show_grid(false)
+            .tick_font(font.clone())
+    };
+    let margin = tokens::T_CHART_VIEWPORT_MARGIN.pixels() as usize;
+    figure.set_layout(
+        Layout::new()
+            .auto_size(true)
+            .height(tokens::T_CHART_HEATMAP_HEIGHT.pixels() as usize)
+            .font(font.clone())
+            .paper_background_color(tokens::T_COLOR_SURFACE_CHART)
+            .plot_background_color(tokens::T_COLOR_SURFACE_CHART)
+            .margin(
+                Margin::new()
+                    .left(margin + tokens::T_CHART_AXIS_Y_LABEL_AREA.pixels() as usize)
+                    .right(margin)
+                    .top(tokens::T_CHART_HEATMAP_SCALE_AREA.pixels() as usize)
+                    .bottom(margin + tokens::T_CHART_AXIS_X_LABEL_AREA.pixels() as usize),
+            )
+            .x_axis(
+                axis()
+                    .range(vec![-0.5, 23.5])
+                    .tick_values(vec![0.0, 6.0, 12.0, 18.0, 23.0])
+                    .tick_text(["00", "06", "12", "18", "23"].map(str::to_owned).to_vec())
+                    .title(Title::with_text("Hour (UTC)").font(font.clone())),
+            )
+            .y_axis(
+                axis()
+                    .range(vec![6.5, -0.5])
+                    .tick_values((0..7).map(f64::from).collect())
+                    .tick_text(weekdays.map(str::to_owned).to_vec()),
+            )
+            .hover_mode(HoverMode::Closest),
+    );
     figure.set_configuration(
         Configuration::new()
             .responsive(true)
@@ -311,7 +465,27 @@ pub mod browser {
 
     #[component]
     pub fn InteractivePlot(plot: Arc<Plot>, metric: Metric) -> impl IntoView {
-        let height = format!("{}px", height(&plot));
+        let label = format!(
+            "{}; {}. {} Hover a point for its exact value and UTC timestamp, or use Download JSON for all recorded observations.",
+            metric.title(),
+            metric.unit(),
+            metric.description()
+        );
+        view! { <PlotSurface figure=render(&plot, &metric) height=height(&plot) label/> }
+    }
+
+    #[component]
+    pub fn InteractiveHeatmap(map: ActivityHeatmap, maximum: f64) -> impl IntoView {
+        let label = format!(
+            "Activity heatmap; {}. Mean observed online population by UTC weekday and hour. Hover for mean, sum and sample count; blank cells have no observations. Download JSON contains the original observations.",
+            map.label
+        );
+        view! { <PlotSurface figure=render_heatmap(&map, maximum) height=tokens::T_CHART_HEATMAP_HEIGHT.pixels() as usize label/> }
+    }
+
+    #[component]
+    fn PlotSurface(figure: Figure, height: usize, label: String) -> impl IntoView {
+        let height = format!("{height}px");
         let node = NodeRef::<leptos::html::Div>::new();
         let error = RwSignal::new(None::<String>);
         let mounted = StoredValue::new_local(None::<web_sys::HtmlElement>);
@@ -323,19 +497,13 @@ pub mod browser {
                 let _ = purge(&node);
             }
         });
-        let label = format!(
-            "{}; {}. {} Hover a point for its exact value and UTC timestamp, or use Download JSON for all recorded observations.",
-            metric.title(),
-            metric.unit(),
-            metric.description()
-        );
         Effect::new(move |_| {
             let Some(element) = node.get() else {
                 return;
             };
             let element: web_sys::HtmlElement = element.unchecked_into();
             mounted.set_value(Some(element.clone()));
-            let figure = render(&plot, &metric).to_js_object();
+            let figure = figure.to_js_object();
             let disposed = disposed.clone();
             leptos::task::spawn_local(async move {
                 let result = new_plot(&element, &figure).await;

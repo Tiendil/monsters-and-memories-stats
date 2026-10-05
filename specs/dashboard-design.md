@@ -108,7 +108,7 @@ Opening one menu MUST close any other open selection menu.
 The dashboard MUST provide three clearly named content sections:
 
 - Overview — trends for online population, daily activity, monthly activity, and global subscriptions.
-- Population — starting-zone totals and individual zones over time.
+- Population — starting-zone populations, server population shares, and activity by weekday and hour.
 - Relationships — the three activity ratios and the corresponding correlations.
 
 Overview MUST be the initial section.
@@ -161,7 +161,8 @@ Daily and monthly activity MUST retain their distinct source labels, and subscri
 
 ### Detailed sections
 
-Population MUST show one full-width “Starting-zone population” chart combining the selected starting-zone totals and individual zones.
+Population MUST show full-width views in this order: Starting-zone population, Server population share, and Activity heatmap.
+The Starting-zone population chart MUST combine the selected starting-zone totals and individual zones.
 Online MUST remain in Overview without a duplicate Population chart.
 A checkbox dropdown labeled “Starting zones” MUST precede the chart and provide “All Zones” plus every zone discovered in the complete history.
 “All Zones” MUST plot the total across all reported starting zones; it MUST NOT select individual-zone checkboxes or sum only checked zones.
@@ -175,6 +176,16 @@ Historical zones MUST remain selectable, and missing zone values MUST follow the
 Each selected zone or total MUST produce a series for each selected server scope and comparison period.
 Legends and hover details MUST identify the zone or “All Zones,” server scope, and period when applicable.
 Zone/server/period combinations MUST have distinct, stable series identities, preserving their colors when other selections change.
+
+Server population share MUST use the time-series chart anatomy and a 0–100 percent axis.
+A short note MUST explain that “All Servers” shows individual shares of the complete observed total.
+Activity heatmap MUST use separate labeled panels for each selected server scope and period, arranged vertically at full width.
+Each panel MUST show weekday rows ordered Monday through Sunday and hour columns ordered 00 through 23, with the hour axis explicitly labeled UTC.
+A labeled sequential color scale MUST show mean online counts and use common bounds across the displayed panels.
+The heatmap MUST NOT use categorical line swatches to represent its intensity scale.
+A short note MUST explain sampled averages, uneven coverage, and blank cells for missing observations.
+Cell hover MUST expose the aggregate details defined in [requirements.md](requirements.md#population-insights).
+An unavailable panel MUST identify its scope and period and show an empty-state message.
 
 Relationships MUST group ratios separately from correlations.
 Correlation results MUST show their paired-day counts and actual shared range and server scope next to the coefficients.
@@ -208,7 +219,8 @@ Invalid input MUST have a local explanation associated with the relevant field.
 An incomplete comparison MUST explain the next action, such as adding a period, instead of presenting an unexplained blank chart.
 
 The selected servers MUST apply to every chart in both ordinary viewing and period comparisons, preserving selections across section and mode changes.
-Period comparisons MUST show a series for each selected entity and period, with both identities in its legend label.
+Period comparisons MUST identify each selected entity and period in the chart legend or heatmap panel label.
+Server population share MUST expand All Servers into individual shares as defined in [requirements.md](requirements.md#population-insights).
 Global subscriptions MUST appear once per period, independently of the number of selected servers, and MUST disappear when no entities are selected.
 The primary range MUST control the primary chart series and the correlation calculations in every comparison mode.
 These stored selections MUST remain available when returning to ordinary mode.
@@ -225,7 +237,8 @@ Its legend identifies the selected months; a separate correlation block identifi
 
 ### Hierarchy and labeling
 
-Each chart MUST present a short metric title, a series legend, and the visualization.
+Each time-series chart MUST present a short metric title, a series legend, and the visualization.
+Heatmaps MUST use the panel labels and color scale defined under Detailed sections.
 The same chart anatomy MUST be used across sections.
 The value-axis title MUST sit beside its axis and read “Count” for counts or “Percent (%)” for ratios.
 Charts MUST NOT repeat units beside the metric heading or display plotted-observation counts or a separate “Observation time (UTC)” caption.
@@ -239,7 +252,7 @@ Gridlines MUST be visually subordinate to series and use a small number of label
 Charts MUST use a linear value scale and MUST NOT combine unrelated units with dual axes.
 Count and ratio charts SHOULD begin at zero to make magnitude comparisons straightforward.
 A nonzero lower bound MAY be used for a line-only chart when needed to reveal variation, provided that the scale is clearly visible and the same scale applies to every compared series.
-Ratios MUST remain able to exceed 100 percent.
+Activity ratios MUST remain able to exceed 100 percent; server population shares MUST use their bounded percentage scale.
 
 ### Series presentation
 
@@ -247,7 +260,7 @@ Time series MUST use unsmoothed lines so interpolation does not imply measured p
 Missing observations and gaps MUST retain the behavior defined in [requirements.md](requirements.md#dashboard-behavior).
 Markers SHOULD be reserved for isolated or sparse observations so dense hourly series remain readable.
 
-Every chart MUST have a legend, including single-series charts.
+Every time-series chart MUST have a legend, including single-series charts.
 The legend MUST be a vertical list with one series per row at every viewport width.
 Each legend entry MUST show a fixed-width colored line sample followed by the entity or period name, without a numeric prefix.
 Line samples MUST align in one column, with a consistent gap before left-aligned names.
@@ -306,7 +319,7 @@ The title MUST remain subordinate to the dashboard's data on the initial screen.
 The page MUST use one centered content region with aligned controls, summary values, and chart edges.
 Wide-screen summaries MUST form one row of four values; narrow-screen summaries MUST use a two-by-two layout when labels fit and a single column when needed.
 Ordinary Relationships charts MAY use two columns where each plot remains readable.
-All Overview charts, the Population chart, and all comparison plots MUST use the full content width.
+All Overview and Population charts and all comparison plots MUST use the full content width.
 Spacing MUST distinguish content sections more strongly than elements inside one chart or control group.
 
 At a 1440 by 900 CSS-pixel viewport, the default populated view MUST show the collection status, shared controls, four summary values, and plotted data without scrolling.

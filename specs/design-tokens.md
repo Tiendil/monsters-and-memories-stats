@@ -169,6 +169,8 @@ Rust chart configuration MUST consume typed presentation values generated from t
 It MUST NOT maintain a separate handwritten palette or copies of token values.
 Ordinary chart lines, observation markers, legend swatches, and hover-label borders MUST use the same series-color selection for the same series.
 Connections across sparse collection intervals MUST use `chart.series.gap.color` and `chart.series.gap.opacity`, independently of the series palette.
+Heatmap intensity MUST use the sequential colors under `chart.heatmap.color`, independently of the categorical series palette.
+Heatmap geometry MUST use tokens under `chart.heatmap`; its displayed color bounds MUST remain derived from data.
 Chart font and dimension conversion MUST preserve the declared units; CSS-relative dimensions MUST NOT silently become fixed pixels.
 Plotly configuration MUST receive resolved colors and pixel dimensions from generated Rust values; it need not read CSS custom properties at runtime.
 The build MUST convert Tailwind's CSS colors, including OKLCH values, into the same bounded sRGB representation for both CSS and Plotly.

@@ -1424,3 +1424,226 @@ fn day_presets_compare_equivalent_parts_of_prior_days_and_years() {
         )
     );
 }
+
+#[test]
+fn population_share_uses_all_observed_servers_and_preserves_unavailability() {
+    let first = snapshot("2024-02-05T10:00:00Z", 1, 2, 3);
+    let mut zero = snapshot("2024-02-05T11:00:00Z", 1, 2, 3);
+    for server in &mut zero.servers {
+        server.online = 0;
+    }
+    let mut missing = snapshot("2024-02-05T12:00:00Z", 1, 2, 3);
+    missing.servers.remove(0);
+    let h = History::new(vec![first, zero, missing]).unwrap();
+    let now = time("2024-04-01T00:00:00Z");
+    let a = Scope::Server("a".into());
+    let shares = plot(
+        &h,
+        &Metric::OnlineShare,
+        std::slice::from_ref(&a),
+        TimeRange::All,
+        now,
+        &Comparison::None,
+    )
+    .unwrap();
+    assert_eq!(
+        shares.series[0]
+            .points
+            .iter()
+            .map(|p| p.value)
+            .collect::<Vec<_>>(),
+        [
+            Some(MetricValue::Ratio {
+                numerator: 7,
+                denominator: 9
+            }),
+            None,
+            None
+        ]
+    );
+    let expanded = plot(
+        &h,
+        &Metric::OnlineShare,
+        &[Scope::All, a],
+        TimeRange::All,
+        now,
+        &Comparison::None,
+    )
+    .unwrap();
+    assert_eq!(expanded.series.len(), 2);
+    assert_eq!(expanded.series[0], shares.series[0]);
+    assert_eq!(expanded.series[1].points[2].value.unwrap().number(), 100.0);
+    let figure: serde_json::Value = serde_json::from_str(
+        &mnm_stats_dashboard::charts::render(&expanded, &Metric::OnlineShare).to_json(),
+    )
+    .unwrap();
+    assert_eq!(
+        figure["layout"]["yaxis"]["range"],
+        serde_json::json!([0.0, 100.0])
+    );
+    let comparison = Comparison::periods(
+        ["2024-02", "2024-03", "2024-04"]
+            .map(|m| Period::month(m).unwrap())
+            .to_vec(),
+    );
+    let compared = plot(
+        &h,
+        &Metric::OnlineShare,
+        &[Scope::All],
+        TimeRange::All,
+        now,
+        &comparison,
+    )
+    .unwrap();
+    assert_eq!(compared.series.len(), 6);
+    assert!(
+        plot(
+            &h,
+            &Metric::OnlineShare,
+            &[],
+            TimeRange::All,
+            now,
+            &comparison
+        )
+        .unwrap()
+        .series
+        .is_empty()
+    );
+    let mut one_zero = h.snapshots()[0].clone();
+    one_zero.servers[0].online = 0;
+    assert_eq!(
+        Metric::OnlineShare.value(&one_zero, &Scope::Server("a".into())),
+        Some(MetricValue::Ratio {
+            numerator: 0,
+            denominator: 2
+        })
+    );
+}
+
+#[test]
+fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
+    let mut records = vec![
+        snapshot("2024-02-04T23:59:59.999Z", 1, 2, 3),
+        snapshot("2024-02-05T00:00:00Z", 1, 2, 3),
+        snapshot("2024-02-05T10:59:59Z", 1, 2, 3),
+        snapshot("2024-02-05T11:00:00Z", 1, 2, 3),
+        snapshot("2024-02-12T10:02:00Z", 1, 2, 3),
+        snapshot("2024-02-19T10:00:00Z", 1, 2, 3),
+        snapshot("2024-03-04T10:00:00Z", 1, 2, 3),
+    ];
+    records[3].servers[0].online = 0;
+    records[4].servers[0].online = 13;
+    records[5].servers.remove(0);
+    records[6].servers[0].online = 30;
+    let h = History::new(records).unwrap();
+    let scopes = [
+        Scope::All,
+        Scope::Server("a".into()),
+        Scope::Server("b".into()),
+    ];
+    let now = time("2024-05-01T00:00:00Z");
+    let comparison = Comparison::periods(
+        ["2024-02", "2024-03", "2024-04"]
+            .map(|m| Period::month(m).unwrap())
+            .to_vec(),
+    );
+    let maps = activity_heatmaps(&h, &scopes, TimeRange::Days7, now, &comparison).unwrap();
+    assert_eq!(maps.len(), 9);
+    let feb_a = &maps[1];
+    assert_eq!(
+        feb_a.cells[0][10],
+        ActivityCell {
+            total: 20,
+            samples: 2
+        }
+    );
+    assert_eq!(feb_a.cells[0][10].mean(), Some(10.0));
+    assert_eq!(feb_a.cells[0][11].mean(), Some(0.0));
+    assert_eq!(feb_a.cells[0][12].mean(), None);
+    assert_eq!(feb_a.cells[6][23].mean(), Some(7.0));
+    assert_eq!(feb_a.cells[0][0].mean(), Some(7.0));
+    assert_eq!(
+        maps[0].cells[0][10],
+        ActivityCell {
+            total: 26,
+            samples: 3
+        }
+    );
+    assert_eq!(maps[4].cells[0][10].mean(), Some(30.0));
+    assert!(
+        maps[6..]
+            .iter()
+            .flat_map(|m| m.cells.iter().flatten())
+            .all(|cell| cell.mean().is_none())
+    );
+    assert_eq!(heatmap_maximum(&maps), 32.0);
+    let fig: serde_json::Value = serde_json::from_str(
+        &mnm_stats_dashboard::charts::render_heatmap(feb_a, heatmap_maximum(&maps)).to_json(),
+    )
+    .unwrap();
+    assert_eq!(fig["data"][0]["z"][0][10], 10.0);
+    assert_eq!(fig["data"][0]["z"][0][11], 0.0);
+    assert!(fig["data"][0]["z"][0][12].is_null());
+    assert_eq!(fig["data"][0]["zmax"], 32.0);
+    assert!(
+        fig["data"][0]["text"][0][10]
+            .as_str()
+            .unwrap()
+            .contains("2 records · sum 20")
+    );
+    assert_eq!(fig["data"][0]["hoverongaps"], false);
+    let filtered = activity_heatmaps(
+        &h,
+        &[Scope::Server("a".into())],
+        TimeRange::custom("2024-02-05", "2024-02-05").unwrap(),
+        now,
+        &Comparison::None,
+    )
+    .unwrap();
+    assert_eq!(
+        filtered[0].cells[0][10],
+        ActivityCell {
+            total: 7,
+            samples: 1
+        }
+    );
+    assert_eq!(filtered[0].cells[6][23].mean(), None);
+    assert!(
+        activity_heatmaps(&h, &[], TimeRange::All, now, &comparison)
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
+fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
+    use mnm_stats_dashboard::charts::render_heatmap;
+    let mut map = ActivityHeatmap {
+        label: "<West> & friends".into(),
+        cells: [[ActivityCell::default(); 24]; 7],
+    };
+    map.cells[0][0] = ActivityCell {
+        total: 0,
+        samples: 1,
+    };
+    let zero: serde_json::Value =
+        serde_json::from_str(&render_heatmap(&map, 0.0).to_json()).unwrap();
+    assert_eq!(zero["data"][0]["z"][0][0], 0.0);
+    assert!(zero["data"][0]["z"][0][1].is_null());
+    assert!(zero["data"][0]["zmax"].as_f64().unwrap() > 0.0);
+    assert!(
+        zero["data"][0]["text"][0][0]
+            .as_str()
+            .unwrap()
+            .contains("&lt;West&gt; &amp; friends")
+    );
+    map.cells[0][1] = ActivityCell {
+        total: 1,
+        samples: 2,
+    };
+    let fractional: serde_json::Value = serde_json::from_str(
+        &render_heatmap(&map, heatmap_maximum(std::slice::from_ref(&map))).to_json(),
+    )
+    .unwrap();
+    assert_eq!(fractional["data"][0]["zmax"], 0.5);
+}

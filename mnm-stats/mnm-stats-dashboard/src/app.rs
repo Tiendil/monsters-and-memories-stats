@@ -1,4 +1,8 @@
-use crate::{analysis::*, charts, charts::browser::InteractivePlot};
+use crate::{
+    analysis::*,
+    charts,
+    charts::browser::{InteractiveHeatmap, InteractivePlot},
+};
 use chrono::{DateTime, Utc};
 use leptos::{ev, prelude::*};
 use mnm_stats_model::History;
@@ -275,6 +279,7 @@ fn ChartCard(
 ) -> impl IntoView {
     let key = metric.key();
     let title = metric.title();
+    let is_share = metric == Metric::OnlineShare;
     let chart_metric = metric.clone();
     let styles = expect_context::<Arc<Mutex<charts::SeriesStyles>>>();
     let plotted = Memo::new(move |_| {
@@ -307,6 +312,7 @@ fn ChartCard(
     view! {
         <article class="chart-card" id=format!("chart-{key}") tabindex="-1" data-metric=key>
             <h3 class="chart-heading">{title.clone()}</h3>
+            {is_share.then(|| view! { <p class="chart-note">"Share of all online players. All Servers shows each server separately."</p> })}
             {move || match plotted.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(plot) => {
@@ -322,6 +328,48 @@ fn ChartCard(
                             view! { <p class="empty-chart">"No available observations for this selection."</p> }.into_any()
                         }}
                     }.into_any()
+                }
+            }}
+        </article>
+    }
+}
+
+#[component]
+fn ActivityCard(
+    history: Arc<History>,
+    scopes: RwSignal<Vec<Scope>>,
+    range: RwSignal<TimeRange>,
+    now: RwSignal<DateTime<Utc>>,
+    comparison: Memo<Result<Comparison, String>>,
+) -> impl IntoView {
+    let maps = Memo::new(move |_| {
+        comparison.get().and_then(|comparison| {
+            activity_heatmaps(&history, &scopes.get(), range.get(), now.get(), &comparison)
+        })
+    });
+    view! {
+        <article class="chart-card" id="chart-activity-heatmap" data-metric="activity-heatmap" tabindex="-1">
+            <h3 class="chart-heading">"Activity heatmap"</h3>
+            <p class="chart-note">"Average observed online count by weekday and hour UTC. Coverage can be uneven; blank cells have no records."</p>
+            {move || match maps.get() {
+                Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
+                Ok(maps) if maps.is_empty() => view! { <p class="empty-chart">"Select servers and a period to show activity."</p> }.into_any(),
+                Ok(maps) => {
+                    let maximum = heatmap_maximum(&maps);
+                    maps.into_iter().map(|map| {
+                        let label = map.label.clone();
+                        let available = map.cells.iter().flatten().any(|cell| cell.samples > 0);
+                        view! {
+                            <section class="heatmap-panel" aria-label=label.clone()>
+                                <h4 class="heatmap-label">{label.clone()}</h4>
+                                {if available {
+                                    view! { <InteractiveHeatmap map maximum/> }.into_any()
+                                } else {
+                                    view! { <p class="empty-chart">"No available observations for this selection."</p> }.into_any()
+                                }}
+                            </section>
+                        }
+                    }).collect_view().into_any()
                 }
             }}
         </article>
@@ -579,20 +627,25 @@ pub fn App() -> impl IntoView {
                     let selected = section.get();
                     let metrics = match selected {
                         Section::Overview => vec![Metric::Online, Metric::Daily, Metric::Monthly, Metric::Subscriptions],
-                        Section::Population => vec![Metric::StartingZones],
+                        Section::Population => vec![Metric::StartingZones, Metric::OnlineShare],
                         Section::Relationships => vec![Metric::DailyMonthly, Metric::DailySubscriptions, Metric::MonthlySubscriptions],
                     };
                     let chart_history = history.clone();
                     let zone_options = zone_names.clone();
                     view! {
-                        <h2 class="section-title">{match selected { Section::Overview => "Trends over time", Section::Population => "Population over time", Section::Relationships => "Ratios of reported counts" }}</h2>
+                        <h2 class="section-title">{match selected { Section::Overview => "Trends over time", Section::Population => "Population", Section::Relationships => "Ratios of reported counts" }}</h2>
                         {(selected == Section::Population).then(move || view! {
                             <div class="zone-control"><ZonePicker names=zone_options zones=zone_scopes/></div>
                             <Show when=move || zone_scopes.get().is_empty()>
                                 <div class="empty-zones" role="status"><p>"Select at least one starting zone to show statistics."</p><button class="secondary" on:click=move |_| zone_scopes.set(vec![ZoneScope::All])>"Show All Zones"</button></div>
                             </Show>
                         })}
-                        <div class="chart-grid" class:overview-chart=selected == Section::Overview class:population-chart=selected == Section::Population>{metrics.into_iter().map(|metric| view! { <ChartCard history=chart_history.clone() metric scopes range now comparison zone_scopes=(selected == Section::Population).then_some(zone_scopes)/> }).collect_view()}</div>
+                        <div class="chart-grid" class:overview-chart=selected == Section::Overview class:population-chart=selected == Section::Population>{metrics.into_iter().map(|metric| {
+                            let selected_zones = (metric == Metric::StartingZones).then_some(zone_scopes);
+                            view! { <ChartCard history=chart_history.clone() metric scopes range now comparison zone_scopes=selected_zones/> }
+                        }).collect_view()}
+                        {(selected == Section::Population).then(|| view! { <ActivityCard history=history.clone() scopes range now comparison/> })}
+                        </div>
                         {(selected == Section::Relationships).then(|| view! {
                             <p class="correlation-explanation">"Correlations below use the primary time range for each selected server."</p>
                             <Correlations history=history.clone() scopes range now/>

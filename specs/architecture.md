@@ -52,9 +52,9 @@ The frontend build validates and embeds the complete JSONL history, and the dash
 
 ### Frontend
 
-The dashboard uses Leptos client-side rendering, built by Trunk, with Plotly.rs constructing figures in Rust and Plotly.js rendering interactive SVG charts in the browser.
-Rust owns metric calculations, time alignment, gap detection, series selection, and exact hover text; Plotly owns chart layout and native hover labels.
-The frontend MUST load a pinned Plotly.js basic bundle compatible with the Rust wrapper from Plotly's official CDN.
+The dashboard uses Leptos client-side rendering, built by Trunk, with Plotly.rs constructing figures in Rust and Plotly.js rendering interactive charts in the browser.
+Rust owns metric calculations, heatmap aggregation, time alignment, gap detection, series selection, and exact hover text; Plotly owns chart layout and native hover labels.
+The frontend MUST load a pinned Plotly.js cartesian bundle compatible with the Rust wrapper from Plotly's official CDN.
 The versioned CDN URL MUST be owned by the frontend HTML and work at both root and Pages subpath URLs.
 Browser tests MUST load the same CDN script as ordinary builds and previews.
 The browser bundle MUST NOT be committed to the repository or packaged with the site.
@@ -171,7 +171,7 @@ The application uses the following libraries and build tools:
 - `scraper` — HTML parsing and scoped DOM selectors; no regex-only HTML extraction.
 - `leptos` with CSR — Rust browser UI and reactive controls.
 - `plotly` (Plotly.rs) — typed Rust figure configuration and serialization.
-- Plotly.js basic bundle — browser rendering and hover interaction, loaded from the CDN at a version supported by the Rust wrapper.
+- Plotly.js cartesian bundle — browser rendering and hover interaction, loaded from the CDN at a version supported by the Rust wrapper.
 - Trunk — Rust/WASM asset builds and local preview.
 - Tailwind CSS default theme — pinned upstream palette and shared style values, installed in the development image for build-time token resolution.
 - `cssparser` and `csscolorparser` — build-time CSS theme parsing and color conversion for the token adapter.

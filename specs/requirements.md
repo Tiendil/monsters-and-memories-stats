@@ -308,7 +308,8 @@ Hovering a plotted observation with the mouse MUST show its exact value followed
 The displayed time MUST use the original observation's UTC date, hour, and minute, omitting seconds and fractional seconds.
 It MUST use a readable date and end with `UTC`, without an ISO `T` separator or `Z` suffix.
 The download MUST preserve each original timestamp at its full stored precision.
-This MUST work for every chart family and comparison mode, including dense series and overlapping comparison points.
+This MUST work for every observation time-series chart and comparison mode, including dense series and overlapping comparison points.
+Aggregate heatmap details MUST follow Population insights below.
 Ratio details MUST include the exact numerator and denominator alongside the rounded percentage.
 Hover details MUST refer only to collected observations, MUST NOT invent points inside gaps, and MUST clear when the pointer leaves the plot or the selection changes.
 The following states MUST be understandable:
@@ -316,6 +317,39 @@ The following states MUST be understandable:
 - initialization.
 - empty data.
 - invalid data.
+
+### Population insights
+
+The Population section MUST include server population share over time and an activity heatmap derived from collected online counts.
+Server population share MUST divide a server's online count by the sum of all server online counts in the same snapshot and display a percentage on a 0–100 percent axis.
+Selecting individual servers MUST NOT change that denominator.
+For this chart, “All Servers” MUST expand to all discovered individual servers, without a redundant 100-percent total or duplicate lines when individual servers are also selected.
+An absent server or zero all-server total MUST yield an unavailable share; a published zero with a positive total MUST remain zero.
+Share lines MUST retain ordinary observation gaps, exact numerator/denominator details, and server/period identities.
+
+The activity heatmap MUST group available online observations by their original UTC weekday and hour, with Monday through Sunday and hours 00 through 23.
+Each cell MUST show the arithmetic mean of the available observations for that bucket within the selected range or comparison period.
+Every available observation MUST have equal weight; gaps MUST NOT be interpolated or treated as zero, and an absent server MUST NOT contribute a sample.
+An empty bucket MUST remain blank and distinct from a measured zero.
+Details MUST identify:
+
+- The server scope and period when applicable.
+- The weekday and UTC hour interval.
+- The rounded mean.
+- The exact sum and observation count.
+
+Heatmap details describe aggregates rather than individual observation timestamps.
+The UI and README MUST explain that these are sampled averages, whose coverage can be uneven.
+
+The shared Servers and time controls MUST govern both views, including more than two entities or periods.
+The heatmap MUST show a separate labeled panel per server scope and period, with “All Servers” representing the summed online count in each observation.
+Every displayed panel MUST use the same color scale from zero to the largest displayed cell mean so comparisons remain meaningful.
+An all-zero selection MAY use a positive upper bound to keep measured zero cells visible.
+Period comparison MUST group by each observation's actual UTC weekday and hour rather than shift observations onto the primary period's calendar.
+Starting-zone selections MUST affect only the starting-zone chart.
+
+**Example:** One server has 20 of 80 online players, giving a 25-percent share even when it is the only selected server.
+Two Monday 10:00–11:00 UTC observations of 20 and 40 give a heatmap mean of 30 from two records; an unobserved Monday hour remains blank.
 
 ### Ratios and correlation
 
@@ -391,9 +425,11 @@ Entity comparisons MUST use the same selected time interval for every series.
 Entity choices MUST come from collected history, including historical servers, and MUST support selecting the all-servers view alongside individual servers.
 One shared multi-select labeled “Servers” MUST control the visible entities across charts and period comparisons.
 Each selected entity MUST have its own series; when periods are compared, each selected entity and period MUST have its own series.
+Server shares and heatmaps MUST use the expansion and panel rules under Population insights.
 Users MUST be able to turn individual entities on or off independently, including clearing the selection.
 An empty selection MUST show no data series and MUST offer an explicit selection prompt.
 The all-servers series MUST retain its ordinary aggregation semantics, including contributions from the individually selected servers where applicable.
+Server population share MUST use individual shares in place of an all-servers series.
 Metrics available only globally MUST NOT be offered as if they had server-specific values.
 Global subscriptions MUST appear once in ordinary viewing or once per comparison period when at least one entity is selected.
 Periods when a selected entity has no observations MUST remain gaps.

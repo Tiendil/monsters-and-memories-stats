@@ -144,3 +144,8 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
   .correlations { padding: var(--mnm-spacing-panel-compact-padding); }
 
 }
+
+.heatmap-label { font-size: var(--mnm-font-size-body-small); font-weight: var(--mnm-font-weight-metadata); margin: var(--mnm-spacing-gap-small) 0 0; overflow-wrap: anywhere; }
+.heatmap-panel + .heatmap-panel { margin-top: var(--mnm-spacing-gap-large); }
+
+.comparing .heatmap-panel .plot-surface { min-width: 0; }

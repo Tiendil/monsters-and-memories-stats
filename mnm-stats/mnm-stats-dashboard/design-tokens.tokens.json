@@ -589,6 +589,56 @@
           "$description": "Color for comparison series position 6; the position does not identify a particular server or metric."
         }
       }
+    },
+    "heatmap": {
+      "color": {
+        "$type": "color",
+        "low": {
+          "$value": "{tailwind.color.teal.600}",
+          "$description": "Low end of the sequential mean-online color scale, visibly distinct from unobserved cells."
+        },
+        "high": {
+          "$value": "{tailwind.color.teal.950}",
+          "$description": "High end of the sequential mean-online color scale; darker cells indicate larger observed means."
+        }
+      },
+      "height": {
+        "$type": "dimension",
+        "$value": {
+          "value": 360,
+          "unit": "px"
+        },
+        "$description": "Height of a weekday/hour heatmap including its axes and horizontal color scale, in CSS pixels."
+      },
+      "scale-area": {
+        "$type": "dimension",
+        "$value": {
+          "value": 80,
+          "unit": "px"
+        },
+        "$description": "Top space reserved for the horizontal intensity scale and its labels, in CSS pixels."
+      },
+      "scale-thickness": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Thickness of the heatmap intensity strip, in CSS pixels."
+      },
+      "cell-gap": {
+        "$type": "dimension",
+        "$value": {
+          "value": 1,
+          "unit": "px"
+        },
+        "$description": "Gutter between neighboring heatmap cells, in CSS pixels."
+      },
+      "hover-line-length": {
+        "$type": "number",
+        "$value": 28,
+        "$description": "Maximum characters per line in heatmap scope labels, wrapping long names and periods for narrow-screen hover details."
+      }
     }
   },
   "outline": {
