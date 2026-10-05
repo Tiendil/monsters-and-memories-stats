@@ -320,7 +320,7 @@ The following states MUST be understandable:
 
 ### Population insights
 
-The Population section MUST include server population share over time and an activity heatmap derived from collected online counts.
+The Player activity section MUST include server population share over time and an activity heatmap derived from collected online counts.
 Server population share MUST divide a server's online count by the sum of all server online counts in the same snapshot and display a percentage on a 0–100 percent axis.
 Selecting individual servers MUST NOT change that denominator.
 For this chart, “All Servers” MUST expand to all discovered individual servers, without a redundant 100-percent total or duplicate lines when individual servers are also selected.

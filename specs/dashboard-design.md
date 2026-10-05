@@ -108,7 +108,7 @@ Opening one menu MUST close any other open selection menu.
 The dashboard MUST provide three clearly named content sections:
 
 - Overview — trends for online population, daily activity, monthly activity, and global subscriptions.
-- Population — starting-zone populations, server population shares, and activity by weekday and hour.
+- Player activity — starting-zone populations, server population shares, and activity by weekday and hour.
 - Relationships — the three activity ratios and the corresponding correlations.
 
 Overview MUST be the initial section.
@@ -161,9 +161,9 @@ Daily and monthly activity MUST retain their distinct source labels, and subscri
 
 ### Detailed sections
 
-Population MUST show full-width views in this order: Starting-zone population, Server population share, and Activity heatmap.
+The Player activity section MUST show full-width views in this order: Starting-zone population, Server population share, and Activity heatmap.
 The Starting-zone population chart MUST combine the selected starting-zone totals and individual zones.
-Online MUST remain in Overview without a duplicate Population chart.
+Online MUST remain in Overview without a duplicate chart in Player activity.
 A checkbox dropdown labeled “Starting zones” MUST precede the chart and provide “All Zones” plus every zone discovered in the complete history.
 “All Zones” MUST plot the total across all reported starting zones; it MUST NOT select individual-zone checkboxes or sum only checked zones.
 Only “All Zones” MUST be selected initially.
@@ -319,7 +319,7 @@ The title MUST remain subordinate to the dashboard's data on the initial screen.
 The page MUST use one centered content region with aligned controls, summary values, and chart edges.
 Wide-screen summaries MUST form one row of four values; narrow-screen summaries MUST use a two-by-two layout when labels fit and a single column when needed.
 Ordinary Relationships charts MAY use two columns where each plot remains readable.
-All Overview and Population charts and all comparison plots MUST use the full content width.
+All Overview and Player activity charts and all comparison plots MUST use the full content width.
 Spacing MUST distinguish content sections more strongly than elements inside one chart or control group.
 
 At a 1440 by 900 CSS-pixel viewport, the default populated view MUST show the collection status, shared controls, four summary values, and plotted data without scrolling.

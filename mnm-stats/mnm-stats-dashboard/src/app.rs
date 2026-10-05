@@ -51,7 +51,7 @@ impl Section {
     fn label(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
-            Self::Population => "Population",
+            Self::Population => "Player activity",
             Self::Relationships => "Relationships",
         }
     }
@@ -633,7 +633,7 @@ pub fn App() -> impl IntoView {
                     let chart_history = history.clone();
                     let zone_options = zone_names.clone();
                     view! {
-                        <h2 class="section-title">{match selected { Section::Overview => "Trends over time", Section::Population => "Population", Section::Relationships => "Ratios of reported counts" }}</h2>
+                        <h2 class="section-title">{match selected { Section::Overview => "Trends over time", Section::Population => "Player activity", Section::Relationships => "Ratios of reported counts" }}</h2>
                         {(selected == Section::Population).then(move || view! {
                             <div class="zone-control"><ZonePicker names=zone_options zones=zone_scopes/></div>
                             <Show when=move || zone_scopes.get().is_empty()>

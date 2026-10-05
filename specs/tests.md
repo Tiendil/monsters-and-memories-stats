@@ -146,7 +146,7 @@ Presentation coverage MUST verify [dashboard-design.md](dashboard-design.md) alo
 Automated tests MUST cover:
 
 - A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
-- Navigation between Overview, Population, and Relationships while retaining the selected scope, range, and comparisons.
+- Navigation between Overview, Player activity, and Relationships while retaining the selected scope, range, and comparisons.
 - Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
 - A visible “Now” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count.
 - Unchanged “Now” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
@@ -154,7 +154,7 @@ Automated tests MUST cover:
 - Persistent cards during comparisons, without a duplicate comparison-information section.
 - A single full-width starting-zone plot with independently selectable “All Zones” and discovered zones, including historical and unavailable zones, without a duplicate Online chart.
 - Multiple zones combined with server and period comparisons, exact hover values, stable colors, and persistent choices across content sections.
-- Full-width Population shares and heatmaps, correct percentage and aggregate hover details, independent zone filtering, entity/period changes, blank buckets versus zero, and narrow-screen labels and color scales.
+- Full-width server population shares and heatmaps in Player activity, correct percentage and aggregate hover details, independent zone filtering, entity/period changes, blank buckets versus zero, and narrow-screen labels and color scales.
 - Zone checkbox keyboard operation, Escape and outside dismissal, long labels at narrow widths, empty-selection recovery, and independence from the shared view controls.
 - Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
