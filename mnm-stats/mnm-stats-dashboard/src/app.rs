@@ -369,7 +369,7 @@ pub fn App() -> impl IntoView {
             <section class="history-summary" aria-label="Statistics coverage">
                 <p id="history-status">
                     {first.zip(latest).map_or_else(|| "No statistics collected yet".into_any(), |(first, last)| view! {
-                        "Statistics from "<time id="first-collection" datetime=utc(first)>{first.format("%d %b %Y").to_string()}</time>" to "<time id="latest-collection" datetime=utc(last)>{readable(last)}</time>
+                        "Data from "<time id="first-collection" datetime=utc(first)>{first.format("%d %b %Y").to_string()}</time>" to "<time id="latest-collection" datetime=utc(last)>{readable(last)}</time>
                     }.into_any())}
                     " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly from "<a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a>
                 </p>

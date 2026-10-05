@@ -48,7 +48,7 @@ The dates and record count MUST use a medium font weight in the normal dark text
 The summary MUST wrap naturally on narrow screens without requiring an archive-details disclosure.
 Empty history MUST show a clear no-statistics message and zero records without inventing dates.
 
-**Example:** “Statistics from 2 Oct 2026 to 4 Oct 2026, 20:00 UTC · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
+**Example:** “Data from 2 Oct 2026 to 4 Oct 2026, 20:00 UTC · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
 
 The summary's latest collection time MUST communicate data age without a separate freshness warning or status message.
 Synthetic-data notices MUST remain visible without opening another view or disclosure.
