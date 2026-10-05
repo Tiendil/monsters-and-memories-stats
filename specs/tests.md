@@ -138,7 +138,7 @@ Automated tests MUST cover:
 - Navigation to every content section while retaining the selected scope, range, and comparisons.
 - Headline counts from the same last snapshot inside the selected interval, including an absent historical server, a published zero, and an empty interval.
 - Explicit global subscription scope in the headline summary.
-- Replacement of the ordinary summary when a comparison is active.
+- Omission of the ordinary summary during comparisons, without a duplicate comparison-information section.
 - Dynamic individual-zone selection, including historical and unavailable zones, without losing other selections.
 - Shared server selections that persist across sections and period modes, with correlations grouped per selected entity over the shared range.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.

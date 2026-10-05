@@ -387,7 +387,6 @@ pub fn App() -> impl IntoView {
     let empty_history = history.clone();
     let empty_range =
         Memo::new(move |_| latest_in_range(&empty_history, range.get(), now.get()).is_none());
-    let summary_names = StoredValue::new(names.clone());
     let comparing = Memo::new(move |_| mode.get() != Mode::Overview || scopes.get().len() > 1);
     view! {
         <style>{include_str!(concat!(env!("OUT_DIR"), "/style.css"))}</style>
@@ -469,13 +468,6 @@ pub fn App() -> impl IntoView {
                 </Show>
                 <Show when=move || section.get() == Section::Overview && mode.get() == Mode::Overview && scopes.get().len() == 1>
                     <Summary history=summary_history.clone() scope range now section/>
-                </Show>
-                <Show when=move || comparing.get() && !scopes.get().is_empty()>
-                    <div class="comparison-summary" role="status"><h2>"Comparison"</h2><p>{move || match comparison.get() {
-                        Ok(Comparison::None) => scopes.get().iter().map(|s| s.label(&summary_names.get_value())).collect::<Vec<_>>().join(" · "),
-                        Ok(Comparison::Periods(items)) => if items.is_empty() { "Add a period above to compare.".into() } else { items.iter().map(Period::label).collect::<Vec<_>>().join(" · ") },
-                        Err(e) => e
-                    }}</p></div>
                 </Show>
                 {move || {
                     let selected = section.get();

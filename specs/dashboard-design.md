@@ -118,8 +118,8 @@ They MUST be visually stronger than supporting text.
 An online-population chart MUST follow the summary and occupy the full content width.
 The summary MUST offer clear links to the relevant detailed sections without making hover the only way to discover navigation.
 
-When multiple entities or comparison periods are selected, the single-snapshot summary MUST be replaced by a concise summary of the compared entities or periods.
-It MUST NOT present one entity's or period's counts as the result of the whole comparison.
+When multiple entities or a period comparison are selected, the single-snapshot summary MUST be omitted without a replacement comparison-information section.
+The dashboard MUST NOT present one entity's or period's counts as the result of the whole comparison.
 
 ### Detailed sections
 
@@ -156,7 +156,8 @@ The comparison entry point MUST distinguish ordinary chronological viewing from 
 Period comparison MUST distinguish calendar months, calendar years, and equal-duration intervals.
 It MUST reveal only the inputs relevant to the chosen comparison type.
 
-The active comparison type and its selected series MUST remain visible above the charts.
+The controls MUST identify the active comparison type and selected periods; chart legends MUST identify the selected series.
+A separate comparison heading or information section MUST NOT repeat these selections above the charts.
 Users MUST be able to add and remove more than two series without losing the other selections.
 Duplicate entries MUST NOT produce indistinguishable duplicate series.
 Invalid input MUST have a local explanation associated with the relevant field.
@@ -174,7 +175,7 @@ Selected-series labels MUST identify the entity or period and distinguish sums f
 Global-only metrics MUST retain the scope rules defined in [requirements.md](requirements.md#entity-comparison).
 
 **Example:** Comparing three months for one server shows three period labels and a calendar-aligned chart.
-Its caption identifies the selected months; a separate correlation block identifies the shared rolling interval instead of borrowing the comparison caption.
+Its legend identifies the selected months; a separate correlation block identifies the shared rolling interval.
 
 ## Charts
 

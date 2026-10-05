@@ -92,7 +92,6 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
 .chart-note { margin: var(--mnm-spacing-gap-tight) 0; overflow-wrap: anywhere; }
 .zone-detail { margin-top: var(--mnm-spacing-section-stack); }
 .zone-detail label { max-width: var(--mnm-layout-period-input-max-width); margin-bottom: var(--mnm-spacing-gap-large); }
-.comparison-summary { margin-bottom: var(--mnm-spacing-gap-large); overflow-wrap: anywhere; }
 #content { min-width: 0; }
 .swatch line { stroke-width: var(--mnm-chart-series-line-width); }
 

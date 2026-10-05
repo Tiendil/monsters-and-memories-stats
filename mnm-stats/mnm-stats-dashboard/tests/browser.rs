@@ -531,7 +531,7 @@ impl Browser {
         self.toggle_server("server:b");
         self.click("#nav-overview");
         self.expect_count(".headline", 0);
-        self.expect_count(".comparison-summary", 1);
+        self.expect_count(".comparison-summary", 0);
         assert_eq!(self.text("#history-status"), coverage);
         self.servers(&["a"]);
         self.expect_count(".headline", 4);
