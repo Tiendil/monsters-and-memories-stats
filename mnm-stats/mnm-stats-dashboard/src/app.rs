@@ -64,21 +64,31 @@ fn readable(time: DateTime<Utc>) -> String {
 }
 
 #[component]
-fn Summary(
-    history: Arc<History>,
-    scope: Memo<Scope>,
-    range: RwSignal<TimeRange>,
-    now: RwSignal<DateTime<Utc>>,
-) -> impl IntoView {
-    let selected = Memo::new(move |_| latest_in_range(&history, range.get(), now.get()).cloned());
+fn Summary(history: Arc<History>, section: RwSignal<Section>) -> impl IntoView {
+    let latest = history.snapshots().last();
     view! {
-        <h2 class="summary-heading">"At a glance"</h2>
-        <div class="headline-grid">{[(Metric::Online, "Online"), (Metric::Daily, "Daily active"), (Metric::Monthly, "Monthly active"), (Metric::Subscriptions, "Global subscribers")].into_iter().map(|(metric, label)| {
+        <section class="now-summary" aria-labelledby="now-heading">
+        <h2 class="summary-heading" id="now-heading">"Now"</h2>
+        <div class="headline-grid">{[Metric::Online, Metric::Daily, Metric::Monthly, Metric::Subscriptions].into_iter().map(|metric| {
             let key = metric.key();
+            let label = metric.title();
+            let link_label = format!("{label}: show chart");
+            let value = latest.and_then(|s| metric.value(s, &Scope::All)).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() });
+            let target = format!("chart-{key}");
             view! { <article class="headline" data-summary=key>
-                <h3><a class="text-action" href=format!("#chart-{key}") aria-label=format!("{label}: show chart")>{label}" →"</a></h3><p class="headline-value">{move || selected.get().and_then(|s| metric.value(&s, &scope.get())).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() })}</p>
+                <h3><a class="text-action" href=format!("#{target}") aria-label=link_label on:click=move |_| {
+                    section.set(Section::Overview);
+                    let target = target.clone();
+                    request_animation_frame(move || {
+                        if let Some(element) = document().get_element_by_id(&target).and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) {
+                            let _ = element.focus();
+                            element.scroll_into_view();
+                        }
+                    });
+                }>{label}</a></h3><p class="headline-value">{value}</p>
             </article> }
         }).collect_view()}</div>
+        </section>
     }
 }
 
@@ -403,7 +413,6 @@ pub fn App() -> impl IntoView {
     .expect("browser timer");
     on_cleanup(move || timer.clear());
     let scopes = RwSignal::new(vec![Scope::All]);
-    let scope = Memo::new(move |_| scopes.get().first().cloned().unwrap_or(Scope::All));
     let range = RwSignal::new(TimeRange::default());
     let mode = RwSignal::new(ComparisonMode::default());
     let matching = RwSignal::new(DateMatching::default());
@@ -421,7 +430,6 @@ pub fn App() -> impl IntoView {
         )
     });
     let download_history = history.clone();
-    let summary_history = history.clone();
     let empty_history = history.clone();
     let empty_range =
         Memo::new(move |_| latest_in_range(&empty_history, range.get(), now.get()).is_none());
@@ -456,6 +464,7 @@ pub fn App() -> impl IntoView {
                     " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly from "<a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a>
                 </p>
             </section>
+            <Summary history=history.clone() section/>
             <section class="controls" aria-labelledby="controls-heading">
                 <h2 id="controls-heading" class="visually-hidden">"Explore the archive"</h2>
                 <div class="control-grid">
@@ -473,9 +482,6 @@ pub fn App() -> impl IntoView {
                 <Show when=move || mode.get() == ComparisonMode::Disabled && !scopes.get().is_empty() && empty_range.get()>
                     <div class="empty-selection" role="status"><p>{if count == 0 { "No history yet. The first successful collection will appear in a future dashboard build." } else { "No observations in this interval. Choose All time to explore the available archive." }}</p>
                     {(count > 0).then(|| view! { <button class="secondary" on:click=move |_| range.set(TimeRange::All)>"Show All time"</button> })}</div>
-                </Show>
-                <Show when=move || section.get() == Section::Overview && mode.get() == ComparisonMode::Disabled && scopes.get().len() == 1>
-                    <Summary history=summary_history.clone() scope range now/>
                 </Show>
                 {move || {
                     let selected = section.get();

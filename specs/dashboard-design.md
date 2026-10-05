@@ -56,7 +56,8 @@ Human-readable UTC dates SHOULD be used in the summary to reduce scanning effort
 
 ### Exploration controls
 
-A shared control area MUST precede the active content and expose a multi-select labeled “Servers,” the time range, and period comparison.
+A shared control area MUST follow “Now” and precede the active content.
+It MUST expose a multi-select labeled “Servers,” the time range, and period comparison.
 The Servers control MUST provide independently toggleable checkboxes for “All Servers” and every server discovered in the complete history.
 Server and zone names throughout the dashboard MUST use their display name when available, falling back to the ID for a missing or blank name without appending an ID to a display name.
 Only “All Servers” MUST be selected initially; selecting it MUST NOT select the individual-server checkboxes.
@@ -106,7 +107,7 @@ Opening one menu MUST close any other open selection menu.
 
 The dashboard MUST provide three clearly named content sections:
 
-- Overview — headline counts and trends for online population, daily activity, monthly activity, and global subscriptions.
+- Overview — trends for online population, daily activity, monthly activity, and global subscriptions.
 - Population — online population, total starting-zone population, and individual starting zones over time.
 - Relationships — the three activity ratios and the corresponding correlations.
 
@@ -116,41 +117,47 @@ Section navigation MUST be visible near the shared controls and MUST have a clea
 All sections MUST remain directly reachable on mobile without an icon-only navigation menu.
 Section changes MUST NOT reset an open comparison or silently change its meaning.
 
-### Overview
+### Now
 
-When one entity is selected without a period comparison, Overview MUST show four headline counts:
+A section titled “Now” MUST appear after the collection-status summary and before the view controls.
+It MUST remain visible in every content section, including during comparisons and empty chart selections.
+It MUST show four counts from the latest collected snapshot in the complete loaded history:
 
 - Online.
-- Daily active count.
-- Monthly active count.
+- Daily active (DAU).
+- Monthly active (MAU).
 - Subscribers.
 
-The counts MUST use the last snapshot within the shared interval.
-Server-scoped values MUST come from that same snapshot; if the chosen server is absent, its counts MUST show “Not available.”
-The UI MUST NOT silently retrieve an earlier server observation or sum successive daily/monthly observations to fill these counts.
-Online population MUST be labeled “Online” in the summary and chart headings.
-The active-subscription count MUST use the chart title “Subscribers” and the label “Global subscribers” in summaries and legends, even when a server is selected.
-The summary MUST NOT repeat the observation timestamp or an all-server aggregation explanation above the counts.
-An empty selected interval MUST produce an explicit empty state rather than display the latest values from outside it.
+Online, daily, and monthly counts MUST sum all servers in that snapshot; the subscriber count MUST use its global active-subscription value.
+Server, time-range, and comparison controls MUST NOT change these counts or hide the section.
+“Now” MUST mean the latest collected state, not a live measurement; the collection-status summary supplies its timestamp.
+Empty history MUST show “Not available” for all four values, and published zeros MUST remain zero.
+The UI MUST NOT retrieve older values or sum successive daily/monthly observations to fill these counts.
+The section MUST NOT repeat the observation timestamp or an all-server aggregation explanation above the counts.
 
-**Example:** The last snapshot in the selected range contains Servers A and B, but the user selects historical Server C.
-The activity and online summary values are unavailable for C; the global subscription count still comes from that snapshot and retains its global label.
+**Example:** A visitor selects a retired server and a historical month for the plots.
+“Now” continues to show all-server totals from the latest collected snapshot, even when the selected charts have no observations.
 
-Headline counts MUST be exact, readable integers with digit grouping, rather than abbreviated values or unexplained growth percentages.
+Counts MUST be exact, readable integers with digit grouping, rather than abbreviated values or unexplained growth percentages.
 They MUST be visually stronger than supporting text.
-Four separate charts MUST follow the summary in this order:
+Cards MUST keep a small token-based gap between each link and its count; desktop labels MUST use their text height so the cards remain compact.
+Each card's link text MUST equal its corresponding plot title and MUST scroll to and focus that plot.
+Activating a link from another content section MUST open Overview before scrolling, while preserving the view controls.
+A separate comparison-information section MUST NOT replace the cards.
+
+### Overview
+
+Overview MUST show four separate charts in this order:
 
 1. Online.
-2. Daily active count.
-3. Monthly active count.
-4. Subscribers (global).
+2. Daily active (DAU).
+3. Monthly active (MAU).
+4. Subscribers.
 
 Each chart MUST occupy the full content width, including without comparisons.
-Daily and monthly activity MUST retain their distinct source labels, and subscriptions MUST visibly retain global scope.
-The summary MUST offer clear links to the corresponding charts within Overview without making hover the only way to discover navigation.
-
-When multiple entities or a period comparison are selected, the single-snapshot summary MUST be omitted without a replacement comparison-information section.
-The dashboard MUST NOT present one entity's or period's counts as the result of the whole comparison.
+Online population MUST be labeled “Online” in the cards and chart headings.
+The active-subscription count MUST use the chart title “Subscribers” and the legend label “Global subscribers.”
+Daily and monthly activity MUST retain their distinct source labels, and subscriber chart legends MUST visibly retain global scope.
 
 ### Detailed sections
 

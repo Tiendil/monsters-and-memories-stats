@@ -421,6 +421,38 @@ impl Browser {
         fs::remove_file(download).unwrap();
     }
 
+    fn verify_now(&self, expected: &Value) {
+        self.expect_text("#now-heading", "Now");
+        self.expect_count(".headline", 4);
+        let last = expected["snapshots"].as_array().unwrap().last();
+        for (metric, field) in [
+            ("online", "online"),
+            ("daily", "daily_active"),
+            ("monthly", "monthly_active"),
+            ("subscriptions", "active_subscriptions"),
+        ] {
+            let value = last
+                .map(|snapshot| {
+                    let count = if metric == "subscriptions" {
+                        u128::from(snapshot[field].as_u64().unwrap())
+                    } else {
+                        snapshot["servers"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .map(|server| u128::from(server[field].as_u64().unwrap()))
+                            .sum()
+                    };
+                    mnm_stats_dashboard::analysis::grouped_count(count)
+                })
+                .unwrap_or_else(|| "Not available".into());
+            self.expect_text(
+                &format!("[data-summary='{metric}'] .headline-value"),
+                &value,
+            );
+        }
+    }
+
     fn verify(&self, url: &str, expected: &Value, scratch: &Path) {
         // Scope network evidence to this dashboard navigation; a fresh Chrome
         // profile can otherwise include its internal new-tab startup assets.
@@ -439,6 +471,7 @@ impl Browser {
             ),
         );
         self.expect_text("#time-range-selection", "Last 7 days");
+        self.verify_now(expected);
         assert_eq!(
             self.text("footer a[href='https://plotly.com/javascript/']"),
             "Charts by Plotly"
@@ -482,7 +515,7 @@ impl Browser {
         );
         assert!(rect["width"].as_f64().unwrap() <= 375.0);
         if count > 0 && self.count(".empty-selection") > 0 {
-            self.expect_text("[data-summary='online'] .headline-value", "Not available");
+            self.verify_now(expected);
             self.click(".empty-selection button");
             self.ready("online");
             self.expect_count(".empty-selection", 0);
@@ -496,15 +529,34 @@ impl Browser {
         self.expect_count(".section-nav button", 3);
         self.expect_count("#nav-activity", 0);
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return Array.from(document.querySelectorAll('.chart-card'), card => card.dataset.metric);","args":[]})), json!(["online", "daily", "monthly", "subscriptions"]));
-        for metric in ["online", "daily", "monthly", "subscriptions"] {
-            self.activate(&format!("[data-summary='{metric}'] a"));
-            assert_eq!(
-                self.request(
-                    Method::POST,
-                    "/execute/sync",
-                    json!({"script":"return document.activeElement.id;","args":[]})
-                ),
-                format!("chart-{metric}")
+        for (metric, section) in [
+            ("online", "overview"),
+            ("daily", "population"),
+            ("monthly", "relationships"),
+            ("subscriptions", "population"),
+        ] {
+            self.activate(&format!("#nav-{section}"));
+            self.verify_now(expected);
+            if metric == "online" {
+                self.click(&format!("[data-summary='{metric}'] a"));
+            } else {
+                self.activate(&format!("[data-summary='{metric}'] a"));
+            }
+            wait_until(
+                || {
+                    self.request(
+                        Method::POST,
+                        "/execute/sync",
+                        json!({"script":"return document.activeElement.id;","args":[]}),
+                    ) == format!("chart-{metric}")
+                },
+                "summary link focuses its plot",
+            );
+            // Scrolling rounds to whole pixels while layout can have fractional positions.
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const chart=document.activeElement.getBoundingClientRect(); return chart.top > -1 && chart.top < innerHeight && document.querySelector('#nav-overview').getAttribute('aria-pressed')==='true';","args":[]})), true, "summary link opens Overview and scrolls to {metric}");
+            self.expect_text(
+                &format!("[data-summary='{metric}'] a"),
+                &self.text(&format!("[data-metric='{metric}'] .chart-heading")),
             );
         }
         for width in [1440, 375] {
@@ -513,6 +565,7 @@ impl Browser {
                 "/window/rect",
                 json!({"width":width,"height":900}),
             );
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const summary=document.querySelector('.now-summary').getBoundingClientRect(); const controls=document.querySelector('.controls').getBoundingClientRect(); return summary.bottom <= controls.top && getComputedStyle(document.querySelector('#now-heading')).position !== 'absolute';","args":[]})), true, "Now precedes the controls at {width}px");
             assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const grid=document.querySelector('.chart-grid').getBoundingClientRect(); const cards=Array.from(document.querySelectorAll('.chart-card'), card => card.getBoundingClientRect()); return cards.every((card,i) => Math.abs(card.width-grid.width)<1 && Math.abs(card.left-grid.left)<1 && (i===0 || card.top>cards[i-1].bottom));","args":[]})), true, "Overview charts fill the width and stack in order at {width}px");
         }
         self.expect_count(".headline", 4);
@@ -520,25 +573,9 @@ impl Browser {
         self.expect_count(".legend li", 4);
         self.expect_text(".legend li", "All Servers");
         self.expect_count(".legend li > .swatch + span", 4);
-        let last = expected["snapshots"].as_array().unwrap().last().unwrap();
-        let daily: u128 = last["servers"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|s| u128::from(s["daily_active"].as_u64().unwrap()))
-            .sum();
-        self.expect_text(
-            "[data-summary='daily'] .headline-value",
-            &mnm_stats_dashboard::analysis::grouped_count(daily),
-        );
+        self.verify_now(expected);
         self.servers(&["retired"]);
-        self.expect_text("[data-summary='daily'] .headline-value", "Not available");
-        self.expect_text(
-            "[data-summary='subscriptions'] .headline-value",
-            &mnm_stats_dashboard::analysis::grouped_count(
-                last["active_subscriptions"].as_u64().unwrap().into(),
-            ),
-        );
+        self.verify_now(expected);
         self.servers(&["a"]);
         self.select("#time-range", "7");
         assert_eq!(self.text("#history-status"), coverage);
@@ -553,7 +590,7 @@ impl Browser {
         self.ready("zone-zz-archived");
         self.select("#time-range", "7");
         self.select("#zone-scope", "w");
-        self.activate("#nav-overview");
+        self.activate("[data-summary='daily'] a");
         self.expect_count(".chart-card", 4);
         self.click("#nav-population");
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#server-options input:checked').value,document.querySelector('#time-range').dataset.value,document.querySelector('#zone-scope').value];","args":[]})), json!(["server:a","7","w"]));
@@ -582,7 +619,7 @@ impl Browser {
         self.expect_count(".server-picker[open]", 0);
         self.toggle_server("server:b");
         self.click("#nav-overview");
-        self.expect_count(".headline", 0);
+        self.verify_now(expected);
         self.expect_count(".comparison-summary", 0);
         assert_eq!(self.text("#history-status"), coverage);
         self.servers(&["a"]);
@@ -690,6 +727,7 @@ impl Browser {
             ("all", None),
         ] {
             self.select("#time-range", key);
+            self.verify_now(expected);
             let selected: Vec<_> = records
                 .iter()
                 .filter(|record| {
@@ -857,6 +895,7 @@ impl Browser {
         self.toggle_server("server:b");
         self.expect_count("[data-metric='daily'] .legend li", 3);
         self.servers(&[]);
+        self.verify_now(expected);
         self.expect_count(".empty-servers", 1);
         for metric in metrics {
             self.expect_count(&format!("[data-metric='{metric}'] .plot-surface"), 0);
@@ -955,6 +994,7 @@ impl Browser {
                 true,
                 "comparison hover details retain the leap-day observation timestamp"
             );
+            self.verify_now(expected);
             self.verify_download(expected, scratch);
             self.click("#comparison-mode");
             self.click(".remove-period");
@@ -1013,7 +1053,7 @@ impl Browser {
         self.click("#comparison-mode");
         self.click("#nav-overview");
         self.expect_count(".date-menu[open]", 0);
-        self.expect_count(".headline", 0);
+        self.verify_now(expected);
         self.expect_count(".comparison-summary", 0);
         self.verify_download(expected, scratch);
         self.verify_requests(url, false);

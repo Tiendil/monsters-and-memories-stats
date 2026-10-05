@@ -99,7 +99,7 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
 .headline { min-width: 0; background: var(--mnm-color-surface-panel); padding: var(--mnm-spacing-panel-padding); border: var(--mnm-border-width-default) solid var(--mnm-color-border-panel); border-radius: var(--mnm-radius-panel); }
 .headline h3 { font-size: var(--mnm-font-size-body-small); color: var(--mnm-color-text-secondary); }
 .headline-value { font-size: var(--mnm-font-size-summary); line-height: var(--mnm-font-line-height-title); font-weight: var(--mnm-font-weight-control); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; margin: var(--mnm-spacing-gap-small) 0; }
-.text-action { display: block; min-height: var(--mnm-layout-control-min-height); font-weight: var(--mnm-font-weight-control); background: transparent; color: var(--mnm-color-text-link); padding: 0; font-size: var(--mnm-font-size-body-small); text-align: left; text-decoration: underline; }
+.text-action { display: block; font-weight: var(--mnm-font-weight-control); background: transparent; color: var(--mnm-color-text-link); padding: 0; font-size: var(--mnm-font-size-body-small); text-align: left; text-decoration: underline; }
 .text-action:hover { background: transparent; color: var(--mnm-color-text-primary); }
 .overview-chart, .comparing .chart-grid { grid-template-columns: minmax(0,1fr); }
 .comparing .plot-surface { min-width: var(--mnm-layout-plot-min-width); }
@@ -135,9 +135,10 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
   .control-grid input, .control-grid select { padding-block: var(--mnm-spacing-control-padding-block); }
   .section-nav { justify-content: space-between; margin-block: var(--mnm-spacing-gap-tight); }
   .section-nav button { font-size: var(--mnm-font-size-body-small); padding-inline: var(--mnm-spacing-gap-tight); }
-  .summary-heading, #content:has(.overview-chart) > .section-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #content:has(.overview-chart) > .section-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .summary-heading { line-height: var(--mnm-font-line-height-title); }
   .headline-grid { gap: var(--mnm-spacing-gap-small); margin-block: var(--mnm-spacing-gap-small) var(--mnm-spacing-gap-large); }
-  .headline { padding: var(--mnm-spacing-gap-small); }
+  .headline { padding: var(--mnm-spacing-gap-tight) var(--mnm-spacing-gap-small); }
   .headline-value { font-size: var(--mnm-font-size-coefficient); margin-block: var(--mnm-spacing-gap-tight); }
   .headline .text-action { min-height: var(--mnm-layout-control-compact-min-height); padding-block: var(--mnm-spacing-gap-tight); line-height: var(--mnm-font-line-height-body); text-decoration: none; }
   .chart-card { padding: var(--mnm-spacing-gap-small); }

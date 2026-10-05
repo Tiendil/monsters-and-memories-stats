@@ -144,9 +144,10 @@ Automated tests MUST cover:
 - A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
 - Navigation between Overview, Population, and Relationships while retaining the selected scope, range, and comparisons.
 - Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
-- Headline counts from the same last snapshot inside the selected interval, including an absent historical server, a published zero, and an empty interval.
-- Explicit global subscription scope in the headline summary.
-- Omission of the ordinary summary during comparisons, without a duplicate comparison-information section.
+- A visible “Now” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count.
+- Unchanged “Now” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
+- Card link text matching the plot titles, with mouse and keyboard activation opening Overview and scrolling to and focusing the corresponding plot without changing filters.
+- Persistent cards during comparisons, without a duplicate comparison-information section.
 - Dynamic individual-zone selection, including historical and unavailable zones, without losing other selections.
 - Shared server selections that persist across sections and period modes, with correlations grouped per selected entity over the shared range.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.

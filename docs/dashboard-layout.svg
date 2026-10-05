@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2182" viewBox="0 0 1600 2182" role="img" aria-labelledby="title description">
 <title id="title">Dashboard Overview layout study</title>
-<desc id="description">A warm light desktop dashboard and a narrow-screen arrangement. Compact shared controls precede four headline counts and four full-width trends: online, daily active, monthly active, and global subscriptions. All values and lines are synthetic; this illustration is not an implemented interface or an authoritative design-token source.</desc>
+<desc id="description">A warm light desktop dashboard and a narrow-screen arrangement. Four latest all-server counts precede shared view controls and four full-width trends: online, daily active, monthly active, and global subscriptions. All values and lines are synthetic; this illustration is not an implemented interface or an authoritative design-token source.</desc>
 <style>
 text { font-family: Arial, sans-serif; fill: #282720; }
 .display { font-family: Georgia, serif; }
@@ -23,6 +23,24 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="887" y="161" class="body">Download history (JSON)</text>
 <text x="57" y="220" class="small muted">Data from 4 Sep 2026 to 4 Oct 2026, 10:00 UTC · 712 records · collected roughly hourly from <a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener" class="accent" text-decoration="underline">M&amp;M’s public statistics</a></text>
 <line x1="56" y1="240" x2="1088" y2="240" stroke="#d8d2c5" stroke-width="1"/>
+<g transform="translate(0 -170)">
+<text x="56" y="440" class="display" font-size="22">Now</text>
+<rect x="56" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="73" y="484" class="body muted">Online</text>
+<text x="73" y="526" class="value">4,328</text>
+<text x="73" y="551" class="small muted">All Servers</text>
+<rect x="320" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="337" y="484" class="body muted">Daily active (DAU)</text>
+<text x="337" y="526" class="value">22,163</text>
+<rect x="584" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="601" y="484" class="body muted">Monthly active (MAU)</text>
+<text x="601" y="526" class="value">28,724</text>
+<rect x="848" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="865" y="484" class="body muted">Subscribers</text>
+<text x="865" y="526" class="value">19,421</text>
+<text x="865" y="551" class="small muted">Global</text>
+</g>
+<g transform="translate(0 164)">
 <text x="56" y="271" class="label muted">SERVERS</text>
 <text x="408" y="271" class="label muted">TIME RANGE</text>
 <text x="626" y="271" class="label muted">COMPARISON</text>
@@ -40,21 +58,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="365" y="392" class="" font-size="17">Relationships</text>
 <line x1="56" y1="408" x2="1088" y2="408" stroke="#d8d2c5" stroke-width="1"/>
 <line x1="56" y1="408" x2="150" y2="408" stroke="#9a401e" stroke-width="3"/>
-<text x="56" y="440" class="display" font-size="22">At a glance</text>
-<rect x="56" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="73" y="484" class="body muted">Online</text>
-<text x="73" y="526" class="value">4,328</text>
-<text x="73" y="551" class="small muted">All Servers</text>
-<rect x="320" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="337" y="484" class="body muted">Daily active</text>
-<text x="337" y="526" class="value">22,163</text>
-<rect x="584" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="601" y="484" class="body muted">Monthly active</text>
-<text x="601" y="526" class="value">28,724</text>
-<rect x="848" y="457" width="240" height="116" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="865" y="484" class="body muted">Subscribers</text>
-<text x="865" y="526" class="value">19,421</text>
-<text x="865" y="551" class="small muted">Global</text>
+</g>
 <rect x="56" y="596" width="1032" height="330" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
 <text x="78" y="629" class="display" font-size="22">Online</text>
 <line x1="78" y1="650" x2="122" y2="650" stroke="#246a75" stroke-width="2.5"/>
@@ -74,7 +78,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1025" y="888" class="small muted">4 Oct</text>
 <g transform="translate(0 354)">
 <rect x="56" y="596" width="1032" height="330" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
-<text x="78" y="629" class="display" font-size="22">Daily active</text>
+<text x="78" y="629" class="display" font-size="22">Daily active (DAU)</text>
 <line x1="78" y1="650" x2="122" y2="650" stroke="#246a75" stroke-width="2.5"/>
 <text x="130" y="654" class="small muted">All Servers</text>
 <text x="65" y="674" class="muted" font-size="12">Count</text>
@@ -93,7 +97,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 </g>
 <g transform="translate(0 708)">
 <rect x="56" y="596" width="1032" height="330" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
-<text x="78" y="629" class="display" font-size="22">Monthly active</text>
+<text x="78" y="629" class="display" font-size="22">Monthly active (MAU)</text>
 <line x1="78" y1="650" x2="122" y2="650" stroke="#246a75" stroke-width="2.5"/>
 <text x="130" y="654" class="small muted">All Servers</text>
 <text x="65" y="674" class="muted" font-size="12">Count</text>
@@ -139,6 +143,24 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1180" y="239" class="small muted">712 records · collected roughly hourly<tspan x="1180" dy="18">from <a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener" class="accent" text-decoration="underline">M&amp;M’s public statistics</a></tspan></text>
 <text x="1453" y="239" class="small accent">Download JSON</text>
 <line x1="1180" y1="270" x2="1552" y2="270" stroke="#d8d2c5" stroke-width="1"/>
+<text x="1180" y="299" class="display" font-size="22">Now</text>
+<g transform="translate(0 -165)">
+<rect x="1180" y="480" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="1192" y="504" class="" font-size="14">Online</text>
+<text x="1192" y="540" class="" font-size="29">4,328</text>
+<text x="1192" y="562" class="muted" font-size="11">All Servers</text>
+<rect x="1373" y="480" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="1385" y="504" class="" font-size="14">Daily active (DAU)</text>
+<text x="1385" y="540" class="" font-size="29">22,163</text>
+<rect x="1180" y="590" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="1192" y="614" class="" font-size="14">Monthly active (MAU)</text>
+<text x="1192" y="650" class="" font-size="29">28,724</text>
+<rect x="1373" y="590" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
+<text x="1385" y="614" class="" font-size="14">Subscribers</text>
+<text x="1385" y="650" class="" font-size="29">19,421</text>
+<text x="1385" y="672" class="muted" font-size="11">Global</text>
+</g>
+<g transform="translate(0 263)">
 <text x="1180" y="284" class="label muted">SERVERS</text>
 <text x="1377" y="284" class="label muted">TIME RANGE</text>
 <rect x="1180" y="295" width="181" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
@@ -153,20 +175,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1420" y="426" class="" font-size="13">Relationships</text>
 <line x1="1180" y1="441" x2="1552" y2="441" stroke="#d8d2c5" stroke-width="1"/>
 <line x1="1180" y1="441" x2="1246" y2="441" stroke="#9a401e" stroke-width="3"/>
-<rect x="1180" y="480" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="1192" y="504" class="" font-size="14">Online</text>
-<text x="1192" y="540" class="" font-size="29">4,328</text>
-<text x="1192" y="562" class="muted" font-size="11">All Servers</text>
-<rect x="1373" y="480" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="1385" y="504" class="" font-size="14">Daily active</text>
-<text x="1385" y="540" class="" font-size="29">22,163</text>
-<rect x="1180" y="590" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="1192" y="614" class="" font-size="14">Monthly active</text>
-<text x="1192" y="650" class="" font-size="29">28,724</text>
-<rect x="1373" y="590" width="179" height="98" rx="8" fill="#fffefa" stroke="#ded7ca"/>
-<text x="1385" y="614" class="" font-size="14">Subscribers</text>
-<text x="1385" y="650" class="" font-size="29">19,421</text>
-<text x="1385" y="672" class="muted" font-size="11">Global</text>
+</g>
 <rect x="1180" y="712" width="372" height="266" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
 <text x="1202" y="745" class="display" font-size="20">Online</text>
 <line x1="1202" y1="766" x2="1246" y2="766" stroke="#246a75" stroke-width="2.5"/>
@@ -186,7 +195,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1489" y="940" class="small muted">4 Oct</text>
 <g transform="translate(0 290)">
 <rect x="1180" y="712" width="372" height="266" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
-<text x="1202" y="745" class="display" font-size="20">Daily active</text>
+<text x="1202" y="745" class="display" font-size="20">Daily active (DAU)</text>
 <line x1="1202" y1="766" x2="1246" y2="766" stroke="#246a75" stroke-width="2.5"/>
 <text x="1254" y="770" class="small muted">All Servers</text>
 <text x="1189" y="790" class="muted" font-size="10">Count</text>
@@ -205,7 +214,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 </g>
 <g transform="translate(0 580)">
 <rect x="1180" y="712" width="372" height="266" rx="8" fill="#fffefa" stroke="#d8d2c5"/>
-<text x="1202" y="745" class="display" font-size="20">Monthly active</text>
+<text x="1202" y="745" class="display" font-size="20">Monthly active (MAU)</text>
 <line x1="1202" y1="766" x2="1246" y2="766" stroke="#246a75" stroke-width="2.5"/>
 <text x="1254" y="770" class="small muted">All Servers</text>
 <text x="1189" y="790" class="muted" font-size="10">Count</text>
