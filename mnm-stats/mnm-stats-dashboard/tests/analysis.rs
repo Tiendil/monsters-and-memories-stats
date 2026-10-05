@@ -151,10 +151,15 @@ fn changing_zone_membership_preserves_gaps_totals_and_exported_rows() {
 #[test]
 fn ranges_end_at_now_and_include_their_exact_utc_boundaries() {
     let now = time("2024-03-01T12:30:00Z");
-    for (range, days) in TimeRange::ALL
-        .into_iter()
-        .take(5)
-        .zip([7, 30, 90, 180, 365])
+    for (range, days) in [
+        TimeRange::Days7,
+        TimeRange::Days30,
+        TimeRange::Days90,
+        TimeRange::Days180,
+        TimeRange::Year,
+    ]
+    .into_iter()
+    .zip([7, 30, 90, 180, 365])
     {
         let start = now - Duration::days(days);
         let mut records = vec![];
@@ -298,7 +303,7 @@ fn calendar_alignment_preserves_leap_days_unequal_months_and_half_open_bounds() 
         &[Scope::All],
         TimeRange::Days7,
         time("2026-01-01T00:00:00Z"),
-        &Comparison::Periods(vec![february, march, Period::month("2024-04").unwrap()]),
+        &Comparison::periods(vec![february, march, Period::month("2024-04").unwrap()]),
     )
     .unwrap();
     assert_eq!(plot.series.len(), 3);
@@ -315,7 +320,7 @@ fn calendar_alignment_preserves_leap_days_unequal_months_and_half_open_bounds() 
 }
 
 #[test]
-fn entity_and_interval_comparisons_allow_many_series_and_reject_mixed_intervals() {
+fn entity_and_interval_comparisons_allow_many_series_and_different_lengths() {
     let mut missing = snapshot("2024-01-01T01:00:00Z", 1, 2, 3);
     missing.servers.remove(0);
     let history = History::new(vec![
@@ -378,7 +383,7 @@ fn entity_and_interval_comparisons_allow_many_series_and_reject_mixed_intervals(
         &[Scope::All],
         TimeRange::All,
         now,
-        &Comparison::Periods(periods),
+        &Comparison::periods(periods),
     )
     .unwrap();
     assert_eq!(values.series.len(), 4);
@@ -395,9 +400,9 @@ fn entity_and_interval_comparisons_allow_many_series_and_reject_mixed_intervals(
             &[Scope::All],
             TimeRange::All,
             now,
-            &Comparison::Periods(unequal)
+            &Comparison::periods(unequal)
         )
-        .is_err()
+        .is_ok()
     );
     assert_eq!(servers(&history).len(), 2);
 }
@@ -625,7 +630,7 @@ fn comparison_encodings_survive_other_selections_and_metric_changes() {
         &[Scope::All],
         TimeRange::All,
         now,
-        &Comparison::Periods(periods.clone()),
+        &Comparison::periods(periods.clone()),
     )
     .unwrap();
     styles.assign(&mut original);
@@ -635,7 +640,7 @@ fn comparison_encodings_survive_other_selections_and_metric_changes() {
         &[Scope::All],
         TimeRange::All,
         now,
-        &Comparison::Periods(periods[2..].to_vec()),
+        &Comparison::periods(periods[2..].to_vec()),
     )
     .unwrap();
     styles.assign(&mut subset);
@@ -671,7 +676,7 @@ fn server_selection_applies_to_every_period_without_duplicating_global_counts() 
         Scope::Server("a".into()),
         Scope::Server("b".into()),
     ];
-    let comparison = Comparison::Periods(
+    let comparison = Comparison::periods(
         (2..=4)
             .map(|month| Period::month(&format!("2024-{month:02}")).unwrap())
             .collect(),
@@ -748,4 +753,434 @@ fn server_selection_applies_to_every_period_without_duplicating_global_counts() 
             assert!(empty.note.contains("Select servers"));
         }
     }
+}
+
+fn compared(
+    range: TimeRange,
+    mode: ComparisonMode,
+    matching: DateMatching,
+    custom: &[Period],
+) -> Vec<ComparedPeriod> {
+    let history = History::new(Vec::new()).unwrap();
+    match comparison_for(
+        &history,
+        range,
+        time("2026-06-01T12:00:00Z"),
+        mode,
+        matching,
+        custom,
+    )
+    .unwrap()
+    {
+        Comparison::Periods(periods) => periods,
+        Comparison::None => panic!("expected comparison periods"),
+    }
+}
+
+#[test]
+fn custom_ranges_include_whole_utc_dates_and_validate_before_selection() {
+    let history = History::new(vec![
+        snapshot("2024-02-29T00:00:00Z", 1, 10, 20),
+        snapshot("2024-02-29T23:59:59.999999999Z", 2, 10, 20),
+        snapshot("2024-03-01T00:00:00Z", 3, 10, 20),
+    ])
+    .unwrap();
+    let range = TimeRange::custom("2024-02-29", "2024-02-29").unwrap();
+    let plot = plot(
+        &history,
+        &Metric::Daily,
+        &[Scope::All],
+        range,
+        time("2026-01-01T00:00:00Z"),
+        &Comparison::None,
+    )
+    .unwrap();
+    assert_eq!(plot.series[0].points.len(), 2);
+    for (start, end) in [
+        ("2023-02-29", "2023-03-01"),
+        ("2024-03-01", "2024-02-29"),
+        ("", "2024-03-01"),
+        ("0000-01-01", "0001-01-01"),
+    ] {
+        assert!(TimeRange::custom(start, end).is_err());
+        assert!(Period::custom(start, end).is_err());
+    }
+}
+
+#[test]
+fn previous_period_tracks_primary_range_and_weekdays_without_overlap() {
+    use chrono::Datelike;
+    let range = TimeRange::custom("2026-05-01", "2026-05-30").unwrap();
+    let exact = compared(
+        range,
+        ComparisonMode::Previous,
+        DateMatching::ExactDate,
+        &[],
+    );
+    assert_eq!(
+        exact[1].period.bounds().unwrap(),
+        (time("2026-04-01T00:00:00Z"), time("2026-05-01T00:00:00Z"))
+    );
+    let weekdays = compared(range, ComparisonMode::Previous, DateMatching::Weekday, &[]);
+    let (start, end) = weekdays[1].period.bounds().unwrap();
+    assert_eq!(start, time("2026-03-27T00:00:00Z"));
+    assert_eq!(start.weekday(), time("2026-05-01T00:00:00Z").weekday());
+    assert_eq!(end - start, Duration::days(30));
+    assert!(end <= weekdays[0].period.bounds().unwrap().0);
+    let rolling = compared(
+        TimeRange::Days7,
+        ComparisonMode::Previous,
+        DateMatching::Weekday,
+        &[],
+    );
+    assert_eq!(
+        rolling[1].period.bounds().unwrap(),
+        (time("2026-05-18T12:00:00Z"), time("2026-05-25T12:00:00Z"))
+    );
+    let changed = compared(
+        TimeRange::Days30,
+        ComparisonMode::Previous,
+        DateMatching::ExactDate,
+        &[],
+    );
+    assert_eq!(
+        changed[1].period.bounds().unwrap(),
+        (time("2026-04-02T12:00:00Z"), time("2026-05-02T12:00:00Z"))
+    );
+}
+
+#[test]
+fn year_over_year_preserves_calendar_alignment_and_handles_leap_day_boundaries() {
+    let range = TimeRange::custom("2024-02-28", "2024-03-01").unwrap();
+    let periods = compared(
+        range,
+        ComparisonMode::YearOverYear,
+        DateMatching::ExactDate,
+        &[],
+    );
+    assert_eq!(
+        periods[1].period.bounds().unwrap(),
+        (time("2023-02-28T00:00:00Z"), time("2023-03-02T00:00:00Z"))
+    );
+    assert_eq!(
+        periods[0].period.x(time("2024-03-01T12:00:00Z")),
+        periods[1].period.x(time("2023-03-01T12:00:00Z"))
+    );
+    assert_eq!(
+        periods[1].period.x(time("2023-03-01T00:00:00Z"))
+            - periods[1].period.x(time("2023-02-28T00:00:00Z")),
+        2.0 * 86400.0
+    );
+    for day in ["2024-02-28", "2024-02-29"] {
+        let single = compared(
+            TimeRange::custom(day, day).unwrap(),
+            ComparisonMode::YearOverYear,
+            DateMatching::ExactDate,
+            &[],
+        );
+        assert_eq!(
+            single[1].period.bounds().unwrap(),
+            (time("2023-02-28T00:00:00Z"), time("2023-03-01T00:00:00Z"))
+        );
+    }
+    let weekdays = compared(
+        TimeRange::custom("2023-01-01", "2023-01-07").unwrap(),
+        ComparisonMode::YearOverYear,
+        DateMatching::Weekday,
+        &[],
+    );
+    assert_eq!(
+        weekdays[1].period.bounds().unwrap(),
+        (time("2022-01-02T00:00:00Z"), time("2022-01-09T00:00:00Z"))
+    );
+    assert_eq!(weekdays[0].period.alignment(), Alignment::Elapsed);
+}
+
+#[test]
+fn custom_comparisons_allow_different_lengths_and_keep_every_original_timestamp() {
+    let range = TimeRange::custom("2024-02-01", "2024-02-29").unwrap();
+    let custom = [
+        Period::custom("2024-03-01", "2024-03-31").unwrap(),
+        Period::custom("2024-04-01", "2024-04-30").unwrap(),
+    ];
+    let comparison = Comparison::Periods(compared(
+        range,
+        ComparisonMode::Custom,
+        DateMatching::ExactDate,
+        &custom,
+    ));
+    let history = History::new(vec![
+        snapshot("2024-02-29T23:00:00Z", 1, 2, 3),
+        snapshot("2024-03-31T23:00:00Z", 1, 2, 3),
+        snapshot("2024-04-30T23:00:00Z", 1, 2, 3),
+    ])
+    .unwrap();
+    let charts = plot(
+        &history,
+        &Metric::Online,
+        &[Scope::All, Scope::Server("a".into())],
+        range,
+        time("2026-01-01T00:00:00Z"),
+        &comparison,
+    )
+    .unwrap();
+    assert_eq!(charts.alignment, Alignment::Month);
+    assert_eq!(charts.series.len(), 6);
+    assert_eq!(charts.series[2].points[0].at, time("2024-03-31T23:00:00Z"));
+    let custom = [
+        Period::custom("2024-03-01", "2024-03-02").unwrap(),
+        Period::custom("2024-04-01", "2024-04-30").unwrap(),
+    ];
+    let comparison = Comparison::Periods(compared(
+        range,
+        ComparisonMode::Custom,
+        DateMatching::ExactDate,
+        &custom,
+    ));
+    let charts = plot(
+        &history,
+        &Metric::Subscriptions,
+        &[Scope::All, Scope::Server("a".into())],
+        range,
+        time("2026-01-01T00:00:00Z"),
+        &comparison,
+    )
+    .unwrap();
+    assert_eq!(charts.alignment, Alignment::Elapsed);
+    assert_eq!(charts.x_bounds, (0.0, 30.0 * 86400.0));
+    assert_eq!(charts.series.len(), 3);
+    assert!(charts.series[1].points.is_empty());
+}
+
+#[test]
+fn comparison_disable_empty_custom_and_clock_updates_preserve_primary_selection_and_identity() {
+    let history = History::new(vec![]).unwrap();
+    let now = time("2026-06-01T00:00:00Z");
+    for mode in [ComparisonMode::Disabled, ComparisonMode::Custom] {
+        assert_eq!(
+            comparison_for(
+                &history,
+                TimeRange::Days30,
+                now,
+                mode,
+                DateMatching::ExactDate,
+                &[]
+            )
+            .unwrap(),
+            Comparison::None
+        );
+    }
+    let mut styles = mnm_stats_dashboard::charts::SeriesStyles::default();
+    let mut identities = None;
+    for at in [now, now + Duration::minutes(1)] {
+        let comparison = comparison_for(
+            &history,
+            TimeRange::Days30,
+            at,
+            ComparisonMode::Previous,
+            DateMatching::ExactDate,
+            &[],
+        )
+        .unwrap();
+        let mut chart = plot(
+            &history,
+            &Metric::Online,
+            &[Scope::All],
+            TimeRange::Days30,
+            at,
+            &comparison,
+        )
+        .unwrap();
+        styles.assign(&mut chart);
+        let actual: Vec<_> = chart
+            .series
+            .into_iter()
+            .map(|s| (s.identity, s.style))
+            .collect();
+        if let Some(expected) = &identities {
+            assert_eq!(&actual, expected);
+        } else {
+            identities = Some(actual);
+        }
+    }
+}
+
+#[test]
+fn cross_year_alignment_custom_weekdays_and_duplicate_ranges_remain_consistent() {
+    use chrono::Datelike;
+    let range = TimeRange::custom("2024-12-20", "2025-01-10").unwrap();
+    let yearly = compared(
+        range,
+        ComparisonMode::YearOverYear,
+        DateMatching::ExactDate,
+        &[],
+    );
+    assert_eq!(
+        yearly[0].period.x(time("2025-01-01T10:00:00Z")),
+        yearly[1].period.x(time("2024-01-01T10:00:00Z"))
+    );
+    assert_eq!(
+        Alignment::Year.tick(yearly[0].period.x(time("2025-01-01T00:00:00Z"))),
+        "01 Jan"
+    );
+    let original = Period::custom("2024-11-01", "2024-11-10").unwrap();
+    let custom = [
+        original.clone(),
+        original.clone(),
+        Period::custom("2024-12-20", "2025-01-10").unwrap(),
+    ];
+    let exact = compared(
+        range,
+        ComparisonMode::Custom,
+        DateMatching::ExactDate,
+        &custom,
+    );
+    assert_eq!(
+        exact.len(),
+        2,
+        "secondary duplicates and the primary range occur once"
+    );
+    let weekdays = compared(
+        TimeRange::custom("2024-12-21", "2025-01-10").unwrap(),
+        ComparisonMode::Custom,
+        DateMatching::Weekday,
+        std::slice::from_ref(&original),
+    );
+    let adjusted = weekdays[1].period.bounds().unwrap();
+    assert_eq!(adjusted.0, time("2024-11-02T00:00:00Z"));
+    assert_eq!(
+        adjusted.0.weekday(),
+        weekdays[0].period.bounds().unwrap().0.weekday()
+    );
+    assert_eq!(adjusted.1 - adjusted.0, Duration::days(10));
+    assert_eq!(
+        custom[0], original,
+        "matching does not mutate custom input dates"
+    );
+}
+
+#[test]
+fn day_presets_use_utc_midnights_including_leap_days_and_year_rollover() {
+    for (now, midnight, yesterday) in [
+        (
+            "2024-03-01T12:30:00Z",
+            "2024-03-01T00:00:00Z",
+            "2024-02-29T00:00:00Z",
+        ),
+        (
+            "2025-01-01T00:00:00Z",
+            "2025-01-01T00:00:00Z",
+            "2024-12-31T00:00:00Z",
+        ),
+    ] {
+        let (now, midnight, yesterday) = (time(now), time(midnight), time(yesterday));
+        let last_yesterday = midnight - Duration::nanoseconds(1);
+        let times: std::collections::BTreeSet<_> = [
+            yesterday - Duration::nanoseconds(1),
+            yesterday,
+            last_yesterday,
+            midnight,
+            now,
+            now + Duration::hours(1),
+        ]
+        .into_iter()
+        .collect();
+        let history = History::new(
+            times
+                .into_iter()
+                .map(|at| snapshot(&at.to_rfc3339(), 1, 2, 3))
+                .collect(),
+        )
+        .unwrap();
+        assert_eq!(TimeRange::Today.bounds(&history, now), (midnight, now));
+        assert_eq!(
+            TimeRange::Yesterday.bounds(&history, now),
+            (yesterday, last_yesterday)
+        );
+        for (range, expected) in [
+            (TimeRange::Today, [midnight, now]),
+            (TimeRange::Yesterday, [yesterday, last_yesterday]),
+        ] {
+            let actual = plot(
+                &history,
+                &Metric::Daily,
+                &[Scope::All],
+                range,
+                now,
+                &Comparison::None,
+            )
+            .unwrap();
+            let expected: std::collections::BTreeSet<_> = expected.into_iter().collect();
+            assert_eq!(
+                actual.series[0]
+                    .points
+                    .iter()
+                    .map(|p| p.at)
+                    .collect::<std::collections::BTreeSet<_>>(),
+                expected
+            );
+            assert_eq!(
+                latest_in_range(&history, range, now).unwrap().observed_at,
+                *expected.last().unwrap()
+            );
+        }
+        let next_midnight = midnight + Duration::days(1);
+        assert_eq!(
+            TimeRange::Today.bounds(&history, next_midnight),
+            (next_midnight, next_midnight)
+        );
+        assert_eq!(
+            TimeRange::Yesterday.bounds(&history, next_midnight),
+            (midnight, next_midnight - Duration::nanoseconds(1))
+        );
+    }
+}
+
+#[test]
+fn day_presets_compare_equivalent_parts_of_prior_days_and_years() {
+    for (range, matching, start, last) in [
+        (
+            TimeRange::Today,
+            DateMatching::ExactDate,
+            "2026-05-31T00:00:00Z",
+            "2026-05-31T12:00:00Z",
+        ),
+        (
+            TimeRange::Today,
+            DateMatching::Weekday,
+            "2026-05-25T00:00:00Z",
+            "2026-05-25T12:00:00Z",
+        ),
+        (
+            TimeRange::Yesterday,
+            DateMatching::ExactDate,
+            "2026-05-30T00:00:00Z",
+            "2026-05-30T23:59:59.999999999Z",
+        ),
+        (
+            TimeRange::Yesterday,
+            DateMatching::Weekday,
+            "2026-05-24T00:00:00Z",
+            "2026-05-24T23:59:59.999999999Z",
+        ),
+    ] {
+        let periods = compared(range, ComparisonMode::Previous, matching, &[]);
+        assert_eq!(
+            periods[1].period.bounds().unwrap(),
+            (time(start), time(last) + Duration::nanoseconds(1))
+        );
+    }
+    let yearly = compared(
+        TimeRange::Today,
+        ComparisonMode::YearOverYear,
+        DateMatching::ExactDate,
+        &[],
+    );
+    assert_eq!(
+        yearly[1].period.bounds().unwrap(),
+        (
+            time("2025-06-01T00:00:00Z"),
+            time("2025-06-01T12:00:00Z") + Duration::nanoseconds(1)
+        )
+    );
 }

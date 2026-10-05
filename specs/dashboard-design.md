@@ -68,7 +68,7 @@ The closed control MAY truncate a long name visually when its full label remains
 An empty selection MUST show an explicit prompt to choose servers and a way to restore “All Servers,” without silently selecting an entity or plotting data.
 The selected time range MUST remain apparent when its control is closed.
 The all-servers scope MUST be labeled “All Servers” in controls, chart labels, and value details.
-The six existing time ranges MUST remain available, with the default defined by [requirements.md](requirements.md#dashboard-behavior).
+All time ranges MUST remain available, with their boundaries and default defined by [requirements.md](requirements.md#dashboard-behavior).
 The control area MUST NOT repeat the selected interval and observation count in a separate summary row; the selected range MUST remain apparent from the controls and chart ticks.
 
 On wide screens, controls SHOULD share a compact row to bring the first chart into view sooner.
@@ -76,8 +76,31 @@ At narrow widths they MUST wrap or stack with visible labels rather than require
 The control area MAY remain sticky where sufficient vertical space exists, but it MUST NOT obscure focused controls, chart details, or section headings.
 Expanded comparison editors MUST NOT become a large persistent sticky overlay.
 
-Changing a selection MUST update the affected content without a separate Apply step or a page reload.
+Selecting a preset, comparison mode, date-matching option, or server MUST update the affected content immediately without reloading the page.
+Custom date fields MUST apply together through “Apply range” or “Add period” after validation.
 Changing the content section MUST preserve server, range, and comparison selections.
+
+### Date and comparison menus
+
+The time controls MUST use a compact primary-range button labeled “Time range” and a comparison button labeled “Comparison.”
+Each label MUST appear above its own button and contribute to its accessible name together with the current selection.
+The controls MUST NOT include “vs” or another connector between them.
+The primary menu MUST begin with Today and Yesterday, followed by the rolling ranges, All time, Custom range, and an Enable comparison or Disable comparison action.
+The comparison button MUST read “Compare” while disabled and identify the active mode while enabled; multiple custom periods MUST be reflected in its label.
+Its menu MUST offer Disable comparison, Previous period, Year over year, and Custom period, followed by a visually separated choice between Match day of week and Match exact date.
+The default matching rule and period calculations MUST follow [requirements.md](requirements.md#time-frame-comparison).
+
+Custom UTC date inputs, validation messages, Add period, and removable custom selections MUST live inside their menus.
+The comparison menu MUST show the resolved dates so weekday adjustments can be inspected before closing it.
+A separate comparison-information section or persistent editor above the charts MUST NOT be shown; chart legends identify the plotted periods and entities.
+The primary range MUST remain visible during comparisons and continue to control correlations.
+The controls MUST NOT add keyboard shortcut bindings or shortcut badges.
+
+The menus MUST support mouse, touch, and standard keyboard activation and focus navigation.
+Escape MUST close a menu and restore focus to its trigger; clicking or moving focus outside MUST close it.
+Selecting a preset, automatic mode, or matching option MUST close its menu; custom editing MUST remain open while adding or removing periods.
+Menus MUST stay within the page width, scroll long content, and avoid a persistent sticky overlay.
+Opening one menu MUST close any other open selection menu.
 
 ### Content navigation
 
@@ -153,8 +176,8 @@ The dashboard MUST NOT include an “About the data” disclosure.
 
 Server comparisons MUST use the shared Servers multi-select without a separate server-comparison mode or duplicate selection controls.
 The comparison entry point MUST distinguish ordinary chronological viewing from period comparison.
-Period comparison MUST distinguish calendar months, calendar years, and equal-duration intervals.
-It MUST reveal only the inputs relevant to the chosen comparison type.
+Period comparison MUST offer Previous period, Year over year, and Custom period through the date menus.
+It MUST reveal date fields only when editing a custom range or custom comparison.
 
 The controls MUST identify the active comparison type and selected periods; chart legends MUST identify the selected series.
 A separate comparison heading or information section MUST NOT repeat these selections above the charts.
@@ -166,7 +189,7 @@ An incomplete comparison MUST explain the next action, such as adding a period, 
 The selected servers MUST apply to every chart in both ordinary viewing and period comparisons, preserving selections across section and mode changes.
 Period comparisons MUST show a series for each selected entity and period, with both identities in its legend label.
 Global subscriptions MUST appear once per period, independently of the number of selected servers, and MUST disappear when no entities are selected.
-In period-comparison mode, the shared range MUST be identified as the correlation range or omitted when it has no effect in the active section.
+The primary range MUST control the primary chart series and the correlation calculations in every comparison mode.
 These stored selections MUST remain available when returning to ordinary mode.
 Controls MUST NOT appear to filter charts that do not use them.
 

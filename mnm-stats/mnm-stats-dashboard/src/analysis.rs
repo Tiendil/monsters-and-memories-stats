@@ -205,6 +205,8 @@ impl MetricValue {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum TimeRange {
+    Today,
+    Yesterday,
     Days7,
     #[default]
     Days30,
@@ -212,10 +214,16 @@ pub enum TimeRange {
     Days180,
     Year,
     All,
+    Custom {
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    },
 }
 
 impl TimeRange {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 8] = [
+        Self::Today,
+        Self::Yesterday,
         Self::Days7,
         Self::Days30,
         Self::Days90,
@@ -225,26 +233,51 @@ impl TimeRange {
     ];
     pub fn key(self) -> &'static str {
         match self {
+            Self::Today => "today",
+            Self::Yesterday => "yesterday",
             Self::Days7 => "7",
             Self::Days30 => "30",
             Self::Days90 => "90",
             Self::Days180 => "180",
             Self::Year => "365",
             Self::All => "all",
+            Self::Custom { .. } => "custom",
         }
     }
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
+            Self::Today => "Today",
+            Self::Yesterday => "Yesterday",
             Self::Days7 => "Last 7 days",
             Self::Days30 => "Last 30 days",
             Self::Days90 => "Last 90 days",
             Self::Days180 => "Last 180 days",
             Self::Year => "Last year (365 days)",
             Self::All => "All time",
+            Self::Custom { start, end } => return date_label(start, end),
         }
+        .into()
+    }
+    pub fn custom(start: &str, end: &str) -> Result<Self, String> {
+        let (start, end) = date_bounds(start, end)?;
+        Ok(Self::Custom {
+            start,
+            end: end - Duration::nanoseconds(1),
+        })
     }
     pub fn bounds(self, history: &History, now: DateTime<Utc>) -> (DateTime<Utc>, DateTime<Utc>) {
         let days = match self {
+            Self::Today | Self::Yesterday => {
+                let midnight = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
+                return if self == Self::Today {
+                    (midnight, now)
+                } else {
+                    (
+                        midnight - Duration::days(1),
+                        midnight - Duration::nanoseconds(1),
+                    )
+                };
+            }
             Self::Days7 => 7,
             Self::Days30 => 30,
             Self::Days90 => 90,
@@ -256,19 +289,73 @@ impl TimeRange {
                     now,
                 );
             }
+            Self::Custom { start, end } => return (start, end),
         };
         (now - Duration::days(days), now)
     }
+}
+
+fn date_bounds(start: &str, end: &str) -> Result<(DateTime<Utc>, DateTime<Utc>), String> {
+    let parse = |value: &str| {
+        NaiveDate::parse_from_str(value, "%Y-%m-%d")
+            .ok()
+            .filter(|d| (1..=9998).contains(&d.year()))
+            .ok_or_else(|| "Choose valid dates between years 1 and 9998.".to_string())
+    };
+    let start = parse(start)?;
+    let end = parse(end)?;
+    if start > end {
+        return Err("The end date must be on or after the start date.".into());
+    }
+    Ok((
+        start.and_hms_opt(0, 0, 0).unwrap().and_utc(),
+        end.succ_opt()
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+            .and_utc(),
+    ))
+}
+
+fn date_label(start: DateTime<Utc>, end: DateTime<Utc>) -> String {
+    format!("{} – {}", start.format("%d %b %Y"), end.format("%d %b %Y"))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Period {
     Month(NaiveDate),
     Year(i32),
-    Interval { start: DateTime<Utc>, hours: u32 },
+    Interval {
+        start: DateTime<Utc>,
+        hours: u32,
+    },
+    Window {
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    },
+    CalendarRange {
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    },
 }
 
 impl Period {
+    pub fn custom(start: &str, end: &str) -> Result<Self, String> {
+        let (start, end) = date_bounds(start, end)?;
+        Ok(Self::window(start, end))
+    }
+    pub fn window(start: DateTime<Utc>, end: DateTime<Utc>) -> Self {
+        if start.time() == chrono::NaiveTime::MIN && start.day() == 1 {
+            if start.month() == 1 && start.checked_add_months(chrono::Months::new(12)) == Some(end)
+            {
+                return Self::Year(start.year());
+            }
+            if start.checked_add_months(chrono::Months::new(1)) == Some(end) {
+                return Self::Month(start.date_naive());
+            }
+        }
+        Self::Window { start, end }
+    }
     pub fn month(input: &str) -> Result<Self, String> {
         let date = NaiveDate::parse_from_str(&format!("{input}-01"), "%Y-%m-%d")
             .map_err(|_| "Choose a valid month (YYYY-MM).")?;
@@ -313,6 +400,9 @@ impl Period {
                 *start,
                 start.checked_add_signed(Duration::hours((*hours).into()))?,
             )),
+            Self::Window { start, end } | Self::CalendarRange { start, end } if end > start => {
+                Some((*start, *end))
+            }
             _ => None,
         }
     }
@@ -323,13 +413,20 @@ impl Period {
             Self::Interval { start, hours } => {
                 format!("{} UTC · {hours} hours", start.format("%Y-%m-%d %H:%M"))
             }
+            Self::Window { start, end } | Self::CalendarRange { start, end } => {
+                format!(
+                    "{} (UTC)",
+                    date_label(*start, *end - Duration::nanoseconds(1))
+                )
+            }
         }
     }
     pub fn alignment(&self) -> Alignment {
         match self {
             Self::Month(_) => Alignment::Month,
             Self::Year(_) => Alignment::Year,
-            Self::Interval { .. } => Alignment::Elapsed,
+            Self::CalendarRange { .. } => Alignment::Year,
+            Self::Interval { .. } | Self::Window { .. } => Alignment::Elapsed,
         }
     }
     pub fn x(&self, time: DateTime<Utc>) -> f64 {
@@ -338,14 +435,22 @@ impl Period {
             Self::Month(_) => {
                 f64::from((time.day() - 1) * 86400 + time.num_seconds_from_midnight()) + fraction
             }
-            Self::Year(_) => {
+            Self::Year(_) | Self::CalendarRange { .. } => {
                 // A leap-year axis reserves February 29 even for non-leap years.
                 let day = NaiveDate::from_ymd_opt(2000, time.month(), time.day())
                     .unwrap()
                     .ordinal0();
-                f64::from(day * 86400 + time.num_seconds_from_midnight()) + fraction
+                let years = match self {
+                    Self::CalendarRange { start, .. } => time.year() - start.year(),
+                    _ => 0,
+                };
+                f64::from(years) * 366.0 * 86400.0
+                    + f64::from(day * 86400 + time.num_seconds_from_midnight())
+                    + fraction
             }
-            Self::Interval { start, .. } => seconds(time) - seconds(*start),
+            Self::Interval { start, .. } | Self::Window { start, .. } => {
+                seconds(time) - seconds(*start)
+            }
         }
     }
 }
@@ -385,7 +490,7 @@ impl Alignment {
                 .unwrap()
                 .and_hms_opt(0, 0, 0)
                 .unwrap()
-                + Duration::seconds(x as i64))
+                + Duration::seconds((x as i64).rem_euclid(366 * 86400)))
             .format("%d %b")
             .to_string(),
             Self::Elapsed => format!("{:.2} h", x / 3600.0),
@@ -396,7 +501,188 @@ impl Alignment {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Comparison {
     None,
-    Periods(Vec<Period>),
+    Periods(Vec<ComparedPeriod>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ComparedPeriod {
+    pub identity: String,
+    pub period: Period,
+}
+
+impl Comparison {
+    pub fn periods(periods: Vec<Period>) -> Self {
+        Self::Periods(
+            periods
+                .into_iter()
+                .map(|period| ComparedPeriod {
+                    identity: period.label(),
+                    period,
+                })
+                .collect(),
+        )
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ComparisonMode {
+    #[default]
+    Disabled,
+    Previous,
+    YearOverYear,
+    Custom,
+}
+
+impl ComparisonMode {
+    pub const ALL: [Self; 4] = [
+        Self::Disabled,
+        Self::Previous,
+        Self::YearOverYear,
+        Self::Custom,
+    ];
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Disabled => "disabled",
+            Self::Previous => "previous",
+            Self::YearOverYear => "year-over-year",
+            Self::Custom => "custom",
+        }
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Disabled => "Disable comparison",
+            Self::Previous => "Previous period",
+            Self::YearOverYear => "Year over year",
+            Self::Custom => "Custom period",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DateMatching {
+    #[default]
+    ExactDate,
+    Weekday,
+}
+
+/// Resolve the primary range and its comparisons without changing original timestamps.
+pub fn comparison_for(
+    history: &History,
+    range: TimeRange,
+    now: DateTime<Utc>,
+    mode: ComparisonMode,
+    matching: DateMatching,
+    custom: &[Period],
+) -> Result<Comparison, String> {
+    if mode == ComparisonMode::Disabled || (mode == ComparisonMode::Custom && custom.is_empty()) {
+        return Ok(Comparison::None);
+    }
+    let (start, last) = range.bounds(history, now);
+    let end = last
+        .checked_add_signed(Duration::nanoseconds(1))
+        .ok_or("Range exceeds the supported calendar.")?;
+    if end <= start {
+        return Err("Choose a range ending after its start.".into());
+    }
+    let duration = if matches!(
+        range,
+        TimeRange::Today | TimeRange::Yesterday | TimeRange::Custom { .. }
+    ) {
+        end - start
+    } else {
+        (last - start).max(Duration::nanoseconds(1))
+    };
+    let mut primary = Period::window(start, end);
+    let mut secondary = match mode {
+        ComparisonMode::Previous => {
+            let mut previous = start
+                .checked_sub_signed(if range == TimeRange::Today {
+                    Duration::days(1)
+                } else {
+                    duration
+                })
+                .ok_or("Previous period exceeds the supported calendar.")?;
+            if matching == DateMatching::Weekday {
+                let days = (previous.weekday().num_days_from_monday() as i64
+                    - start.weekday().num_days_from_monday() as i64)
+                    .rem_euclid(7);
+                previous = previous
+                    .checked_sub_signed(Duration::days(days))
+                    .ok_or("Previous period exceeds the supported calendar.")?;
+            }
+            vec![ComparedPeriod {
+                identity: "previous".into(),
+                period: Period::window(previous, previous + duration),
+            }]
+        }
+        ComparisonMode::YearOverYear => {
+            let previous = start
+                .checked_sub_months(chrono::Months::new(12))
+                .ok_or("Previous year exceeds the supported calendar.")?;
+            let previous_end = last
+                .checked_sub_months(chrono::Months::new(12))
+                .and_then(|t| t.checked_add_signed(Duration::nanoseconds(1)))
+                .ok_or("Previous year exceeds the supported calendar.")?;
+            primary = Period::CalendarRange { start, end };
+            vec![ComparedPeriod {
+                identity: "year-over-year".into(),
+                period: Period::CalendarRange {
+                    start: previous,
+                    end: previous_end,
+                },
+            }]
+        }
+        ComparisonMode::Custom => custom
+            .iter()
+            .cloned()
+            .map(|period| ComparedPeriod {
+                identity: period.label(),
+                period,
+            })
+            .collect(),
+        ComparisonMode::Disabled => unreachable!(),
+    };
+    if matching == DateMatching::Weekday {
+        primary = Period::Window { start, end };
+        for selected in &mut secondary {
+            let (other, other_end) = selected
+                .period
+                .bounds()
+                .ok_or("Invalid comparison period.")?;
+            let days = (start.weekday().num_days_from_monday() as i64
+                - other.weekday().num_days_from_monday() as i64
+                + 3)
+            .rem_euclid(7)
+                - 3;
+            let adjusted = other
+                .checked_add_signed(Duration::days(days))
+                .ok_or("Comparison exceeds the supported calendar.")?;
+            let length = if mode == ComparisonMode::YearOverYear {
+                end - start
+            } else {
+                other_end - other
+            };
+            selected.period = Period::Window {
+                start: adjusted,
+                end: adjusted
+                    .checked_add_signed(length)
+                    .ok_or("Comparison exceeds the supported calendar.")?,
+            };
+        }
+    }
+    let mut periods = vec![ComparedPeriod {
+        identity: "primary".into(),
+        period: primary,
+    }];
+    for selected in secondary {
+        if !periods
+            .iter()
+            .any(|p| p.period.bounds() == selected.period.bounds())
+        {
+            periods.push(selected);
+        }
+    }
+    Ok(Comparison::Periods(periods))
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -488,28 +774,39 @@ pub fn plot(
                 result.note = "Add periods to compare.".into();
                 return Ok(result);
             }
-            result.alignment = periods[0].alignment();
-            if periods.iter().any(|p| p.alignment() != result.alignment) {
-                return Err("Compare periods of the same kind.".into());
+            result.alignment = periods[0].period.alignment();
+            if periods
+                .iter()
+                .any(|p| p.period.alignment() != result.alignment)
+            {
+                result.alignment = Alignment::Elapsed;
             }
-            let first_bounds = periods[0].bounds().ok_or("Invalid comparison period.")?;
-            let duration = first_bounds.1 - first_bounds.0;
             result.x_bounds = (
-                0.0,
+                if result.alignment == Alignment::Year {
+                    f64::INFINITY
+                } else {
+                    0.0
+                },
                 match result.alignment {
                     Alignment::Month => 31.0 * 86400.0,
-                    Alignment::Year => 366.0 * 86400.0,
-                    _ => duration.num_seconds() as f64,
+                    _ => 0.0,
                 },
             );
-            for period in periods {
+            for selected in periods {
+                let period = &selected.period;
                 let (start, end) = period.bounds().ok_or("Invalid comparison period.")?;
-                if result.alignment == Alignment::Elapsed && end - start != duration {
-                    return Err("Intervals must have equal durations.".into());
+                if result.alignment == Alignment::Year {
+                    result.x_bounds.0 = result.x_bounds.0.min(period.x(start));
+                    result.x_bounds.1 = result
+                        .x_bounds
+                        .1
+                        .max(period.x(end - Duration::nanoseconds(1)));
+                } else if result.alignment == Alignment::Elapsed {
+                    result.x_bounds.1 = result.x_bounds.1.max(seconds(end) - seconds(start));
                 }
                 for scope in scopes {
                     result.series.push(Series {
-                        identity: format!("period:{}:{scope:?}", period.label()),
+                        identity: format!("period:{}:{scope:?}", selected.identity),
                         style: result.series.len(),
                         label: format!("{} · {}", scope_label(scope), period.label()),
                         points: history
@@ -518,7 +815,11 @@ pub fn plot(
                             .filter(|s| s.observed_at >= start && s.observed_at < end)
                             .map(|s| Point {
                                 at: s.observed_at,
-                                x: period.x(s.observed_at),
+                                x: if result.alignment == Alignment::Elapsed {
+                                    seconds(s.observed_at) - seconds(start)
+                                } else {
+                                    period.x(s.observed_at)
+                                },
                                 value: metric.value(s, scope),
                             })
                             .collect(),

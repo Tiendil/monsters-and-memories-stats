@@ -1,9 +1,9 @@
 use crate::{analysis::*, charts, charts::browser::InteractivePlot};
-use chrono::{DateTime, Datelike, Utc};
+use chrono::{DateTime, Utc};
 use leptos::{ev, prelude::*};
 use mnm_stats_model::History;
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     sync::{Arc, Mutex},
 };
 use wasm_bindgen::{JsCast, JsValue};
@@ -34,33 +34,6 @@ fn download(history: &History) -> Result<(), JsValue> {
 
 fn utc(time: DateTime<Utc>) -> String {
     time.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true)
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Mode {
-    Overview,
-    Months,
-    Years,
-    Intervals,
-}
-impl Mode {
-    const ALL: [Self; 4] = [Self::Overview, Self::Months, Self::Years, Self::Intervals];
-    fn key(self) -> &'static str {
-        match self {
-            Self::Overview => "overview",
-            Self::Months => "months",
-            Self::Years => "years",
-            Self::Intervals => "intervals",
-        }
-    }
-    fn label(self) -> &'static str {
-        match self {
-            Self::Overview => "No comparison",
-            Self::Months => "Periods · months",
-            Self::Years => "Periods · years",
-            Self::Intervals => "Periods · equal intervals",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -118,41 +91,163 @@ fn Summary(
     }
 }
 
+fn close_menu(node: NodeRef<leptos::html::Details>, id: &str) {
+    if let Some(element) = node.get() {
+        let _ = element.remove_attribute("open");
+    }
+    if let Some(toggle) = document()
+        .get_element_by_id(id)
+        .and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok())
+    {
+        let _ = toggle.focus();
+    }
+}
+
 #[component]
-fn PeriodPicker(periods: RwSignal<Vec<Period>>, yearly: bool, initial: String) -> impl IntoView {
-    let value = RwSignal::new(initial);
-    let error = RwSignal::new(None::<String>);
-    let add = move |_| {
-        let result = if yearly {
-            Period::year(&value.get())
-        } else {
-            Period::month(&value.get())
-        };
-        match result {
-            Ok(period) => {
-                periods.update(|p| {
-                    if !p.contains(&period) {
-                        p.push(period);
-                    }
-                });
-                error.set(None);
-            }
-            Err(message) => error.set(Some(message)),
+fn DateMenu(
+    id: &'static str,
+    node: NodeRef<leptos::html::Details>,
+    label: Signal<String>,
+    value: Signal<String>,
+    children: Children,
+) -> impl IntoView {
+    let outside = window_event_listener(ev::click, move |event| {
+        // A Remove button may already be detached by its click handler. The
+        // event path still identifies the menu where that click originated.
+        if let Some(element) = node.get()
+            && !event.composed_path().includes(element.as_ref(), 0)
+        {
+            let _ = element.remove_attribute("open");
         }
-    };
+    });
+    on_cleanup(move || outside.remove());
     view! {
-        <div class="period-picker">
-            <label> {if yearly { "Calendar year (UTC)" } else { "Calendar month (UTC)" }}
-                <input id="period-input" type="text" inputmode=if yearly { "numeric" } else { "text" }
-                    aria-describedby="period-error" aria-invalid=move || error.get().is_some().to_string()
-                    placeholder=if yearly { "YYYY" } else { "YYYY-MM" }
-                    prop:value=move || value.get() on:input=move |ev| value.set(event_target_value(&ev))/>
-            </label>
-            <button id="add-period" on:click=add>"Add period"</button>
-            <p id="period-error" class="error" role="alert">{move || error.get()}</p>
-            <ul class="selections">{move || periods.get().into_iter().enumerate().map(|(i, period)| view! {
-                <li><span>{period.label()}</span><button class="secondary remove-period" aria-label=format!("Remove {}", period.label()) on:click=move |_| { periods.update(|p| { p.remove(i); }); if let Some(el) = document().get_element_by_id("period-input").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = el.focus(); } }>"Remove"</button></li>
-            }).collect_view()}</ul>
+        <details class="date-menu" node_ref=node on:keydown=move |event| {
+            if event.key() == "Escape" { event.prevent_default(); close_menu(node, id); }
+        } on:focusout=move |event| {
+            if let (Some(element), Some(target)) = (node.get(), event.related_target().and_then(|t| t.dyn_into::<web_sys::Node>().ok())) && !element.contains(Some(&target)) {
+                let _ = element.remove_attribute("open");
+            }
+        }>
+            <summary id=id data-value=move || value.get() aria-labelledby=format!("{id}-label {id}-selection")>
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 11h18"/></svg>
+                <span id=format!("{id}-selection")>{move || label.get()}</span><span aria-hidden="true">"⌄"</span>
+            </summary>
+            <div class="date-menu-panel" id=format!("{id}-options")>{children()}</div>
+        </details>
+    }
+}
+
+#[component]
+fn DateFields(
+    prefix: &'static str,
+    start: RwSignal<String>,
+    end: RwSignal<String>,
+    error: RwSignal<Option<String>>,
+) -> impl IntoView {
+    view! {
+        <div class="date-fields">
+            <label>"From (UTC)"<input id=format!("{prefix}-start") type="date" min="0001-01-01" max="9998-12-31" prop:value=move || start.get() aria-describedby=format!("{prefix}-error") aria-invalid=move || error.get().is_some().to_string() on:input=move |ev| start.set(event_target_value(&ev))/></label>
+            <label>"To (UTC)"<input id=format!("{prefix}-end") type="date" min="0001-01-01" max="9998-12-31" prop:value=move || end.get() aria-describedby=format!("{prefix}-error") aria-invalid=move || error.get().is_some().to_string() on:input=move |ev| end.set(event_target_value(&ev))/></label>
+        </div>
+        <p id=format!("{prefix}-error") role="alert">{move || error.get()}</p>
+    }
+}
+
+#[component]
+fn DateControls(
+    history: Arc<History>,
+    range: RwSignal<TimeRange>,
+    now: RwSignal<DateTime<Utc>>,
+    mode: RwSignal<ComparisonMode>,
+    matching: RwSignal<DateMatching>,
+    custom: RwSignal<Vec<Period>>,
+    comparison: Memo<Result<Comparison, String>>,
+) -> impl IntoView {
+    let primary_node = NodeRef::<leptos::html::Details>::new();
+    let comparison_node = NodeRef::<leptos::html::Details>::new();
+    let editing_primary = RwSignal::new(false);
+    let start = RwSignal::new(String::new());
+    let end = RwSignal::new(String::new());
+    let error = RwSignal::new(None::<String>);
+    let compare_start = RwSignal::new(String::new());
+    let compare_end = RwSignal::new(String::new());
+    let compare_error = RwSignal::new(None::<String>);
+    view! {
+        <div class="date-control">
+            <div class="date-controls">
+                <div class="date-field">
+                <span id="time-range-label" class="control-label">"Time range"</span>
+                <DateMenu id="time-range" node=primary_node label=Signal::derive(move || range.get().label()) value=Signal::derive(move || range.get().key().into())>
+                    <div class="menu-choices" role="group" aria-label="Time range presets">
+                        {TimeRange::ALL.into_iter().map(|item| view! {
+                            <button class="menu-choice" data-range=item.key() aria-pressed=move || (range.get() == item).to_string() on:click=move |_| { range.set(item); editing_primary.set(false); close_menu(primary_node, "time-range"); }>{item.label()}</button>
+                        }).collect_view()}
+                        <button class="menu-choice" id="custom-range" aria-pressed=move || matches!(range.get(), TimeRange::Custom { .. }).to_string() on:click=move |_| {
+                            let (first, last) = range.get().bounds(&history, now.get());
+                            start.set(first.format("%Y-%m-%d").to_string()); end.set(last.format("%Y-%m-%d").to_string()); error.set(None); editing_primary.set(true);
+                        }>"Custom range"</button>
+                    </div>
+                    <Show when=move || editing_primary.get()>
+                        <div class="date-form">
+                            <DateFields prefix="range" start end error/>
+                            <button id="apply-range" on:click=move |_| match TimeRange::custom(&start.get(), &end.get()) {
+                                Ok(selected) => { range.set(selected); error.set(None); editing_primary.set(false); close_menu(primary_node, "time-range"); }
+                                Err(message) => error.set(Some(message)),
+                            }>"Apply range"</button>
+                        </div>
+                    </Show>
+                    <div class="menu-divider"><button class="menu-choice" id="toggle-comparison" on:click=move |_| {
+                        mode.set(if mode.get() == ComparisonMode::Disabled { ComparisonMode::Previous } else { ComparisonMode::Disabled }); close_menu(primary_node, "time-range");
+                    }>{move || if mode.get() == ComparisonMode::Disabled { "Enable comparison" } else { "Disable comparison" }}</button></div>
+                </DateMenu>
+                </div>
+                <div class="date-field comparison-control">
+                <span id="comparison-mode-label" class="control-label">"Comparison"</span>
+                <DateMenu id="comparison-mode" node=comparison_node label=Signal::derive(move || {
+                    match mode.get() {
+                        ComparisonMode::Disabled => "Compare".into(),
+                        ComparisonMode::Custom if custom.get().len() > 1 => format!("{} custom periods", custom.get().len()),
+                        selected => selected.label().into(),
+                    }
+                }) value=Signal::derive(move || mode.get().key().into())>
+                    <div class="menu-choices" role="group" aria-label="Comparison period">
+                        {ComparisonMode::ALL.into_iter().map(|item| view! {
+                            <button class="menu-choice" data-comparison=item.key() aria-pressed=move || (mode.get() == item).to_string() on:click=move |_| {
+                                mode.set(item); compare_error.set(None);
+                                if item != ComparisonMode::Custom { close_menu(comparison_node, "comparison-mode"); }
+                            }>{item.label()}</button>
+                        }).collect_view()}
+                    </div>
+                    <Show when=move || mode.get() == ComparisonMode::Custom>
+                        <div class="date-form">
+                            <DateFields prefix="compare" start=compare_start end=compare_end error=compare_error/>
+                            <button id="add-period" on:click=move |_| match Period::custom(&compare_start.get(), &compare_end.get()) {
+                                Ok(period) => { custom.update(|selected| { if !selected.contains(&period) { selected.push(period); } }); compare_error.set(None); }
+                                Err(message) => compare_error.set(Some(message)),
+                            }>"Add period"</button>
+                            <ul class="selected-periods">{move || custom.get().into_iter().enumerate().map(|(i, period)| view! {
+                                <li><span>{period.label()}</span><button class="secondary remove-period" aria-label=format!("Remove {}", period.label()) on:click=move |_| {
+                                    if let Some(input) = document().get_element_by_id("compare-start").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = input.focus(); }
+                                    custom.update(|selected| { selected.remove(i); });
+                                }>"Remove"</button></li>
+                            }).collect_view()}</ul>
+                        </div>
+                    </Show>
+                    <div class="menu-divider" role="group" aria-label="Date matching">
+                        <button class="menu-choice" id="match-weekday" aria-pressed=move || (matching.get() == DateMatching::Weekday).to_string() on:click=move |_| { matching.set(DateMatching::Weekday); close_menu(comparison_node, "comparison-mode"); }>"Match day of week"</button>
+                        <button class="menu-choice" id="match-date" aria-pressed=move || (matching.get() == DateMatching::ExactDate).to_string() on:click=move |_| { matching.set(DateMatching::ExactDate); close_menu(comparison_node, "comparison-mode"); }>"Match exact date"</button>
+                    </div>
+                    <Show when=move || mode.get() != ComparisonMode::Disabled && (mode.get() != ComparisonMode::Custom || matching.get() == DateMatching::Weekday || custom.get().is_empty())>
+                        <div class="resolved-periods" aria-label="Compared dates">{move || match comparison.get() {
+                            Ok(Comparison::Periods(periods)) => periods.into_iter().skip(1).map(|p| view! { <p>{p.period.label()}</p> }).collect_view().into_any(),
+                            Err(message) => view! { <p role="alert">{message}</p> }.into_any(),
+                            _ => view! { <p>"Choose dates to add a comparison."</p> }.into_any(),
+                        }}</div>
+                    </Show>
+                </DateMenu>
+                </div>
+            </div>
         </div>
     }
 }
@@ -319,75 +414,28 @@ pub fn App() -> impl IntoView {
     let scopes = RwSignal::new(vec![Scope::All]);
     let scope = Memo::new(move |_| scopes.get().first().cloned().unwrap_or(Scope::All));
     let range = RwSignal::new(TimeRange::default());
-    let mode = RwSignal::new(Mode::Overview);
-    let distinct_months: BTreeSet<_> = history
-        .snapshots()
-        .iter()
-        .map(|s| s.observed_at.format("%Y-%m").to_string())
-        .collect();
-    let distinct_years: BTreeSet<_> = history
-        .snapshots()
-        .iter()
-        .map(|s| s.observed_at.year())
-        .collect();
-    let months = RwSignal::new(
-        distinct_months
-            .iter()
-            .rev()
-            .take(3)
-            .rev()
-            .map(|m| Period::month(m).unwrap())
-            .collect::<Vec<_>>(),
-    );
-    let years = RwSignal::new(
-        distinct_years
-            .iter()
-            .rev()
-            .take(3)
-            .rev()
-            .map(|y| Period::Year(*y))
-            .collect::<Vec<_>>(),
-    );
-    let starts = RwSignal::new(Vec::<DateTime<Utc>>::new());
-    let start_input = RwSignal::new(
-        latest
-            .unwrap_or_else(utc_now)
-            .format("%Y-%m-%dT%H:%M")
-            .to_string(),
-    );
-    let hours = RwSignal::new("168".to_string());
-    let interval_error = RwSignal::new(None::<String>);
+    let mode = RwSignal::new(ComparisonMode::default());
+    let matching = RwSignal::new(DateMatching::default());
+    let custom = RwSignal::new(Vec::<Period>::new());
     let download_error = RwSignal::new(None::<String>);
-    let comparison = Memo::new(move |_| -> Result<Comparison, String> {
-        Ok(match mode.get() {
-            Mode::Overview => Comparison::None,
-            Mode::Months => Comparison::Periods(months.get()),
-            Mode::Years => Comparison::Periods(years.get()),
-            Mode::Intervals => {
-                let hours = hours
-                    .get()
-                    .parse::<u32>()
-                    .ok()
-                    .filter(|h| *h > 0)
-                    .ok_or("Choose a positive duration in hours.")?;
-                Comparison::Periods(
-                    starts
-                        .get()
-                        .into_iter()
-                        .map(|start| Period::Interval { start, hours })
-                        .collect(),
-                )
-            }
-        })
+    let comparison_history = history.clone();
+    let comparison = Memo::new(move |_| {
+        comparison_for(
+            &comparison_history,
+            range.get(),
+            now.get(),
+            mode.get(),
+            matching.get(),
+            &custom.get(),
+        )
     });
     let download_history = history.clone();
-    let month_default = latest.unwrap_or_else(utc_now).format("%Y-%m").to_string();
-    let year_default = latest.unwrap_or_else(utc_now).format("%Y").to_string();
     let summary_history = history.clone();
     let empty_history = history.clone();
     let empty_range =
         Memo::new(move |_| latest_in_range(&empty_history, range.get(), now.get()).is_none());
-    let comparing = Memo::new(move |_| mode.get() != Mode::Overview || scopes.get().len() > 1);
+    let comparing =
+        Memo::new(move |_| mode.get() != ComparisonMode::Disabled || scopes.get().len() > 1);
     view! {
         <style>{include_str!(concat!(env!("OUT_DIR"), "/style.css"))}</style>
         <a class="skip-link" href="#content">"Skip to dashboard content"</a>
@@ -421,39 +469,8 @@ pub fn App() -> impl IntoView {
                 <h2 id="controls-heading" class="visually-hidden">"Explore the archive"</h2>
                 <div class="control-grid">
                     <ServerPicker names scopes/>
-                    <label class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships>{move || if mode.get() == Mode::Overview { "Time range" } else { "Correlation range" }}<select id="time-range" prop:value=move || range.get().key() on:change=move |ev| {
-                        let value = event_target_value(&ev);
-                        if let Some(selected) = TimeRange::ALL.into_iter().find(|r| r.key() == value) { range.set(selected); }
-                    }>{TimeRange::ALL.into_iter().map(|r| view! { <option value=r.key()>{r.label()}</option> }).collect_view()}</select></label>
-                    <label>"Compare"<select id="comparison-mode" prop:value=move || mode.get().key() on:change=move |ev| {
-                        let value = event_target_value(&ev); if let Some(selected) = Mode::ALL.into_iter().find(|m| m.key() == value) { mode.set(selected); }
-                    }>{Mode::ALL.into_iter().map(|m| view! { <option value=m.key()>{m.label()}</option> }).collect_view()}</select></label>
+                    <DateControls history=history.clone() range now mode matching custom comparison/>
                 </div>
-                {move || match mode.get() {
-                    Mode::Months => view! { <PeriodPicker periods=months yearly=false initial=month_default.clone()/> }.into_any(),
-                    Mode::Years => view! { <PeriodPicker periods=years yearly=true initial=year_default.clone()/> }.into_any(),
-                    Mode::Intervals => view! {
-                        <div class="period-picker">
-                            <label>"Duration for every interval (hours)"<input id="interval-hours" aria-describedby="interval-error" aria-invalid=move || comparison.get().is_err().to_string() type="number" min="1" step="1" prop:value=move || hours.get() on:input=move |ev| hours.set(event_target_value(&ev))/></label>
-                            <label>"Start (UTC, YYYY-MM-DDTHH:MM)"<input id="interval-start" aria-describedby="interval-error" aria-invalid=move || interval_error.get().is_some().to_string() type="text" prop:value=move || start_input.get() on:input=move |ev| start_input.set(event_target_value(&ev))/></label>
-                            <button id="add-interval" on:click=move |_| {
-                                let result = hours.get().parse::<u32>().map_err(|_| "Choose a positive duration in hours.".to_string()).and_then(|h| Period::interval(&start_input.get(), h));
-                                match result {
-                                    Ok(Period::Interval { start, .. }) => { starts.update(|s| { if !s.contains(&start) { s.push(start); } }); interval_error.set(None); }
-                                    Err(error) => interval_error.set(Some(error)), _ => unreachable!(),
-                                }
-                            }>"Add interval"</button>
-                            <p id="interval-error" role="alert">{move || interval_error.get().or_else(|| comparison.get().err())}</p>
-                            <ul class="selections">{move || starts.get().into_iter().enumerate().map(|(i, start)| view! {
-                                <li><span>{utc(start)}</span><button class="secondary remove-period" aria-label=format!("Remove interval starting {}", utc(start)) on:click=move |_| { starts.update(|s| { s.remove(i); }); if let Some(el) = document().get_element_by_id("interval-start").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = el.focus(); } }>"Remove"</button></li>
-                            }).collect_view()}</ul>
-                        </div>
-                    }.into_any(),
-                    _ => ().into_any(),
-                }}
-                <Show when=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals)>
-                    <p class="comparison-explanation">"Periods align by calendar date or elapsed hours for each selected server. Incomplete periods remain gaps. Correlations use the shared time range."</p>
-                </Show>
             </section>
             <nav class="section-nav" aria-label="Dashboard sections">{Section::ALL.into_iter().map(|item| view! {
                 <button id=format!("nav-{}", item.key()) aria-pressed=move || (section.get() == item).to_string() on:click=move |_| section.set(item)>{item.label()}</button>
@@ -462,11 +479,11 @@ pub fn App() -> impl IntoView {
                 <Show when=move || scopes.get().is_empty()>
                     <div class="empty-servers" role="status"><p>"Select at least one server to show statistics."</p><button class="secondary" on:click=move |_| scopes.set(vec![Scope::All])>"Show All Servers"</button></div>
                 </Show>
-                <Show when=move || mode.get() == Mode::Overview && !scopes.get().is_empty() && empty_range.get()>
+                <Show when=move || mode.get() == ComparisonMode::Disabled && !scopes.get().is_empty() && empty_range.get()>
                     <div class="empty-selection" role="status"><p>{if count == 0 { "No history yet. The first successful collection will appear in a future dashboard build." } else { "No observations in this interval. Choose All time to explore the available archive." }}</p>
                     {(count > 0).then(|| view! { <button class="secondary" on:click=move |_| range.set(TimeRange::All)>"Show All time"</button> })}</div>
                 </Show>
-                <Show when=move || section.get() == Section::Overview && mode.get() == Mode::Overview && scopes.get().len() == 1>
+                <Show when=move || section.get() == Section::Overview && mode.get() == ComparisonMode::Disabled && scopes.get().len() == 1>
                     <Summary history=summary_history.clone() scope range now section/>
                 </Show>
                 {move || {
@@ -491,7 +508,7 @@ pub fn App() -> impl IntoView {
                             </section>
                         })}
                         {(selected == Section::Relationships).then(|| view! {
-                            <p class="correlation-explanation">"Correlations below use the shared time range for each selected server, including when the charts compare different periods."</p>
+                            <p class="correlation-explanation">"Correlations below use the primary time range for each selected server."</p>
                             <Correlations history=history.clone() scopes range now/>
                         })}
                     }

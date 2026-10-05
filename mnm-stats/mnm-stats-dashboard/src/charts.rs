@@ -3,7 +3,6 @@ use crate::{
     analysis::{Alignment, Metric, Plot},
     tokens,
 };
-use chrono::{Datelike, NaiveDate};
 use plotly::{
     Configuration, Layout, Plot as Figure, Scatter,
     common::{DashType, Font, Label, Line, Marker, Mode, Title},
@@ -53,11 +52,6 @@ fn escape(text: &str) -> String {
 fn time_ticks(plot: &Plot) -> Vec<f64> {
     match plot.alignment {
         Alignment::Month => [0, 14, 28].map(|day| f64::from(day * 86400)).to_vec(),
-        Alignment::Year => [1, 5, 9]
-            .map(|month| {
-                f64::from(NaiveDate::from_ymd_opt(2000, month, 1).unwrap().ordinal0() * 86400)
-            })
-            .to_vec(),
         _ => {
             let (start, end) = plot.x_bounds;
             let target = (end - start) / 3.0;

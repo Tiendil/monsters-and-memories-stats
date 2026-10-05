@@ -386,6 +386,17 @@
         "$value": "{tailwind.spacing.40}",
         "$description": "Minimum readable track width for paired controls and summary cards before they stack."
       }
+    },
+    "date-menu": {
+      "$type": "dimension",
+      "preferred-width": {
+        "$value": "{tailwind.spacing.96}",
+        "$description": "Preferred width of a date-range or comparison menu, constrained to the available page width."
+      },
+      "max-height": {
+        "$value": "{tailwind.spacing.144}",
+        "$description": "Maximum height of scrollable date controls, including custom-period editing."
+      }
     }
   },
   "chart": {

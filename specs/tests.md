@@ -95,9 +95,12 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Ratio values, including zero denominators and values above 100 percent.
 - Correlation with known expected results and selection of the last jointly available sample per UTC day.
 - Unavailable correlation for insufficient paired days or zero variance.
-- All required time ranges and their UTC boundaries.
+- All range presets and custom inclusive UTC date boundaries, including invalid or reversed inputs.
+- Today and Yesterday at UTC midnight, month/year rollover, and leap-day boundaries; Today comparisons MUST use the same elapsed part of the prior day, and Yesterday comparisons MUST retain the full day.
 - Gaps between observations.
-- Equal-duration and calendar-period comparison alignment, including unequal month lengths and leap days.
+- Automatic previous-period and year-over-year calculation when the primary range changes; exact-date and weekday matching, including leap-day boundaries and ranges crossing a year.
+- Elapsed and calendar-period alignment, including unequal month lengths, different custom durations, leap-day gaps, and original observation timestamps.
+- Stable automatic series identities across clock updates, deduplication of resolved periods, and disabled or empty custom comparisons.
 - Comparisons with more than two periods or entities and with missing observations.
 - Combined server-and-period selections, distinct identities for each pair, global subscriptions without duplicate series, and empty server selections.
 
@@ -117,7 +120,9 @@ Browser coverage MUST include:
 - Unavailable metrics and empty or invalid data states.
 - Month-to-month and year-to-year comparisons with at least three periods.
 - Server-to-server and all-servers-to-server comparisons with at least three series.
-- Adding and removing comparison selections.
+- Enabling and disabling comparison from both menus, changing the primary range, choosing Previous period or Year over year, and switching between exact dates and weekdays.
+- Applying custom primary dates, adding and removing multiple custom comparisons, and validation without changing the applied range.
+- Closing menus through Escape and outside interaction, focus restoration, section persistence, and usable date menus at narrow widths.
 - Complete-history JSON downloads independent of filters, including valid empty history.
 - Operation under a repository subpath.
 - Absence of separate runtime requests for metrics data.

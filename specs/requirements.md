@@ -102,7 +102,7 @@ If another server disappears from the page, the next snapshot omits it while ear
 The dashboard MUST support comparisons between plots of similar nature, meaning series with compatible metric semantics, units, and calculation rules.
 It MUST provide both comparison types:
 
-- Time-frame comparison — the same metric and entity scope over equal-duration intervals or calendar periods of the same unit, including month-to-month and year-to-year comparisons.
+- Time-frame comparison — the same metric and entity scope over a primary range and previous, year-over-year, or custom periods, including month-to-month and year-to-year comparisons.
 - Entity comparison — the same metric and time interval across entities, including server-to-server and all-servers-to-server comparisons.
 
 Both comparison types MUST support more than two series in one comparison.
@@ -260,19 +260,27 @@ It MUST plot the following over time:
 - online population.
 - starting-zone populations.
 
-Outside time-frame comparisons, all plots, ratio series, and correlation calculations MUST use one visible shared time-range selector.
-Time-frame comparisons MUST use explicitly selected periods as defined under Comparisons below.
+All plots, ratio series, and correlation calculations MUST share one visible primary time-range selector.
+Time-frame comparisons MUST add periods alongside that primary range as defined under Comparisons below; correlations MUST continue to use the primary range.
 The available ranges MUST be:
 
+- today.
+- yesterday.
 - last 7 days.
 - last 30 days.
 - last 90 days.
 - last 180 days.
 - last year.
 - all time.
+- a custom inclusive range of UTC dates.
+
+Custom dates MUST be valid, with the end on or after the start. Both boundary dates MUST be included in full.
+Invalid inputs MUST leave the applied range unchanged and show a local validation message.
 
 The default range SHOULD be the last 30 days.
-The standard time ranges MUST end at the current UTC time; “last year” MUST mean the previous 365 days, and “all time” MUST include all collected history.
+Today MUST run from the current UTC midnight through the current time. Yesterday MUST include the complete preceding UTC calendar day and exclude the current midnight.
+These day presets MUST follow the current UTC date when the clock crosses midnight.
+The rolling ranges and All time MUST end at the current UTC time; “last year” MUST mean the previous 365 days, and “all time” MUST include all collected history.
 The UI MUST state the selected interval and show when it contains no observations.
 
 The UI MUST show the latest collection time and the available history interval.
@@ -320,16 +328,47 @@ The existing rules for aggregation labels and unavailable values MUST also apply
 
 #### Time-frame comparison
 
-Users MUST be able to select the periods to compare without restricting every period to end at the current time.
-Equal-duration intervals MUST align by elapsed time from their respective starts.
-Calendar months MUST align by day of month and time of day; calendar years MUST align by month, day, and time of day.
+The selected primary range MUST remain visible and included in every time-frame comparison.
+Comparison MUST be disabled initially, and users MUST be able to enable or disable it without changing the primary range or selected servers.
+The comparison choices MUST be:
+
+- **Previous period:** the same duration immediately preceding the primary range when matching exact dates. For Today, compare the same elapsed part of the preceding UTC day, beginning at midnight.
+- **Year over year:** the primary range's dates shifted back one calendar year when matching exact dates; a February 29 boundary MUST clamp to February 28 where necessary.
+- **Custom period:** an inclusive range of UTC dates. Users MUST be able to add and remove any number of custom periods, including periods longer or shorter than the primary range.
+
+Changing the primary range MUST recalculate automatic comparisons and retain the selected custom periods.
+The dashboard MUST retain the primary chart while a custom comparison has no periods yet.
+Identical resolved periods MUST appear only once.
+Automatic series identities and colors MUST remain stable when the current-time clock advances.
+
+##### Date matching
+
+The comparison menu MUST offer **Match exact date** and **Match day of week**.
+Exact-date matching MUST be the default and MUST preserve explicitly selected custom dates.
+Weekday matching MUST align each secondary start to the primary start's weekday:
+
+- For Previous period, move the exact-date candidate backward by zero to six days so it cannot overlap the primary range; retain its duration.
+- For Year over year, choose the nearest matching weekday to the prior-year start, within three days, and use the primary duration.
+- For Custom period, choose the nearest matching weekday to the selected start, within three days, and retain the selected duration.
+
+The menu and chart legends MUST identify the resolved dates, including any weekday adjustment.
+Switching back to exact dates MUST restore the original custom dates.
+
+##### Plot alignment
+
+With exact-date matching, comparisons containing only complete calendar months MUST align by day of month and time of day; comparisons containing only complete calendar years MUST align by month, day, and time of day.
+Year-over-year comparisons with exact-date matching MUST align by month, day, and time of day, including when the primary range covers only part of a year or crosses a year boundary.
+Other ranges and weekday-matched periods MUST align by elapsed time from their respective starts.
+Different durations MUST retain their actual lengths; the common axis MUST accommodate the longest period without stretching observations.
 Calendar boundaries MUST use UTC, and exact-value inspection MUST display each observation's original UTC date and time to the minute rather than the aligned comparison coordinate.
 Calendar-year comparison MUST be distinguished from the standard rolling “last year” range of 365 days.
 Dates absent from a compared period, such as a leap day in a non-leap year, MUST remain absent.
 Missing observations and incomplete periods MUST remain visible as gaps or partial coverage, without invented zeros or extrapolated values.
 
-**Example:** Comparing February, March, and April for one server produces three series aligned by day of month.
+**Example:** Selecting February as the primary range and adding March and April with exact-date matching produces three series aligned by day of month.
 March's day 31 has no corresponding value in the February or April series.
+
+**Example:** Comparing January 1–7, 2023 with the previous year uses January 1–7, 2022 for exact dates, or January 2–8, 2022 for matching weekdays.
 
 #### Entity comparison
 
@@ -398,7 +437,7 @@ Live source and deployment evidence MUST be gathered through separate operationa
 
 ### Time ranges (R9)
 
-Browser verification of all six ranges on every chart family, including boundary timestamps and an empty interval.
+Browser verification of all presets and custom UTC dates on every chart family, including boundary timestamps, validation, and an empty interval.
 
 ### Failure handling (R10)
 
@@ -431,7 +470,8 @@ Review of dependencies and a subtraction pass over each component; no unnecessar
 
 - Browser verification of month-to-month and year-to-year comparisons with at least three periods in every compatible plot family.
 - Browser verification of server-to-server and all-servers-to-server comparisons with at least three series, including adding and removing selections.
-- Calculation and boundary checks for equal-duration alignment and calendar alignment, including unequal month lengths and leap days.
+- Calculation and browser checks for Previous period, Year over year, Custom period, enabling/disabling comparisons, and changes to the primary range.
+- Calculation and boundary checks for exact-date and weekday matching, elapsed and calendar alignment, unequal lengths, leap days, and stable automatic series identities.
 - Correct aggregation labels and visible gaps for incomplete periods or missing entity observations.
 - Global-only metrics are unavailable for server-specific comparison rather than presented as invented per-server data.
 

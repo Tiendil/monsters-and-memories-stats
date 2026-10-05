@@ -353,21 +353,50 @@ impl Browser {
     }
 
     fn select(&self, selector: &str, value: &str) {
-        self.click(&format!("{selector} option[value='{value}']"));
+        match selector {
+            "#time-range" => {
+                self.click(selector);
+                self.click(&format!("[data-range='{value}']"));
+            }
+            "#comparison-mode" => {
+                self.click(selector);
+                self.click(&format!("[data-comparison='{value}']"));
+            }
+            _ => self.click(&format!("{selector} option[value='{value}']")),
+        }
     }
 
-    fn input(&self, selector: &str, value: &str) {
-        let element = self.element(selector);
-        self.request(
-            Method::POST,
-            &format!("/element/{element}/clear"),
-            json!({}),
-        );
-        self.request(
-            Method::POST,
-            &format!("/element/{element}/value"),
-            json!({"text":value}),
-        );
+    fn date(&self, selector: &str, value: &str) {
+        self.element(selector);
+        // Native date controls have locale-specific keyboard segments. Set the
+        // standard ISO value and deliver the same input event as date selection.
+        self.request(Method::POST, "/execute/sync", json!({
+            "script":"const e=document.querySelector(arguments[0]); e.value=arguments[1]; e.dispatchEvent(new Event('input',{bubbles:true}));", "args":[selector,value]
+        }));
+    }
+
+    fn primary_range(&self, start: &str, end: &str) {
+        self.click("#time-range");
+        self.click("#custom-range");
+        self.date("#range-start", start);
+        self.date("#range-end", end);
+        self.activate("#apply-range");
+        self.expect_count(".date-menu[open]", 0);
+    }
+
+    fn custom_periods(&self, periods: &[(&str, &str)]) {
+        self.primary_range(periods[0].0, periods[0].1);
+        self.select("#comparison-mode", "custom");
+        while self.count(".remove-period") > 0 {
+            self.click(".remove-period");
+            self.expect_count(".date-menu[open]", 1);
+        }
+        for (start, end) in &periods[1..] {
+            self.date("#compare-start", start);
+            self.date("#compare-end", end);
+            self.activate("#add-period");
+        }
+        self.click("#comparison-mode");
     }
 
     fn expect_text(&self, selector: &str, expected: &str) {
@@ -504,7 +533,7 @@ impl Browser {
         self.activate("#nav-activity");
         self.expect_count(".chart-card", 3);
         self.click("#nav-population");
-        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#server-options input:checked').value,document.querySelector('#time-range').value,document.querySelector('#zone-scope').value];","args":[]})), json!(["server:a","7","w"]));
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#server-options input:checked').value,document.querySelector('#time-range').dataset.value,document.querySelector('#zone-scope').value];","args":[]})), json!(["server:a","7","w"]));
         self.servers(&["", "a", "b"]);
         self.expect_count("[data-metric='online'] .legend li", 3);
         // The checkbox dropdown supports keyboard toggling and Escape restores focus.
@@ -625,7 +654,10 @@ impl Browser {
         self.click("#servers-toggle");
         assert!(self.text("#server-options").contains("Retired server"));
         self.click("#servers-toggle");
+        let midnight = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
         for (key, days) in [
+            ("today", None),
+            ("yesterday", None),
             ("7", Some(7)),
             ("30", Some(30)),
             ("90", Some(90)),
@@ -639,7 +671,13 @@ impl Browser {
                 .filter(|record| {
                     let at: chrono::DateTime<chrono::Utc> =
                         record["observed_at"].as_str().unwrap().parse().unwrap();
-                    at <= now && days.is_none_or(|d| at >= now - chrono::Duration::days(d))
+                    match key {
+                        "today" => at >= midnight && at <= now,
+                        "yesterday" => at >= midnight - chrono::Duration::days(1) && at < midnight,
+                        _ => {
+                            at <= now && days.is_none_or(|d| at >= now - chrono::Duration::days(d))
+                        }
+                    }
                 })
                 .collect();
             for metric in metrics {
@@ -804,18 +842,53 @@ impl Browser {
         self.expect_count(".empty-servers", 0);
         self.expect_text("#servers-selection", "All Servers");
         self.servers(&["a"]);
+        self.select("#comparison-mode", "previous");
+        self.expect_count("[data-metric='daily'] .legend li", 2);
+        for key in ["today", "yesterday"] {
+            self.select("#time-range", key);
+            self.expect_count("[data-metric='daily'] .legend li", 2);
+            self.ready("daily");
+            assert!(self.text("#comparison-mode").contains("Previous period"));
+        }
+        self.select("#time-range", "30");
+        assert!(self.text("#comparison-mode").contains("Previous period"));
+        self.select("#comparison-mode", "year-over-year");
+        self.expect_count("[data-metric='daily'] .legend li", 2);
+        let exact_dates = self.text("[data-metric='daily'] .legend");
+        self.click("#comparison-mode");
+        self.activate("#match-weekday");
+        self.expect_count(".date-menu[open]", 0);
+        assert_ne!(self.text("[data-metric='daily'] .legend"), exact_dates);
+        self.click("#comparison-mode");
+        self.activate("#match-date");
+        assert_eq!(self.text("[data-metric='daily'] .legend"), exact_dates);
+        self.select("#comparison-mode", "disabled");
+        self.expect_count("[data-metric='daily'] .legend li", 1);
+        self.click("#time-range");
+        self.activate("#toggle-comparison");
+        self.expect_count("[data-metric='daily'] .legend li", 2);
+        self.click("#time-range");
+        self.activate("#toggle-comparison");
+        self.expect_count("[data-metric='daily'] .legend li", 1);
         for (mode, periods) in [
-            ("months", ["2024-02", "2024-03", "2024-04"]),
-            ("years", ["2023", "2024", "2025"]),
+            (
+                "months",
+                [
+                    ("2024-02-01", "2024-02-29"),
+                    ("2024-03-01", "2024-03-31"),
+                    ("2024-04-01", "2024-04-30"),
+                ],
+            ),
+            (
+                "years",
+                [
+                    ("2023-01-01", "2023-12-31"),
+                    ("2024-01-01", "2024-12-31"),
+                    ("2025-01-01", "2025-12-31"),
+                ],
+            ),
         ] {
-            self.select("#comparison-mode", mode);
-            while self.count(".remove-period") > 0 {
-                self.click(".remove-period");
-            }
-            for period in periods {
-                self.input("#period-input", period);
-                self.activate("#add-period");
-            }
+            self.custom_periods(&periods);
             for metric in metrics {
                 self.expect_count(&format!("[data-metric='{metric}'] .legend li"), 3);
                 self.ready(metric);
@@ -859,40 +932,31 @@ impl Browser {
                 "comparison hover details retain the leap-day observation timestamp"
             );
             self.verify_download(expected, scratch);
+            self.click("#comparison-mode");
             self.click(".remove-period");
-            self.expect_count("[data-metric='daily'] .legend li", 2);
-            self.input("#period-input", "invalid");
+            self.date("#compare-start", "2024-03-01");
+            self.date("#compare-end", "2024-02-01");
             self.activate("#add-period");
-            assert!(!self.text(".period-picker [role='alert']").is_empty());
+            assert!(!self.text("#compare-error").is_empty());
             assert_eq!(
                 self.request(
                     Method::GET,
                     &format!(
                         "/element/{}/attribute/aria-invalid",
-                        self.element("#period-input")
+                        self.element("#compare-start")
                     ),
                     Value::Null
                 ),
                 "true"
             );
-            assert_eq!(
-                self.request(
-                    Method::GET,
-                    &format!(
-                        "/element/{}/attribute/aria-describedby",
-                        self.element("#period-input")
-                    ),
-                    Value::Null
-                ),
-                "period-error"
-            );
+            self.click("#comparison-mode");
+            self.expect_count("[data-metric='daily'] .legend li", 2);
         }
-        self.select("#comparison-mode", "intervals");
-        self.input("#interval-hours", "24");
-        for start in ["2024-02-01T00:00", "2024-03-01T00:00", "2024-04-01T00:00"] {
-            self.input("#interval-start", start);
-            self.click("#add-interval");
-        }
+        self.custom_periods(&[
+            ("2024-02-01", "2024-02-01"),
+            ("2024-03-01", "2024-03-01"),
+            ("2024-04-01", "2024-04-02"),
+        ]);
         for metric in metrics {
             self.expect_count(&format!("[data-metric='{metric}'] .legend li"), 3);
             self.ready(metric);
@@ -904,15 +968,32 @@ impl Browser {
         );
         self.move_pointer("[data-metric='zone-w'] .plot-surface", 0, 0);
         self.expect_count(".hovertext", 0);
-        self.input("#interval-hours", "0");
+        self.click("#time-range");
+        self.click("#custom-range");
+        self.date("#range-end", "2024-01-01");
+        self.activate("#apply-range");
         self.expect_text(
-            "[data-metric='daily'] .error",
-            "Choose a positive duration in hours.",
+            "#range-error",
+            "The end date must be on or after the start date.",
         );
-        self.input("#interval-hours", "24");
+        self.request(Method::POST, "/actions", json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e00c}"},{"type":"keyUp","value":"\u{e00c}"}]}]}));
+        self.expect_count(".date-menu[open]", 0);
+        assert_eq!(
+            self.request(
+                Method::POST,
+                "/execute/sync",
+                json!({"script":"return document.activeElement.id;","args":[]})
+            ),
+            "time-range"
+        );
+        self.click("#comparison-mode");
+        self.click("#nav-overview");
+        self.expect_count(".date-menu[open]", 0);
+        self.expect_count(".headline", 0);
+        self.expect_count(".comparison-summary", 0);
         self.verify_download(expected, scratch);
         self.verify_requests(url, false);
-        self.select("#comparison-mode", "overview");
+        self.select("#comparison-mode", "disabled");
         // Capture the real browser for visual review; decoding is a separate local activity.
         self.servers(&[""]);
         self.request(Method::POST, "/url", json!({"url":url}));
@@ -957,7 +1038,7 @@ impl Browser {
         )
         .unwrap();
         println!(
-            "All metric families, six ranges, exact values, historical entities, three-period/entity comparisons, missing data, and filter-independent downloads verified."
+            "All metric families, all range presets, exact values, historical entities, three-period/entity comparisons, missing data, and filter-independent downloads verified."
         );
     }
 
@@ -1017,7 +1098,7 @@ impl Browser {
     }
 
     fn verify_token_styles(&self, changed: bool) {
-        self.select("#comparison-mode", "overview");
+        self.select("#comparison-mode", "disabled");
         // Seven days keeps demo observations sparse enough to draw point markers.
         self.select("#time-range", "7");
         self.servers(&[""]);
@@ -1109,16 +1190,15 @@ impl Browser {
             "/window/rect",
             json!({"width":1280,"height":1000}),
         );
-        self.select("#comparison-mode", "months");
-        while self.count(".remove-period") > 0 {
-            self.click(".remove-period");
-        }
-        for month in [
-            "2023-02", "2023-03", "2023-04", "2024-02", "2024-03", "2024-04", "2025-02",
-        ] {
-            self.input("#period-input", month);
-            self.activate("#add-period");
-        }
+        self.custom_periods(&[
+            ("2023-02-01", "2023-02-28"),
+            ("2023-03-01", "2023-03-31"),
+            ("2023-04-01", "2023-04-30"),
+            ("2024-02-01", "2024-02-29"),
+            ("2024-03-01", "2024-03-31"),
+            ("2024-04-01", "2024-04-30"),
+            ("2025-02-01", "2025-02-28"),
+        ]);
         self.expect_count("[data-metric='daily'] .legend li", 7);
         for i in 0..7 {
             let swatch = format!(
@@ -1170,7 +1250,7 @@ impl Browser {
         );
         self.hover("[data-metric='daily'] .scatterlayer .point");
         self.expect_count("[data-metric='daily'] .hovertext", 7);
-        self.select("#comparison-mode", "overview");
+        self.select("#comparison-mode", "disabled");
     }
 
     fn verify_requests(&self, url: &str, require_wasm: bool) {
@@ -1302,6 +1382,8 @@ fn comparison_history() -> Vec<Value> {
         }
     }
     let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
+    let midnight = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
+    times.extend([midnight - Duration::seconds(1), midnight, now]);
     for days in [7, 30, 90, 180, 365] {
         let boundary = now - Duration::days(days);
         for hours in [-1, 0, 1] {

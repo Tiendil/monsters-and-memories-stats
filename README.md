@@ -33,7 +33,7 @@ GitHub jobs reuse `.github/actions/setup/` to build this image with a Docker lay
 
 Overview shows the last counts in the selected interval and the online trend. Activity, Population, and Relationships expose the detailed charts while preserving the selected server, range, and comparison. Population includes a zone selector drawn from the full archive.
 
-Use Servers to toggle individual servers and All Servers independently. Use Compare for calendar months/years or equal-duration intervals. Chart colors stay attached to the selected series during the session. All series use solid lines, with each legend entry on its own row. Chart hover provides exact values and UTC observation times to the minute; “Download JSON” always includes the complete archive.
+Use Servers to toggle individual servers and All Servers independently. Use the date menus to compare the primary range with the previous period, previous year, or custom periods. Chart colors stay attached to the selected series during the session. All series use solid lines, with each legend entry on its own row. Chart hover provides exact values and UTC observation times to the minute; “Download JSON” always includes the complete archive.
 
 Presentation follows [the dashboard design](specs/dashboard-design.md) and [design tokens](specs/design-tokens.md). IM Fell English is distributed locally with its [SIL Open Font License](mnm-stats/mnm-stats-dashboard/fonts/OFL.txt) and [source attribution](mnm-stats/mnm-stats-dashboard/fonts/README.txt).
 
@@ -100,13 +100,18 @@ An omitted individual zone is unavailable for that server and observation, leavi
 
 Use **Servers** to toggle any number of servers and the independent **All Servers** sum. The selection persists across sections and period comparisons. Clear every checkbox to hide all series; **Show All Servers** restores the default. The dropdown supports keyboard selection, Escape, and clicking outside to close.
 
-Use **Compare** to choose a period comparison:
+Choose a primary **Time range** preset or apply a **Custom range** of inclusive UTC dates. **Today** starts at UTC midnight and ends now; **Yesterday** covers the complete preceding UTC day. Use **Compare** beside it to choose:
 
-- **Compare months:** add calendar months as `YYYY-MM`; observations align by day of month and time.
-- **Compare calendar years:** add years; observations align by month, day, and time, preserving a gap for February 29 in non-leap years.
-- **Compare equal-duration intervals:** choose a positive duration in hours and add UTC starts as `YYYY-MM-DDTHH:MM`; observations align by elapsed time.
+- **Previous period:** the same duration immediately before the primary range; Today compares with the same elapsed part of yesterday.
+- **Year over year:** the corresponding dates one calendar year earlier.
+- **Custom period:** add one or more UTC date ranges; their lengths may differ.
+- **Disable comparison:** return to the primary range alone. The primary menu can also enable or disable comparison.
 
-Period comparisons plot each selected server for each selected period. Global subscriptions appear once per period. The shared range controls correlations separately for each selected entity. Remove periods with their **Remove** buttons and toggle servers in **Servers**. There is no two-series limit. Incomplete periods are not extrapolated, and lines break at missing values or gaps longer than two hours.
+**Match exact date** is the default. **Match day of week** moves secondary starts onto the primary start's weekday: backward for the previous period to avoid overlap, or to the nearest matching weekday for yearly/custom periods. The menu and legends show the resulting dates. Switching back restores custom dates as entered.
+
+Changing the primary range updates automatic comparisons; custom selections persist. Complete months align by day of month, complete years and exact year-over-year comparisons by calendar date, and other ranges by elapsed time. Missing leap days remain gaps. Custom dates apply with **Apply range** or **Add period**; remove secondary periods inside the comparison menu. There is no two-period limit and no shortcut bindings.
+
+Period comparisons plot each selected server for each period, with global subscriptions once per period. Correlations use the primary range separately for each selected entity. Incomplete periods are not extrapolated, and lines break at missing values or gaps longer than two hours.
 
 Hover a plotted point to see its exact value and series name on the first line, with its original UTC collection date and time to the minute on the second, including in comparisons. Overlapping points show their individual details. The **Download JSON** action provides all recorded observations with full timestamp precision. Counts are exact; ratios show a rounded percentage together with the exact numerator and denominator. Zero denominators produce gaps, and ratios may exceed 100 percent. Narrow screens can scroll comparison charts horizontally when needed.
 
@@ -153,7 +158,7 @@ mkdir -p .session/manual-replay
 ./bin/build-dashboard.sh
 ```
 
-Native tests cover JSONL validation and exports, collection and history preservation, dashboard aggregation, ratios, daily correlation sampling, range boundaries, calendar alignment, and missing observations. Browser tests exercise every chart family, all six ranges, exact values, historical servers, comparisons with more than two series, and complete downloads under filters. They also verify root/subpath hosting, runtime asset requests, history-only cached rebuilds, failed builds preserving the last site, and the development preview with watched history updates. The browser clock is fixed by a small test-only clock stub; application logic and test assertions are Rust. Tests use loopback servers and keep scratch inputs, browser profiles, and logs under ignored `.session/tests/`. They never modify `data/history.jsonl` or captured source fixtures.
+Native tests cover JSONL validation and exports, collection and history preservation, dashboard aggregation, ratios, daily correlation sampling, range boundaries, calendar alignment, and missing observations. Browser tests exercise every chart family, all range presets, exact values, historical servers, comparisons with more than two series, and complete downloads under filters. They also verify root/subpath hosting, runtime asset requests, history-only cached rebuilds, failed builds preserving the last site, and the development preview with watched history updates. The browser clock is fixed by a small test-only clock stub; application logic and test assertions are Rust. Tests use loopback servers and keep scratch inputs, browser profiles, and logs under ignored `.session/tests/`. They never modify `data/history.jsonl` or captured source fixtures.
 
 The notification-probe test uses a local malformed fixture. `check-actions.sh` uses actionlint to check workflow syntax, expressions, and action inputs without running a workflow.
 

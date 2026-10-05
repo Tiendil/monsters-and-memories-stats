@@ -25,23 +25,16 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <line x1="56" y1="240" x2="1088" y2="240" stroke="#d8d2c5" stroke-width="1"/>
 <text x="56" y="271" class="label muted">SERVERS</text>
 <text x="408" y="271" class="label muted">TIME RANGE</text>
+<text x="626" y="271" class="label muted">COMPARISON</text>
 <rect x="56" y="282" width="330" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="70" y="309" class="body">All Servers</text>
 <text x="362" y="309" class="body">⌄</text>
-<rect x="408" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
-<text x="417" y="309" class="" font-size="14">7 days</text>
-<rect x="492" y="282" width="78" height="42" rx="6" fill="#9a401e"/>
-<text x="501" y="309" style="fill:#fffefa;font:14px Arial">30 days</text>
-<rect x="576" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
-<text x="585" y="309" class="" font-size="14">90 days</text>
-<rect x="660" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
-<text x="669" y="309" class="" font-size="14">180 days</text>
-<rect x="744" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
-<text x="753" y="309" class="" font-size="14">1 year</text>
-<rect x="828" y="282" width="78" height="42" rx="6" fill="#fffefa" stroke="#b4a28b"/>
-<text x="837" y="309" class="" font-size="14">All time</text>
-<rect x="930" y="282" width="158" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
-<text x="954" y="309" class="body">Compare  +</text>
+<rect x="408" y="282" width="200" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
+<text x="424" y="309" class="body">Last 30 days</text>
+<text x="582" y="309" class="body">⌄</text>
+<rect x="626" y="282" width="170" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
+<text x="642" y="309" class="body">Compare</text>
+<text x="770" y="309" class="body">⌄</text>
 <text x="56" y="392" class="accent" font-size="17">Overview</text>
 <text x="202" y="392" class="" font-size="17">Activity</text>
 <text x="333" y="392" class="" font-size="17">Population</text>
@@ -96,8 +89,9 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <rect x="1377" y="295" width="175" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="1191" y="322" class="" font-size="14">All Servers  ⌄</text>
 <text x="1390" y="322" class="" font-size="14">Last 30 days  ⌄</text>
-<rect x="1180" y="350" width="125" height="40" rx="6" fill="#fffefa" stroke="#9c9383"/>
-<text x="1195" y="376" class="body">Compare  +</text>
+<text x="1180" y="358" class="label muted">COMPARISON</text>
+<rect x="1180" y="368" width="125" height="40" rx="6" fill="#fffefa" stroke="#9c9383"/>
+<text x="1195" y="394" class="body">Compare  ⌄</text>
 <text x="1180" y="426" class="accent" font-size="13">Overview</text>
 <text x="1265" y="426" class="" font-size="13">Activity</text>
 <text x="1341" y="426" class="" font-size="13">Population</text>
