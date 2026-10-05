@@ -460,7 +460,7 @@ pub mod browser {
     #[component]
     pub fn InteractiveHeatmap(map: ActivityHeatmap, maximum: f64) -> impl IntoView {
         let label = format!(
-            "Activity heatmap; {}. Mean observed online population by UTC weekday and hour. Hover for mean, sum and sample count; blank cells have no observations. Download JSON contains the original observations.",
+            "Activity heatmap; {}. Average online population by day of the week and hour (UTC). Hover for the average, total and number of records used. Blank cells mean no data. Download JSON contains the original records.",
             map.label
         );
         view! { <PlotSurface figure=render_heatmap(&map, maximum) height=tokens::T_CHART_HEATMAP_HEIGHT.pixels() as usize label/> }

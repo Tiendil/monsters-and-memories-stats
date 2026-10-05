@@ -140,15 +140,15 @@ Source investigation evidence is recorded in the [source analysis](../docs/sourc
 
 The UI MUST distinguish source-reported counts from derived values.
 Every chart MUST have a concise explanation of what it measures and how to interpret it.
-Recognized metrics MUST link to a suitable definition, preferring GameAnalytics' [engagement metric dictionary](https://docs.gameanalytics.com/events-metrics-and-filtering/metrics/#engagement) for DAU, MAU, and DAU/MAU.
-General concepts MAY use Wikipedia definitions, including [concurrent users](https://en.wikipedia.org/wiki/Concurrent_user).
-Links MUST describe the referenced concept and MUST NOT imply that M&M's unverified counting semantics conform to an external definition.
+Chart descriptions MUST NOT contain reference links.
+Background definitions MAY be linked in the README.
 Custom ratios and source-specific counts MUST use explicit descriptions rather than borrowed KPI names such as conversion or retention.
-DAU/MAU MAY be identified as stickiness, with a qualification about unverified source windows and its distinction from returning-player retention.
+DAU/MAU MAY be identified as stickiness.
+The README MUST explain the unverified source windows and the distinction from returning-player retention; chart descriptions MUST focus on interpreting the metric rather than repeating these qualifications.
 
 The README MUST explain that DAU/MAU are the source's daily/monthly active fields with unverified counting semantics.
 The UI MUST label subscriptions as subscriptions, without equating them with unique people.
-Missing fields MUST NOT become zero; a literal published zero MUST remain zero, with the source limitation visible.
+Missing fields MUST NOT become zero; a literal published zero MUST remain zero, with source limitations documented in the README.
 The dashboard MUST NOT infer MAU by summing observations.
 
 Starting-zone counts MAY be summed by zone ID across servers, and across zones within a server.
@@ -347,7 +347,8 @@ Details MUST identify:
 - The exact sum and observation count.
 
 Heatmap details describe aggregates rather than individual observation timestamps.
-The UI and README MUST explain that these are sampled averages, whose coverage can be uneven.
+The UI MUST describe the heatmap values as averages of online populations.
+The README MUST explain that these are sampled averages whose coverage can be uneven.
 
 The shared Servers and time controls MUST govern both views, including more than two entities or periods.
 The heatmap MUST show a separate labeled panel per server scope and period, with “All Servers” representing the summed online count in each observation.
@@ -376,7 +377,7 @@ Period comparisons MUST preserve every original observation and its ratio while 
 Online-ratio hover details MUST use the ordinary two-line format with the rounded percentage, series name, and observation timestamp.
 These points MUST retain the ordinary connection-interval rules.
 The README MUST explain same-snapshot calculations, aggregation scope, and missing-data handling, with a calculation example.
-These ratios MUST be described as online presence at collection time, without claiming measured playtime, session length, retention, or subscriber conversion.
+These ratios MUST be described as online presence, without claiming measured playtime, session length, retention, or subscriber conversion.
 
 **Example:** A snapshot at 08:00 reports 10 online and 40 daily active, producing a 25-percent point at 08:00.
 A snapshot at 20:00 reports 30 online and 100 daily active, producing a separate 30-percent point at 20:00.

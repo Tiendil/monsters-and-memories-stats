@@ -13,8 +13,6 @@ use std::{
 use wasm_bindgen::{JsCast, JsValue};
 
 const REPOSITORY_URL: &str = "https://github.com/Tiendil/monsters-and-memories-stats";
-const GAMEANALYTICS_METRICS: &str =
-    "https://docs.gameanalytics.com/events-metrics-and-filtering/metrics/#engagement";
 const ONLINE_METRICS: [Metric; 2] = [Metric::OnlineDaily, Metric::OnlineMonthly];
 const SUBSCRIBER_METRICS: [Metric; 3] = [
     Metric::DailySubscriptions,
@@ -23,67 +21,43 @@ const SUBSCRIBER_METRICS: [Metric; 3] = [
 ];
 
 #[component]
-fn DefinitionLink(href: &'static str, label: &'static str) -> impl IntoView {
-    view! { <a href=href target="_blank" rel="noopener noreferrer">{label}</a> }
-}
-
-#[component]
 fn ChartExplanation(metric: Metric) -> impl IntoView {
-    let (formula, text, reference) = match metric {
-        Metric::Online => (
-            None,
-            "Players reported online at each collection: a snapshot of how busy the selected servers were.",
-            Some((
-                "https://en.wikipedia.org/wiki/Concurrent_user",
-                "Concurrent users (CCU)",
-            )),
-        ),
+    let (formula, text) = match metric {
+        Metric::Online => (None, "Number of players online at the same time."),
         Metric::Daily => (
             None,
-            "Daily active counts reported by M&M. DAU usually counts distinct users active in a day; M&M’s exact counting window is unverified.",
-            Some((GAMEANALYTICS_METRICS, "DAU definition")),
+            "Daily active players, reflecting day-to-day participation.",
         ),
         Metric::Monthly => (
             None,
-            "Monthly active counts reported by M&M: a view of the broader active audience. M&M’s use of a calendar month or rolling window is unverified.",
-            Some((GAMEANALYTICS_METRICS, "MAU definitions")),
+            "Monthly active players, reflecting the size of the active community over a longer period.",
         ),
-        Metric::Subscriptions => (
-            None,
-            "Active subscriptions across the whole game, showing the size of its subscription base. Subscriptions are not necessarily distinct people; per-server counts are unavailable.",
-            None,
-        ),
+        Metric::Subscriptions => (None, "Active subscriptions across the game."),
         Metric::StartingZones | Metric::Zone(..) => (
             None,
-            "Players currently in the reported starting areas. “All Zones” adds those areas together; these counts do not measure new players or character creation.",
-            None,
+            "Players in the starting areas. “All Zones” is the combined population of those areas.",
         ),
         Metric::OnlineShare => (
             Some("Server online / total online × 100%"),
-            "The “All Servers” option shows a separate line for every server. Uncheck it and select individual servers to see only their shares of all online players.",
-            None,
+            "Each server’s share of the total online population. The “All Servers” option shows a separate line for every server. Uncheck it and select individual servers to show only their shares.",
         ),
         Metric::DailyMonthly => (
             Some("DAU / MAU × 100%"),
-            "Often called stickiness, this compares daily participation with the monthly audience. It does not measure returning-player retention; M&M’s counting windows are unverified.",
-            Some((GAMEANALYTICS_METRICS, "DAU/MAU definition")),
+            "Daily activity as a percentage of monthly activity, commonly called stickiness. Higher values suggest more frequent participation.",
         ),
         Metric::OnlineDaily | Metric::OnlineMonthly => (
             Some("Online / (DAU or MAU) × 100%"),
-            "Online population at collection time, relative to daily or monthly active players.",
-            None,
+            "Players online as a percentage of the daily or monthly active audience.",
         ),
         _ => (
             Some("(DAU, MAU, or online) / global subscribers × 100%"),
-            "Activity relative to the game’s total subscriber count. Values can exceed 100%.",
-            Some((GAMEANALYTICS_METRICS, "Active-user definitions")),
+            "Daily, monthly, or online activity relative to the game’s total subscriptions. Values above 100% mean the activity count exceeds the subscription count.",
         ),
     };
     view! {
         <p class="chart-note chart-explanation">
             {formula.map(|formula| view! { <span class="chart-formula">{formula}</span> })}
             {text}
-            {reference.map(|(href, label)| view! { " "<DefinitionLink href label/>"." })}
         </p>
     }
 }
@@ -464,7 +438,7 @@ fn ActivityCard(
     view! {
         <article class="chart-card" id="chart-activity-heatmap" data-metric="activity-heatmap" tabindex="-1">
             <h3 class="chart-heading">"Activity heatmap"</h3>
-            <p class="chart-note chart-explanation">"Average observed online count by weekday and hour UTC, helping you find busier times to play. Samples have equal weight and coverage can be uneven; blank cells have no records, while the palest color can mean a measured zero."</p>
+            <p class="chart-note chart-explanation">"Average online population by weekday and hour (UTC). Darker cells indicate more players; blank cells have no records."</p>
             {move || match maps.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(maps) if maps.is_empty() => view! { <p class="empty-chart">"Select servers and a period to show activity."</p> }.into_any(),

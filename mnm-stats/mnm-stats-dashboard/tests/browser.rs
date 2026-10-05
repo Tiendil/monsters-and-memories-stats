@@ -1117,9 +1117,7 @@ impl Browser {
         self.expect_count("[data-metric='subscriber-activity'] .plot-surface", 0);
         self.click("[data-metric='subscriber-activity'] button.secondary");
         self.expect_count("#subscriber-metrics-options input:checked", 3);
-        assert_eq!(self.request(Method::POST, "/execute/sync", json!({
-            "script":"return Array.from(document.querySelectorAll('.chart-explanation a')).every(a=>a.target==='_blank' && a.href.startsWith('https://') && a.textContent.trim().length>0);", "args":[]
-        })), true);
+        self.expect_count(".chart-explanation a", 0);
         self.select("#time-range", "30");
         self.click("#nav-overview");
     }

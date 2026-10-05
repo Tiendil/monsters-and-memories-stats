@@ -136,28 +136,28 @@ impl Metric {
     pub fn description(&self) -> &'static str {
         match self {
             Self::Daily | Self::Monthly => {
-                "Source-reported activity. All-server values are sums without deduplication, not unique game-wide players. The source's counting semantics are unverified; published zeros are preserved."
+                "Activity counts. All Servers adds each server's count, so a player active on several servers may be counted more than once."
             }
             Self::Subscriptions => {
-                "Global source-reported subscriptions, not necessarily distinct people. Per-server subscriptions are unavailable."
+                "Active subscriptions across the game. Multiple subscriptions may belong to the same player; counts for individual servers are not available."
             }
             Self::Online => {
-                "Source-reported concurrent population; all-server values sum the observed servers."
+                "Players online. All Servers adds the counts from all servers in that record."
             }
             Self::OnlineShare => {
-                "Server online count divided by the complete snapshot online total. Missing servers and zero totals are unavailable."
+                "Each server's share of all online players in the same record. No share is shown when the server is missing or the total is zero."
             }
             Self::StartingZones | Self::Zone(..) => {
-                "Current population in starting areas, not new players or character creations. Totals sum the selected zones and servers."
+                "Players in starting areas, rather than a count of new players or characters. All Zones combines all starting areas. All Servers adds their counts across servers."
             }
             Self::DailyMonthly => {
-                "Derived ratio of reported daily and monthly counts. A zero denominator is not available. Values may exceed 100%."
+                "Daily activity as a percentage of monthly activity. No ratio is shown when monthly activity is zero. Values can exceed 100%."
             }
             Self::OnlineDaily | Self::OnlineMonthly => {
-                "Online population at collection time relative to daily or monthly active players."
+                "Players online, shown as a percentage of the daily or monthly active audience."
             }
             _ => {
-                "Derived ratio of reported activity to global subscribers, not a proven fraction of subscribers playing. The denominator stays global in server views. Values may exceed 100%."
+                "Activity compared with total subscriptions across the game, even when viewing one server. These ratios can exceed 100% and do not show what share of subscribers are playing."
             }
         }
     }
@@ -897,7 +897,7 @@ pub fn plot(
                     });
                 }
             }
-            result.note = "Incomplete periods are not extrapolated.".into();
+            result.note = "Incomplete periods show only the available data.".into();
         }
         Comparison::None => {
             for scope in scopes {

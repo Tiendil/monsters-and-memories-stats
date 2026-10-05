@@ -209,14 +209,19 @@ The tab MUST NOT have a redundant “Ratios of reported counts” heading or add
 ### Data explanations
 
 Short interpretation labels MUST remain close to affected values, including “Global subscribers.”
-Every chart MUST show a concise plain-language explanation below its title, including relevant calculation and interpretation limits.
+Every chart MUST show a concise plain-language explanation below its title, stating what the metric measures and how its values are interpreted.
+Descriptions MUST use neutral, factual game-design language with familiar terms and short sentences.
+Descriptions MUST omit redundant source-attribution and data-collection qualifiers already established by the page context.
+They MUST NOT address the reader with invitations such as “follow”, “discover”, or “see how”, or use playful or promotional language.
+Direct instructions MAY explain a chart control when needed.
+General caveats about unconfirmed counting methods and source windows MUST remain in the README rather than visible or accessible chart descriptions.
 Formulas MUST appear as compact blocks below the chart title and above their explanatory prose, using medium-weight monospace text in the dashboard's burnt-orange accent color.
 Each formula block MUST have a faint warm background, a subtle thin border, small rounded corners, and compact padding.
 Blocks MUST fit their text within the available width, with formulas wrapping naturally on narrow screens.
 The chart title MUST remain visually stronger than the formula, and explanatory prose MUST use muted text.
-Definition links MUST follow [requirements.md](requirements.md#metric-interpretation), use descriptive visible labels, and open in a new tab.
+Chart descriptions MUST contain no reference links.
 Explanations MUST remain visible and accessible without hover or opening a disclosure.
-Online-presence explanations MUST identify the online population at collection time relative to daily or monthly active players.
+Online-presence explanations MUST identify the online population relative to daily or monthly active players.
 Subscriber-activity explanations MUST identify the global subscriber count and state that ratios can exceed 100 percent.
 Detailed calculation rules, aggregation scope, and missing-data handling MUST remain in the README rather than repeated in chart explanations or time-series tooltips.
 Detailed methodology, source limitations, all-server aggregation semantics, and archive coverage MUST be documented in the README.

@@ -164,7 +164,7 @@ Automated tests MUST cover:
 - Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
 - Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and two-line online-ratio tooltips without calculation or coverage details.
 - Online presence and subscriber-activity series preserving individual collection points, with percentages calculated from the same snapshot and no daily averaging.
-- Visible explanations on every chart, relevant definition links with descriptive labels and new-tab behavior, and readable explanations at narrow widths.
+- Visible explanations on every chart, absence of reference links in descriptions, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.
 - Keyboard operation of navigation, comparison editing, and downloads.
