@@ -13,6 +13,74 @@ use std::{
 use wasm_bindgen::{JsCast, JsValue};
 
 const REPOSITORY_URL: &str = "https://github.com/Tiendil/monsters-and-memories-stats";
+const GAMEANALYTICS_METRICS: &str =
+    "https://docs.gameanalytics.com/events-metrics-and-filtering/metrics/#engagement";
+
+#[component]
+fn DefinitionLink(href: &'static str, label: &'static str) -> impl IntoView {
+    view! { <a href=href target="_blank" rel="noopener noreferrer">{label}</a> }
+}
+
+#[component]
+fn ChartExplanation(metric: Metric) -> impl IntoView {
+    let (formula, text, reference) = match metric {
+        Metric::Online => (
+            None,
+            "Players reported online at each collection: a snapshot of how busy the selected servers were.",
+            Some((
+                "https://en.wikipedia.org/wiki/Concurrent_user",
+                "Concurrent users (CCU)",
+            )),
+        ),
+        Metric::Daily => (
+            None,
+            "Daily active counts reported by M&M. DAU usually counts distinct users active in a day; M&M’s exact counting window is unverified.",
+            Some((GAMEANALYTICS_METRICS, "DAU definition")),
+        ),
+        Metric::Monthly => (
+            None,
+            "Monthly active counts reported by M&M: a view of the broader active audience. M&M’s use of a calendar month or rolling window is unverified.",
+            Some((GAMEANALYTICS_METRICS, "MAU definitions")),
+        ),
+        Metric::Subscriptions => (
+            None,
+            "Active subscriptions across the whole game, showing the size of its subscription base. Subscriptions are not necessarily distinct people; per-server counts are unavailable.",
+            None,
+        ),
+        Metric::StartingZones | Metric::Zone(..) => (
+            None,
+            "Players currently in the reported starting areas. “All Zones” adds those areas together; these counts do not measure new players or character creation.",
+            None,
+        ),
+        Metric::OnlineShare => (
+            Some("Server online / total online × 100%"),
+            "The “All Servers” option shows a separate line for every server. Uncheck it and select individual servers to see only their shares of all online players.",
+            None,
+        ),
+        Metric::DailyMonthly => (
+            Some("DAU / MAU × 100%"),
+            "Often called stickiness, this compares daily participation with the monthly audience. It does not measure returning-player retention; M&M’s counting windows are unverified.",
+            Some((GAMEANALYTICS_METRICS, "DAU/MAU definition")),
+        ),
+        Metric::AverageOnlineDaily | Metric::AverageOnlineMonthly => (
+            Some("Daily average online / (DAU or MAU) × 100%"),
+            "Shows sampled online presence relative to the active audience, rather than measured playtime. Each point averages available samples within one UTC day and uses that day’s last available activity count in the selected period. Sparse and partial days can differ in coverage; hover shows the samples used.",
+            None,
+        ),
+        _ => (
+            Some("(DAU, MAU, or daily average online) / global subscribers × 100%"),
+            "Compares activity with the subscription base; it does not measure subscriber conversion or the fraction of subscribers playing. The denominator stays global when selecting individual servers.",
+            Some((GAMEANALYTICS_METRICS, "Active-user definitions")),
+        ),
+    };
+    view! {
+        <p class="chart-note chart-explanation">
+            {formula.map(|formula| view! { <span class="chart-formula">{formula}</span> })}
+            {text}
+            {reference.map(|(href, label)| view! { " "<DefinitionLink href label/>"." })}
+        </p>
+    }
+}
 
 fn download(history: &History) -> Result<(), JsValue> {
     let json = history
@@ -52,7 +120,7 @@ impl Section {
         match self {
             Self::Overview => "Overview",
             Self::Population => "Player activity",
-            Self::Relationships => "Relationships",
+            Self::Relationships => "Engagement",
         }
     }
     fn key(self) -> &'static str {
@@ -276,15 +344,38 @@ fn ChartCard(
     now: RwSignal<DateTime<Utc>>,
     comparison: Memo<Result<Comparison, String>>,
     zone_scopes: Option<RwSignal<Vec<ZoneScope>>>,
+    metric_choices: Option<RwSignal<Vec<Metric>>>,
 ) -> impl IntoView {
-    let key = metric.key();
-    let title = metric.title();
-    let is_share = metric == Metric::OnlineShare;
+    let (key, title) = if metric_choices.is_some() {
+        if metric == Metric::AverageOnlineDaily {
+            ("online-presence".into(), "Online presence".into())
+        } else {
+            (
+                "subscriber-activity".into(),
+                "Activity relative to subscribers".into(),
+            )
+        }
+    } else if metric == Metric::DailyMonthly {
+        (metric.key(), "Daily participation".into())
+    } else {
+        (metric.key(), metric.title())
+    };
+    let explanation_metric = metric.clone();
+    let picker_metric = metric.clone();
     let chart_metric = metric.clone();
     let styles = expect_context::<Arc<Mutex<charts::SeriesStyles>>>();
     let plotted = Memo::new(move |_| {
         comparison.get().and_then(|comparison| {
-            let result = if let Some(selected) = zone_scopes {
+            let result = if let Some(selected) = metric_choices {
+                engagement_plot(
+                    &history,
+                    &selected.get(),
+                    &scopes.get(),
+                    range.get(),
+                    now.get(),
+                    &comparison,
+                )
+            } else if let Some(selected) = zone_scopes {
                 population_plot(
                     &history,
                     &selected.get(),
@@ -312,7 +403,20 @@ fn ChartCard(
     view! {
         <article class="chart-card" id=format!("chart-{key}") tabindex="-1" data-metric=key>
             <h3 class="chart-heading">{title.clone()}</h3>
-            {is_share.then(|| view! { <p class="chart-note">"The “All Servers” option shows a separate line for every server. Uncheck it and select individual servers to see only their shares of all online players."</p> })}
+            <ChartExplanation metric=explanation_metric/>
+            {metric_choices.map(|selected| {
+                let online = picker_metric == Metric::AverageOnlineDaily;
+                view! {
+                    <MetricPicker online selected/>
+                    <Show when=move || selected.get().is_empty()>
+                        <p class="chart-note">"Choose at least one metric."</p>
+                        <button class="secondary" on:click=move |_| selected.set(if online { vec![Metric::AverageOnlineDaily] } else { vec![Metric::DailySubscriptions, Metric::MonthlySubscriptions] })>"Restore default metrics"</button>
+                    </Show>
+                    <Show when=move || selected.get().contains(&Metric::AverageOnlineSubscriptions)>
+                        <p class="chart-note">"Average online uses equally weighted samples within each UTC day and the last available global subscriber count in that day and selected period. Missing hours are omitted; partial days and uneven coverage can affect the result. Hover shows the samples used."</p>
+                    </Show>
+                }
+            })}
             {move || match plotted.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(plot) => {
@@ -350,7 +454,7 @@ fn ActivityCard(
     view! {
         <article class="chart-card" id="chart-activity-heatmap" data-metric="activity-heatmap" tabindex="-1">
             <h3 class="chart-heading">"Activity heatmap"</h3>
-            <p class="chart-note">"Average observed online count by weekday and hour UTC. Coverage can be uneven; blank cells have no records."</p>
+            <p class="chart-note chart-explanation">"Average observed online count by weekday and hour UTC, helping you find busier times to play. Samples have equal weight and coverage can be uneven; blank cells have no records, while the palest color can mean a measured zero."</p>
             {move || match maps.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(maps) if maps.is_empty() => view! { <p class="empty-chart">"Select servers and a period to show activity."</p> }.into_any(),
@@ -501,6 +605,38 @@ fn ZonePicker(names: BTreeMap<String, String>, zones: RwSignal<Vec<ZoneScope>>) 
 }
 
 #[component]
+fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView {
+    let options = if online {
+        vec![Metric::AverageOnlineDaily, Metric::AverageOnlineMonthly]
+    } else {
+        vec![
+            Metric::DailySubscriptions,
+            Metric::MonthlySubscriptions,
+            Metric::AverageOnlineSubscriptions,
+        ]
+    };
+    let choices = options.iter().map(|m| (m.key(), m.title())).collect();
+    let summary = Signal::derive(move || match selected.get().as_slice() {
+        [] => "Choose metrics".into(),
+        [metric] => metric.title(),
+        metrics => format!("{} metrics", metrics.len()),
+    });
+    let selected_keys = Signal::derive(move || selected.get().iter().map(Metric::key).collect());
+    let on_toggle = Callback::new(move |key: String| {
+        if let Some(metric) = options.iter().find(|m| m.key() == key) {
+            selected.update(|current| {
+                if current.contains(metric) {
+                    current.retain(|m| m != metric);
+                } else {
+                    current.push(metric.clone());
+                }
+            });
+        }
+    });
+    view! { <div class="metric-control"><CheckboxPicker id=if online { "online-metrics" } else { "subscriber-metrics" } label="Metrics" choices selected=selected_keys summary on_toggle/></div> }
+}
+
+#[component]
 fn Correlations(
     history: Arc<History>,
     scopes: RwSignal<Vec<Scope>>,
@@ -510,8 +646,9 @@ fn Correlations(
     let names = servers(&history);
     view! {
         <section class="correlations" aria-labelledby="correlations-heading">
-            <h2 id="correlations-heading">"Correlations"</h2>
-            <p>"Pearson's r uses the last jointly available observation per UTC day in the shared time range. At least three paired days and variation in both counts are needed."</p>
+            <h2 id="correlations-heading">"How metrics move together"</h2>
+            <p class="chart-note"><DefinitionLink href="https://en.wikipedia.org/wiki/Pearson_correlation_coefficient" label="Pearson’s r"/>" describes linear association: near +1 means counts tend to rise and fall together, near −1 means opposite movement, and near 0 means little linear association. It does not establish causation."</p>
+            <p class="chart-note">"Uses the last jointly available observation per UTC day in the primary time range for each selected server, including during comparisons. At least three paired days and variation in both counts are needed."</p>
             {move || {
                 let (start, end) = range.get().bounds(&history, now.get());
                 scopes.get().into_iter().map(|scope| view! {
@@ -519,7 +656,7 @@ fn Correlations(
                         <h3 class="correlation-scope">{format!("{} · {} · {} – {}", scope.label(&names), range.get().label(), readable(start), readable(end))}</h3>
                         <div class="correlation-grid">{[(Metric::Daily, Metric::Monthly), (Metric::Daily, Metric::Subscriptions), (Metric::Monthly, Metric::Subscriptions)].into_iter().map(|(a, b)| {
                             let result = correlation(&history, &a, &b, &scope, start, end);
-                            view! { <div class="correlation-value"><h4>{format!("{} / {}", a.title(), b.title())}</h4>
+                            view! { <div class="correlation-value"><h4>{format!("{} and {}", a.title(), if b == Metric::Subscriptions { "Global subscribers".into() } else { b.title() })}</h4>
                                 <p class="coefficient">{result.r.map_or_else(|| "not available".into(), |r| format!("r = {r:.3}"))}</p>
                                 <p>{format!("{} paired UTC days", result.paired_days)}</p>
                             </div> }
@@ -527,7 +664,7 @@ fn Correlations(
                     </section>
                 }).collect_view()
             }}
-            <p class="muted">"Correlation does not establish causation. Overlapping source activity windows limit interpretation. Subscriptions remain global; activity sums are not deduplicated."</p>
+            <p class="muted">"Shared trends and overlapping activity windows can inflate these associations. Subscriptions remain global; activity sums are not deduplicated."</p>
         </section>
     }
 }
@@ -543,6 +680,11 @@ pub fn App() -> impl IntoView {
     let names = servers(&history);
     let zone_names = zones(&history);
     let zone_scopes = RwSignal::new(vec![ZoneScope::All]);
+    let online_metrics = RwSignal::new(vec![Metric::AverageOnlineDaily]);
+    let subscriber_metrics = RwSignal::new(vec![
+        Metric::DailySubscriptions,
+        Metric::MonthlySubscriptions,
+    ]);
     let utc_now =
         || DateTime::from_timestamp_millis(js_sys::Date::now() as i64).expect("browser timestamp");
     let now = RwSignal::new(utc_now());
@@ -628,12 +770,12 @@ pub fn App() -> impl IntoView {
                     let metrics = match selected {
                         Section::Overview => vec![Metric::Online, Metric::Daily, Metric::Monthly, Metric::Subscriptions],
                         Section::Population => vec![Metric::StartingZones, Metric::OnlineShare],
-                        Section::Relationships => vec![Metric::DailyMonthly, Metric::DailySubscriptions, Metric::MonthlySubscriptions],
+                        Section::Relationships => vec![Metric::DailyMonthly, Metric::AverageOnlineDaily, Metric::DailySubscriptions],
                     };
                     let chart_history = history.clone();
                     let zone_options = zone_names.clone();
                     view! {
-                        <h2 class="section-title">{match selected { Section::Overview => "Trends over time", Section::Population => "Player activity", Section::Relationships => "Ratios of reported counts" }}</h2>
+                        <h2 class="section-title" class:visually-hidden=selected == Section::Relationships>{match selected { Section::Overview => "Trends over time", Section::Population => "Player activity", Section::Relationships => "Engagement" }}</h2>
                         {(selected == Section::Population).then(move || view! {
                             <div class="zone-control"><ZonePicker names=zone_options zones=zone_scopes/></div>
                             <Show when=move || zone_scopes.get().is_empty()>
@@ -642,12 +784,16 @@ pub fn App() -> impl IntoView {
                         })}
                         <div class="chart-grid" class:overview-chart=selected == Section::Overview class:population-chart=selected == Section::Population>{metrics.into_iter().map(|metric| {
                             let selected_zones = (metric == Metric::StartingZones).then_some(zone_scopes);
-                            view! { <ChartCard history=chart_history.clone() metric scopes range now comparison zone_scopes=selected_zones/> }
+                            let metric_choices = match metric {
+                                Metric::AverageOnlineDaily => Some(online_metrics),
+                                Metric::DailySubscriptions => Some(subscriber_metrics),
+                                _ => None,
+                            };
+                            view! { <ChartCard history=chart_history.clone() metric scopes range now comparison zone_scopes=selected_zones metric_choices/> }
                         }).collect_view()}
                         {(selected == Section::Population).then(|| view! { <ActivityCard history=history.clone() scopes range now comparison/> })}
                         </div>
                         {(selected == Section::Relationships).then(|| view! {
-                            <p class="correlation-explanation">"Correlations below use the primary time range for each selected server."</p>
                             <Correlations history=history.clone() scopes range now/>
                         })}
                     }

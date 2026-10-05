@@ -68,6 +68,9 @@ pub enum Metric {
     DailyMonthly,
     DailySubscriptions,
     MonthlySubscriptions,
+    AverageOnlineDaily,
+    AverageOnlineMonthly,
+    AverageOnlineSubscriptions,
 }
 
 impl Metric {
@@ -83,6 +86,9 @@ impl Metric {
             Self::DailyMonthly => "daily-monthly",
             Self::DailySubscriptions => "daily-subscriptions",
             Self::MonthlySubscriptions => "monthly-subscriptions",
+            Self::AverageOnlineDaily => "average-online-daily",
+            Self::AverageOnlineMonthly => "average-online-monthly",
+            Self::AverageOnlineSubscriptions => "average-online-subscriptions",
         }
         .into()
     }
@@ -99,6 +105,9 @@ impl Metric {
             Self::DailyMonthly => "Daily / monthly activity",
             Self::DailySubscriptions => "Daily activity / global subscribers",
             Self::MonthlySubscriptions => "Monthly activity / global subscribers",
+            Self::AverageOnlineDaily => "Average online / daily active",
+            Self::AverageOnlineMonthly => "Average online / monthly active",
+            Self::AverageOnlineSubscriptions => "Average online / global subscribers",
         }
         .into()
     }
@@ -110,6 +119,9 @@ impl Metric {
                 | Self::DailyMonthly
                 | Self::DailySubscriptions
                 | Self::MonthlySubscriptions
+                | Self::AverageOnlineDaily
+                | Self::AverageOnlineMonthly
+                | Self::AverageOnlineSubscriptions
         )
     }
 
@@ -141,6 +153,11 @@ impl Metric {
             Self::DailyMonthly => {
                 "Derived ratio of reported daily and monthly counts. A zero denominator is not available. Values may exceed 100%."
             }
+            Self::AverageOnlineDaily
+            | Self::AverageOnlineMonthly
+            | Self::AverageOnlineSubscriptions => {
+                "Daily arithmetic mean of available online samples divided by the last available count that UTC day within the selected period. Coverage can be uneven. This descriptive ratio does not measure playtime or subscriber conversion."
+            }
             _ => {
                 "Derived ratio of reported activity to global subscribers, not a proven fraction of subscribers playing. The denominator stays global in server views. Values may exceed 100%."
             }
@@ -148,6 +165,10 @@ impl Metric {
     }
 
     pub fn value(&self, snapshot: &Snapshot, scope: &Scope) -> Option<MetricValue> {
+        // A daily average cannot be computed from an isolated snapshot.
+        if self.average_denominator().is_some() {
+            return None;
+        }
         if *self == Self::Subscriptions {
             return Some(MetricValue::Count(snapshot.active_subscriptions.into()));
         }
@@ -206,12 +227,30 @@ impl Metric {
         }
         found.then_some(MetricValue::Count(count))
     }
+
+    fn average_denominator(&self) -> Option<Self> {
+        match self {
+            Self::AverageOnlineDaily => Some(Self::Daily),
+            Self::AverageOnlineMonthly => Some(Self::Monthly),
+            Self::AverageOnlineSubscriptions => Some(Self::Subscriptions),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MetricValue {
     Count(u128),
-    Ratio { numerator: u128, denominator: u128 },
+    Ratio {
+        numerator: u128,
+        denominator: u128,
+    },
+    SampledRatio {
+        online_sum: u128,
+        samples: usize,
+        denominator: u128,
+        first: DateTime<Utc>,
+    },
 }
 
 impl MetricValue {
@@ -222,6 +261,12 @@ impl MetricValue {
                 numerator,
                 denominator,
             } => 100.0 * numerator as f64 / denominator as f64,
+            Self::SampledRatio {
+                online_sum,
+                samples,
+                denominator,
+                ..
+            } => 100.0 * (online_sum as f64 / samples as f64) / denominator as f64,
         }
     }
 
@@ -232,6 +277,22 @@ impl MetricValue {
                 numerator,
                 denominator,
             } => format!("{:.2}% ({numerator} / {denominator})", self.number()),
+            Self::SampledRatio { .. } => format!("{:.2}%", self.number()),
+        }
+    }
+
+    pub fn sample_details(self) -> Option<String> {
+        match self {
+            Self::SampledRatio {
+                online_sum,
+                samples,
+                denominator,
+                first,
+            } => Some(format!(
+                "Online mean: {online_sum} / {samples} samples; denominator: {denominator}; samples from {} UTC",
+                first.format("%H:%M")
+            )),
+            _ => None,
         }
     }
 }
@@ -796,6 +857,18 @@ pub fn plot(
     now: DateTime<Utc>,
     comparison: &Comparison,
 ) -> Result<Plot, String> {
+    if let Some(denominator) = metric.average_denominator() {
+        let mut result = plot(history, &Metric::Online, scopes, range, now, comparison)?;
+        for (index, series) in result.series.iter_mut().enumerate() {
+            series.points = daily_online_ratios(
+                &series.points,
+                history,
+                &denominator,
+                &scopes[index % scopes.len()],
+            )?;
+        }
+        return Ok(result);
+    }
     let names = servers(history);
     let scope_label = |scope: &Scope| {
         if *metric == Metric::Subscriptions {
@@ -910,6 +983,80 @@ pub fn plot(
     }
     if result.x_bounds.1 <= result.x_bounds.0 {
         result.x_bounds.1 = result.x_bounds.0 + 3600.0;
+    }
+    Ok(result)
+}
+
+/// Each plotted aggregate uses only the original samples inside its series' period.
+fn daily_online_ratios(
+    points: &[Point],
+    history: &History,
+    denominator: &Metric,
+    scope: &Scope,
+) -> Result<Vec<Point>, String> {
+    let mut days = BTreeMap::<NaiveDate, (u128, usize, DateTime<Utc>, Point)>::new();
+    for point in points {
+        if let Some(MetricValue::Count(online)) = point.value {
+            let entry = days
+                .entry(point.at.date_naive())
+                .or_insert_with(|| (0, 0, point.at, point.clone()));
+            entry.0 = entry
+                .0
+                .checked_add(online)
+                .ok_or("Online sample total is too large.")?;
+            entry.1 += 1;
+            entry.3 = point.clone();
+        }
+    }
+    Ok(days
+        .into_values()
+        .map(|(online_sum, samples, first, mut point)| {
+            let index = history
+                .snapshots()
+                .binary_search_by_key(&point.at, |s| s.observed_at)
+                .expect("point belongs to history");
+            point.value = match denominator.value(&history.snapshots()[index], scope) {
+                Some(MetricValue::Count(denominator)) if denominator > 0 => {
+                    Some(MetricValue::SampledRatio {
+                        online_sum,
+                        samples,
+                        denominator,
+                        first,
+                    })
+                }
+                _ => None,
+            };
+            point
+        })
+        .collect())
+}
+
+/// Combine compatible percentage series, retaining a distinct identity per metric.
+pub fn engagement_plot(
+    history: &History,
+    metrics: &[Metric],
+    scopes: &[Scope],
+    range: TimeRange,
+    now: DateTime<Utc>,
+    comparison: &Comparison,
+) -> Result<Plot, String> {
+    let mut result = plot(history, &Metric::DailyMonthly, &[], range, now, comparison)?;
+    for metric in metrics {
+        let mut part = plot(history, metric, scopes, range, now, comparison)?;
+        for series in &mut part.series {
+            series.identity = format!("metric:{}:{}", metric.key(), series.identity);
+            series.label = format!("{} · {}", metric.title(), series.label);
+        }
+        result.alignment = part.alignment;
+        result.x_bounds = part.x_bounds;
+        result.note = part.note;
+        result.series.extend(part.series);
+    }
+    if metrics.is_empty() {
+        result.note = "Select metrics to show their data.".into();
+    }
+    for (index, series) in result.series.iter_mut().enumerate() {
+        series.style = index;
     }
     Ok(result)
 }

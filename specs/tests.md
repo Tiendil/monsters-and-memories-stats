@@ -97,6 +97,9 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Weekday/hour UTC means with exact sums and sample counts, uneven sampling, missing cells, published zeros, boundary timestamps, and absent servers.
 - Separate heatmaps for selected entities and periods, using original UTC buckets and common displayed color bounds, including more than two selections and empty ranges.
 - Ratio values, including zero denominators and values above 100 percent.
+- Daily sampled-online ratios with unequal sample counts, missing hours and servers, measured zeros, zero last denominators, partial UTC days, selection boundaries, and original-date grouping during comparisons.
+- Exact sum, sample count, denominator, and coverage details for online-average ratios, including fractional means and all-server totals.
+- Combined engagement metric selections with stable distinct identities across more than two scopes and periods, including empty selections.
 - Correlation with known expected results and selection of the last jointly available sample per UTC day.
 - Unavailable correlation for insufficient paired days or zero variance.
 - All range presets and custom inclusive UTC date boundaries, including invalid or reversed inputs.
@@ -146,7 +149,7 @@ Presentation coverage MUST verify [dashboard-design.md](dashboard-design.md) alo
 Automated tests MUST cover:
 
 - A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
-- Navigation between Overview, Player activity, and Relationships while retaining the selected scope, range, and comparisons.
+- Navigation between Overview, Player activity, and Engagement while retaining the selected scope, range, and comparisons.
 - Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
 - A visible “Now” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count.
 - Unchanged “Now” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
@@ -159,6 +162,9 @@ Automated tests MUST cover:
 - Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes, with correlations grouped per selected entity over the shared range.
+- Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
+- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and sampled-average hover details.
+- Visible explanations on every chart, relevant definition links with descriptive labels and new-tab behavior, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.
 - Keyboard operation of navigation, comparison editing, and downloads.

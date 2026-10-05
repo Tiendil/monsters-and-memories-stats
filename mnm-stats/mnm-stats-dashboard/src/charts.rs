@@ -78,11 +78,46 @@ fn time_ticks(plot: &Plot) -> Vec<f64> {
 }
 
 fn height(plot: &Plot) -> usize {
+    let hover_height: usize = plot
+        .series
+        .iter()
+        .map(|series| {
+            let lines = series
+                .points
+                .iter()
+                .filter_map(|point| {
+                    point
+                        .value
+                        .map(|_| hover_text(point, &series.label).matches("<br>").count() + 1)
+                })
+                .max()
+                .unwrap_or(1);
+            (tokens::T_CHART_HOVER_SERIES_MIN_HEIGHT.pixels() as usize)
+                .max(lines * tokens::T_CHART_HOVER_LINE_HEIGHT.pixels() as usize)
+        })
+        .sum();
     (tokens::T_CHART_VIEWPORT_MIN_HEIGHT.pixels() as usize).max(
-        plot.series.len() * tokens::T_CHART_HOVER_SERIES_MIN_HEIGHT.pixels() as usize
+        hover_height
             + tokens::T_CHART_VIEWPORT_MARGIN.pixels() as usize * 2
             + tokens::T_CHART_AXIS_X_LABEL_AREA.pixels() as usize,
     )
+}
+
+fn hover_text(point: &crate::analysis::Point, label: &str) -> String {
+    point.value.map_or_else(String::new, |value| {
+        let limit = tokens::T_CHART_HOVER_LINE_LENGTH as usize;
+        format!(
+            "<b>{}</b><br>{}{}",
+            wrapped_label(&format!("{} {label}", value.display()), limit),
+            point.at.format("%d %b %Y, %H:%M UTC"),
+            value
+                .sample_details()
+                .map_or_else(String::new, |details| format!(
+                    "<br>{}",
+                    wrapped_label(&details, limit)
+                )),
+        )
+    })
 }
 
 pub fn render(plot: &Plot, metric: &Metric) -> Figure {
@@ -127,14 +162,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             }
             x.push(Some(point.x));
             y.push(point.value.map(|v| v.number()));
-            text.push(point.value.map_or_else(String::new, |value| {
-                format!(
-                    "<b>{} {}</b><br>{}",
-                    value.display(),
-                    escape(&series.label),
-                    point.at.format("%d %b %Y, %H:%M UTC")
-                )
-            }));
+            text.push(hover_text(point, &series.label));
             // Dense lines omit markers except where an observation has no connected neighbor.
             let connected_before = previous.is_some_and(|p| point.connection_from(p).is_some());
             let connected_after = series
@@ -298,8 +326,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
     figure
 }
 
-fn heatmap_label(label: &str) -> String {
-    let limit = tokens::T_CHART_HEATMAP_HOVER_LINE_LENGTH as usize;
+fn wrapped_label(label: &str, limit: usize) -> String {
     let mut result = String::new();
     let mut column = 0;
     for word in label.split_whitespace() {
@@ -347,7 +374,7 @@ pub fn render_heatmap(map: &ActivityHeatmap, maximum: f64) -> Figure {
                     cell.mean().map_or_else(String::new, |mean| {
                         format!(
                             "<b>{mean:.2} mean online</b><br>{}<br>{} {hour:02}:00–{:02}:00 UTC<br>{} {} · sum {}",
-                            heatmap_label(&map.label), weekdays[day], hour + 1, cell.samples,
+                            wrapped_label(&map.label, tokens::T_CHART_HEATMAP_HOVER_LINE_LENGTH as usize), weekdays[day], hour + 1, cell.samples,
                             if cell.samples == 1 { "record" } else { "records" }, cell.total
                         )
                     })

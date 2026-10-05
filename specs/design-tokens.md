@@ -91,7 +91,7 @@ References MUST use these mappings:
 - `{tailwind.color.stone.50}` selects `--color-stone-50`; the same naming rule applies to other palette entries and unshaded colors such as `{tailwind.color.white}`.
 - `{tailwind.spacing.4}` selects four times the theme's `--spacing` base; spacing steps MUST be nonnegative integers.
 - `{tailwind.text.sm}` selects `--text-sm` as a font-size dimension.
-- `{tailwind.font.sans}` selects `--font-sans` as an ordered font-family list.
+- `{tailwind.font.sans}` and `{tailwind.font.mono}` select `--font-sans` and `--font-mono` respectively as ordered font-family lists.
 - `{tailwind.font-weight.medium}` selects `--font-weight-medium` as a numeric weight.
 - `{tailwind.leading.normal}` selects `--leading-normal` as a unitless line height.
 - `{tailwind.radius.md}` selects `--radius-md` as a dimension.

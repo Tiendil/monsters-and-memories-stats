@@ -656,8 +656,13 @@ fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
     assert_eq!(series["y"][2], 7.0);
     let text = series["text"][0].as_str().unwrap();
     assert_eq!(
-        text, "<b>9007199254740993 Alpha &lt;island&gt; &amp; West</b><br>01 Feb 2024, 12:34 UTC",
+        text.replace(" <br>", " "),
+        "<b>9007199254740993 Alpha &lt;island&gt; &amp; West</b><br>01 Feb 2024, 12:34 UTC",
         "hover keeps the exact value and literal name, with minute precision on the second line"
+    );
+    assert!(
+        text.split("</b>").next().unwrap().contains("<br>"),
+        "long value/name content wraps within its own block"
     );
     assert_eq!(series["text"][1], "");
     assert_eq!(figure["data"].as_array().unwrap().len(), 1);
@@ -1646,4 +1651,150 @@ fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
     )
     .unwrap();
     assert_eq!(fractional["data"][0]["zmax"], 0.5);
+}
+
+#[test]
+fn daily_online_means_use_selected_samples_last_denominators_and_exact_coverage() {
+    let mut samples = vec![
+        snapshot("2024-02-28T23:00:00Z", 999, 999, 999),
+        snapshot("2024-02-29T08:00:00Z", 30, 300, 0),
+        snapshot("2024-02-29T20:00:00Z", 100, 400, 200),
+        snapshot("2024-03-01T00:00:00Z", 100, 500, 0),
+        snapshot("2024-03-03T12:00:00Z", 100, 500, 200),
+    ];
+    for (sample, online) in samples.iter_mut().zip([900, 10, 31, 0, 50]) {
+        sample.servers[0].online = online;
+    }
+    samples[4].servers.remove(0); // No sample for Alpha that day.
+    let history = History::new(samples).unwrap();
+    let scope = Scope::Server("a".into());
+    let range = TimeRange::custom("2024-02-29", "2024-03-03").unwrap();
+    let now = time("2024-03-04T00:00:00Z");
+    let result = |metric: Metric, scope: Scope, range| {
+        plot(&history, &metric, &[scope], range, now, &Comparison::None).unwrap()
+    };
+    let daily = result(Metric::AverageOnlineDaily, scope.clone(), range);
+    let points = &daily.series[0].points;
+    assert_eq!(points.len(), 2);
+    assert_eq!(points[0].at, time("2024-02-29T20:00:00Z"));
+    assert_eq!(
+        points[0].value,
+        Some(MetricValue::SampledRatio {
+            online_sum: 41,
+            samples: 2,
+            denominator: 100,
+            first: time("2024-02-29T08:00:00Z"),
+        })
+    );
+    assert_eq!(points[0].value.unwrap().number(), 20.5);
+    assert_eq!(points[1].value.unwrap().number(), 0.0);
+    let subscriber = result(Metric::AverageOnlineSubscriptions, scope.clone(), range);
+    assert_eq!(
+        subscriber.series[0].points[0].value.unwrap().number(),
+        10.25
+    );
+    assert_eq!(subscriber.series[0].points[1].value, None); // Last denominator zero.
+    let monthly = result(Metric::AverageOnlineMonthly, scope.clone(), range);
+    assert_eq!(monthly.series[0].points[0].value.unwrap().number(), 5.125);
+    let partial = result(
+        Metric::AverageOnlineDaily,
+        scope,
+        TimeRange::Custom {
+            start: time("2024-02-29T12:00:00Z"),
+            end: time("2024-02-29T21:00:00Z"),
+        },
+    );
+    assert_eq!(partial.series[0].points[0].value.unwrap().number(), 31.0);
+    let all = result(Metric::AverageOnlineDaily, Scope::All, range);
+    assert!((all.series[0].points[0].value.unwrap().number() - 100.0 * 22.5 / 105.0).abs() < 1e-10);
+    let empty = result(
+        Metric::AverageOnlineMonthly,
+        Scope::Server("gone".into()),
+        range,
+    );
+    assert!(empty.series[0].points.is_empty());
+    let figure: serde_json::Value = serde_json::from_str(
+        &mnm_stats_dashboard::charts::render(&daily, &Metric::AverageOnlineDaily).to_json(),
+    )
+    .unwrap();
+    let hover = figure["data"][0]["text"][0]
+        .as_str()
+        .unwrap()
+        .replace("<br>", "");
+    assert!(
+        hover.contains("Online mean: 41 / 2 samples; denominator: 100; samples from 08:00 UTC")
+    );
+    assert!(hover.contains("29 Feb 2024, 20:00 UTC"));
+}
+
+#[test]
+fn engagement_metrics_combine_scopes_and_periods_without_cross_day_or_range_leaks() {
+    let mut records = Vec::new();
+    for month in [1, 2, 3] {
+        for (hour, online) in [(1, 10), (22, 30)] {
+            let mut sample = snapshot(
+                &format!("2024-{month:02}-01T{hour:02}:00:00Z"),
+                100,
+                400,
+                200,
+            );
+            sample.servers[0].online = online;
+            records.push(sample);
+        }
+    }
+    let history = History::new(records).unwrap();
+    let periods = Comparison::periods(
+        ["2024-01", "2024-02", "2024-03"]
+            .map(|m| Period::month(m).unwrap())
+            .into(),
+    );
+    let scopes = [
+        Scope::All,
+        Scope::Server("a".into()),
+        Scope::Server("b".into()),
+    ];
+    let metrics = [
+        Metric::DailySubscriptions,
+        Metric::MonthlySubscriptions,
+        Metric::AverageOnlineSubscriptions,
+    ];
+    let now = time("2024-04-01T00:00:00Z");
+    let all = engagement_plot(&history, &metrics, &scopes, TimeRange::All, now, &periods).unwrap();
+    assert_eq!(all.series.len(), 27);
+    let mut identities = std::collections::BTreeSet::new();
+    for series in &all.series {
+        assert!(identities.insert(series.identity.clone()));
+    }
+    for series in &all.series[18..] {
+        assert_eq!(series.points.len(), 1);
+        assert_eq!(series.points[0].x, 22.0 * 3600.0);
+        assert!(series.label.contains("Average online / global subscribers"));
+    }
+    let mut styles = mnm_stats_dashboard::charts::SeriesStyles::default();
+    let mut all = all;
+    styles.assign(&mut all);
+    let mut subset = engagement_plot(
+        &history,
+        &metrics[2..],
+        &scopes[1..2],
+        TimeRange::All,
+        now,
+        &periods,
+    )
+    .unwrap();
+    styles.assign(&mut subset);
+    for series in &subset.series {
+        let original = all
+            .series
+            .iter()
+            .find(|s| s.identity == series.identity)
+            .unwrap();
+        assert_eq!(original.style, series.style);
+        assert_eq!(series.points[0].value.unwrap().number(), 10.0);
+    }
+    for (metrics, scopes) in [(&[][..], &scopes[..]), (&metrics[..], &[][..])] {
+        let empty =
+            engagement_plot(&history, metrics, scopes, TimeRange::All, now, &periods).unwrap();
+        assert!(empty.series.is_empty());
+    }
 }

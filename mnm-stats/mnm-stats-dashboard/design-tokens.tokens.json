@@ -94,6 +94,10 @@
         "$value": "{color.surface.panel}",
         "$description": "Background of chart cards, matching the shared panel surface."
       },
+      "formula": {
+        "$value": "{tailwind.color.orange.50}",
+        "$description": "Faint warm background distinguishing formulas from chart explanations."
+      },
       "tooltip": {
         "$value": "{tailwind.color.stone.50}",
         "$description": "Background of exact-value hover details, matching the input surface."
@@ -114,7 +118,7 @@
       },
       "accent": {
         "$value": "{tailwind.color.orange.800}",
-        "$description": "Emphasized metric values, small headings, and units."
+        "$description": "Emphasized metric values, small headings, formulas, and units."
       },
       "link": {
         "$value": "{tailwind.color.orange.800}",
@@ -180,6 +184,10 @@
         "$value": "{tailwind.color.stone.300}",
         "$description": "Boundary of panel surfaces and subdivisions within them."
       },
+      "formula": {
+        "$value": "{tailwind.color.orange.200}",
+        "$description": "Subtle warm outline around a chart formula."
+      },
       "fieldset": {
         "$value": "{tailwind.color.stone.300}",
         "$description": "Boundary of grouped comparison choices."
@@ -207,6 +215,10 @@
         "$value": "{tailwind.font.sans}",
         "$description": "Ordered font fallback stack for body text and controls."
       },
+      "formula": {
+        "$value": "{tailwind.font.mono}",
+        "$description": "Ordered monospace fallback stack distinguishing mathematical expressions from prose."
+      },
       "title": {
         "$value": [
           "IM Fell English",
@@ -229,6 +241,10 @@
       "metadata": {
         "$value": "{tailwind.font-weight.medium}",
         "$description": "Subtle emphasis for metadata values such as coverage dates and record counts."
+      },
+      "formula": {
+        "$value": "{tailwind.font-weight.medium}",
+        "$description": "Subtle emphasis for chart formulas above their explanatory prose."
       },
       "emphasis": {
         "$value": "{tailwind.font-weight.semibold}",
@@ -402,6 +418,15 @@
   "chart": {
     "hover": {
       "$type": "dimension",
+      "line-length": {
+        "$type": "number",
+        "$value": 32,
+        "$description": "Maximum characters per time-series hover line, keeping exact values and long series labels readable on narrow charts."
+      },
+      "line-height": {
+        "$value": { "value": 22, "unit": "px" },
+        "$description": "Vertical space reserved per wrapped time-series hover line when sizing charts for simultaneous labels."
+      },
       "hit-radius": {
         "$value": {
           "value": 8,
@@ -689,6 +714,10 @@
   },
   "radius": {
     "$type": "dimension",
+    "formula": {
+      "$value": "{tailwind.radius.sm}",
+      "$description": "Small corner rounding for compact formula blocks."
+    },
     "control": {
       "$value": "{tailwind.radius.md}",
       "$description": "Corner rounding of buttons."
@@ -765,6 +794,18 @@
       "padding": {
         "$value": "{scale.spacing.4}",
         "$description": "Inner padding of individual metric cards."
+      }
+    },
+    "formula": {
+      "padding": {
+        "block": {
+          "$value": "{scale.spacing.1}",
+          "$description": "Compact vertical padding within a formula block."
+        },
+        "inline": {
+          "$value": "{scale.spacing.2}",
+          "$description": "Inline padding separating formula text from its border."
+        }
       }
     },
     "control": {

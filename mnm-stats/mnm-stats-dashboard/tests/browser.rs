@@ -992,11 +992,80 @@ impl Browser {
         );
     }
 
+    fn verify_engagement(&self) {
+        self.servers(&[""]);
+        self.select("#time-range", "all");
+        self.click("#nav-relationships");
+        self.ready("online-presence");
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+            "script":"return Array.from(document.querySelectorAll('.chart-heading'), e => e.textContent);", "args":[]
+        })), json!(["Daily participation", "Online presence", "Activity relative to subscribers"]));
+        assert_eq!(
+            self.computed(".chart-grid", "grid-template-columns")
+                .split_whitespace()
+                .count(),
+            1
+        );
+        self.expect_count("#online-metrics-options input:checked", 1);
+        self.expect_count("#subscriber-metrics-options input:checked", 2);
+        self.expect_count("[data-metric='subscriber-activity'] .legend li", 2);
+        self.click("#online-metrics-toggle");
+        self.click("#online-metrics-options label:nth-child(2)");
+        self.expect_count("#online-metrics-options input:checked", 2);
+        self.expect_count("[data-metric='online-presence'] .legend li", 2);
+        self.click("#online-metrics-toggle");
+        self.click("#subscriber-metrics-toggle");
+        self.click("#subscriber-metrics-options input[value='average-online-subscriptions']");
+        self.expect_count("#subscriber-metrics-options input:checked", 3);
+        self.request(Method::POST, "/actions", json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e00c}"},{"type":"keyUp","value":"\u{e00c}"}]}]}));
+        self.expect_count(".selection-picker[open]", 0);
+        self.click("#nav-overview");
+        self.expect_count(".chart-explanation", 4);
+        self.click("#nav-relationships");
+        self.expect_count("#online-metrics-options input:checked", 2);
+        self.expect_count("#subscriber-metrics-options input:checked", 3);
+        self.hover("[data-metric='online-presence'] .scatterlayer .point");
+        assert!(
+            self.text("[data-metric='online-presence'] .hoverlayer")
+                .contains("samples")
+        );
+        assert!(
+            self.text("[data-metric='online-presence'] .hoverlayer")
+                .contains("UTC")
+        );
+        self.hover("[data-metric='online-presence'] .chart-heading");
+        self.click("#online-metrics-toggle");
+        for index in [1, 2] {
+            self.click(&format!("#online-metrics-options label:nth-child({index})"));
+        }
+        self.click("#online-metrics-toggle");
+        self.expect_count("[data-metric='online-presence'] .plot-surface", 0);
+        self.click("[data-metric='online-presence'] button.secondary");
+        self.expect_count("#online-metrics-options input:checked", 1);
+        self.ready("online-presence");
+        self.click("#subscriber-metrics-toggle");
+        for index in [1, 2, 3] {
+            self.click(&format!(
+                "#subscriber-metrics-options label:nth-child({index})"
+            ));
+        }
+        self.click("#subscriber-metrics-toggle");
+        self.expect_count("[data-metric='subscriber-activity'] .plot-surface", 0);
+        self.click("[data-metric='subscriber-activity'] button.secondary");
+        self.expect_count("#subscriber-metrics-options input:checked", 2);
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+            "script":"return Array.from(document.querySelectorAll('.chart-explanation a, .correlations a')).every(a=>a.target==='_blank' && a.href.startsWith('https://') && a.textContent.trim().length>0);", "args":[]
+        })), true);
+        self.select("#time-range", "30");
+        self.click("#nav-overview");
+    }
+
     fn verify_features(&self, url: &str, expected: &Value, scratch: &Path) {
         self.verify_presentation(expected, scratch);
         self.verify_checkbox_labels("w", "a");
         self.verify_population(expected);
         self.verify_population_insights(expected);
+        self.verify_engagement();
         let metrics = [
             "daily",
             "monthly",
@@ -1004,8 +1073,7 @@ impl Browser {
             "online",
             "starting-zones",
             "daily-monthly",
-            "daily-subscriptions",
-            "monthly-subscriptions",
+            "subscriber-activity",
         ];
         let records = expected["snapshots"].as_array().unwrap();
         let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
@@ -1049,7 +1117,7 @@ impl Browser {
                 let count = selected
                     .iter()
                     .filter(|r| {
-                        !(metric.ends_with("-subscriptions") && r["active_subscriptions"] == 0)
+                        !(metric == "subscriber-activity" && r["active_subscriptions"] == 0)
                     })
                     .count();
                 self.ready(metric);
@@ -1057,13 +1125,19 @@ impl Browser {
                     "script":"return document.querySelector(arguments[0]).data.filter(trace => trace.hoverinfo !== 'skip').reduce((n, trace) => n + trace.y.filter(value => value !== null).length, 0);",
                     "args":[format!("[data-metric='{metric}'] .plot-surface")]
                 }));
-                assert_eq!(plotted_count, count, "{metric} in range {key}");
+                assert_eq!(
+                    plotted_count,
+                    count
+                        * if metric == "subscriber-activity" {
+                            2
+                        } else {
+                            1
+                        },
+                    "{metric} in range {key}"
+                );
                 self.expect_text(
                     &format!("[data-metric='{metric}'] .ytitle"),
-                    if matches!(
-                        metric,
-                        "daily-monthly" | "daily-subscriptions" | "monthly-subscriptions"
-                    ) {
+                    if matches!(metric, "daily-monthly" | "subscriber-activity") {
                         "Percent (%)"
                     } else {
                         "Count"
@@ -1102,20 +1176,11 @@ impl Browser {
                 ),
             ),
             (
-                "daily-subscriptions",
+                "subscriber-activity",
                 format!(
                     "{:.2}% ({} / {})",
                     n("daily_active") as f64 / subscriptions as f64 * 100.0,
                     n("daily_active"),
-                    subscriptions
-                ),
-            ),
-            (
-                "monthly-subscriptions",
-                format!(
-                    "{:.2}% ({} / {})",
-                    n("monthly_active") as f64 / subscriptions as f64 * 100.0,
-                    n("monthly_active"),
                     subscriptions
                 ),
             ),
@@ -1125,6 +1190,8 @@ impl Browser {
                 metric,
                 if metric == "subscriptions" {
                     "Global subscribers"
+                } else if metric == "subscriber-activity" {
+                    "Daily activity / global subscribers · Alpha <island> & West"
                 } else if metric == "starting-zones" {
                     "All Zones · Alpha <island> & West"
                 } else {
@@ -1133,9 +1200,22 @@ impl Browser {
                 "2026-05-25T12:00:00Z",
                 &value,
             );
+            if metric == "subscriber-activity" {
+                self.expect_hover(
+                    metric,
+                    "Monthly activity / global subscribers · Alpha <island> & West",
+                    "2026-05-25T12:00:00Z",
+                    &format!(
+                        "{:.2}% ({} / {})",
+                        n("monthly_active") as f64 / subscriptions as f64 * 100.0,
+                        n("monthly_active"),
+                        subscriptions
+                    ),
+                );
+            }
             self.hover(&format!("[data-metric='{metric}'] .chart-heading"));
             self.expect_count(".hovertext", 0);
-            if metric.ends_with("-subscriptions") {
+            if metric == "subscriber-activity" {
                 assert_eq!(
                     self.request(Method::POST, "/execute/sync", json!({
                         "script":"const trace=document.querySelector(arguments[0]).data[0]; const i=trace.x.indexOf(Date.parse(arguments[1])/1000); return {present:i>=0,value:trace.y[i],hover:trace.text[i]};",
@@ -1166,7 +1246,13 @@ impl Browser {
         for metric in metrics {
             self.expect_count(
                 &format!("[data-metric='{metric}'] .legend li"),
-                if metric == "subscriptions" { 1 } else { 3 },
+                if metric == "subscriptions" {
+                    1
+                } else if metric == "subscriber-activity" {
+                    6
+                } else {
+                    3
+                },
             );
         }
         self.hover("[data-metric='online'] .scatterlayer .trace:nth-child(3) .point:last-child");
@@ -1244,14 +1330,27 @@ impl Browser {
         ] {
             self.custom_periods(&periods);
             for metric in metrics {
-                self.expect_count(&format!("[data-metric='{metric}'] .legend li"), 3);
+                self.expect_count(
+                    &format!("[data-metric='{metric}'] .legend li"),
+                    if metric == "subscriber-activity" {
+                        6
+                    } else {
+                        3
+                    },
+                );
                 self.ready(metric);
             }
             self.toggle_server("server:b");
             for metric in metrics {
                 self.expect_count(
                     &format!("[data-metric='{metric}'] .legend li"),
-                    if metric == "subscriptions" { 3 } else { 6 },
+                    if metric == "subscriptions" {
+                        3
+                    } else if metric == "subscriber-activity" {
+                        12
+                    } else {
+                        6
+                    },
                 );
             }
             self.expect_count(".correlation-entity", 2);
@@ -1320,7 +1419,14 @@ impl Browser {
             ("2024-04-01", "2024-04-02"),
         ]);
         for metric in metrics {
-            self.expect_count(&format!("[data-metric='{metric}'] .legend li"), 3);
+            self.expect_count(
+                &format!("[data-metric='{metric}'] .legend li"),
+                if metric == "subscriber-activity" {
+                    6
+                } else {
+                    3
+                },
+            );
             self.ready(metric);
         }
         self.zones(&["w"]);
@@ -1520,10 +1626,10 @@ impl Browser {
             self.text("[data-metric='daily'] .hoverlayer")
                 .contains("UTC")
         );
-        // Relationships retains its responsive two-column layout.
+        // Engagement retains full-width plots at both ordinary and changed breakpoints.
         self.click("#nav-relationships");
         self.ready("daily-monthly");
-        // The changed breakpoint is 900px, so the same 1000px window changes layout.
+        // Full width is retained on both sides of the responsive breakpoint.
         self.request(
             Method::POST,
             "/window/rect",
@@ -1533,7 +1639,7 @@ impl Browser {
             self.computed(".chart-grid", "grid-template-columns")
                 .split_whitespace()
                 .count(),
-            if changed { 2 } else { 1 }
+            1
         );
         self.request(
             Method::POST,

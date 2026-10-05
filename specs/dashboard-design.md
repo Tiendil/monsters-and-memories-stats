@@ -109,7 +109,7 @@ The dashboard MUST provide three clearly named content sections:
 
 - Overview — trends for online population, daily activity, monthly activity, and global subscriptions.
 - Player activity — starting-zone populations, server population shares, and activity by weekday and hour.
-- Relationships — the three activity ratios and the corresponding correlations.
+- Engagement — daily participation, sampled online presence, activity relative to subscribers, and supporting correlations.
 
 Overview MUST be the initial section.
 One section MUST be presented at a time so visitors do not need to scan every metric to find a relevant chart.
@@ -189,7 +189,25 @@ A short note MUST explain sampled averages, uneven coverage, and blank cells for
 Cell hover MUST expose the aggregate details defined in [requirements.md](requirements.md#population-insights).
 An unavailable panel MUST identify its scope and period and show an empty-state message.
 
-Relationships MUST group ratios separately from correlations.
+Engagement MUST show three full-width charts in this order:
+
+1. Daily participation — daily active divided by monthly active, without a local metric selector.
+2. Online presence — daily average online divided by daily or monthly active counts.
+3. Activity relative to subscribers — daily active, monthly active, or daily average online divided by global subscriptions.
+
+The latter two charts MUST each have a checkbox dropdown labeled “Metrics,” using the Servers control's interaction and accessibility behavior.
+Online presence MUST initially select only Average online / daily active.
+Activity relative to subscribers MUST initially select daily and monthly activity, with average online available independently.
+Selections MUST persist across content sections and changes to the shared server, time-range, and comparison controls.
+An empty metric selection MUST plot no series and offer an explicit action to restore that chart's defaults.
+Every selected metric MUST combine with every selected server scope and period, with stable distinct series identities and labels identifying the metric, scope, and period when applicable.
+The two metric selectors MUST affect only their own charts.
+Ratio axes MUST remain percentages without a 100-percent ceiling.
+The tab MUST NOT have a redundant “Ratios of reported counts” heading or additional summary cards.
+
+Engagement MUST place correlations after the three charts under “How metrics move together,” visually subordinate to the ratio trends.
+The explanation MUST describe the meaning of positive, negative, and near-zero Pearson coefficients as linear association, including the limitation that association does not establish causation.
+Metric pairs MUST use “and” rather than a division sign so coefficients are not confused with ratios.
 Correlation results MUST show their paired-day counts and actual shared range and server scope next to the coefficients.
 Correlations MUST be grouped separately for every selected entity using the shared time range, including during period comparisons.
 The correlation block MUST explain this range and MUST NOT imply that it calculates correlations between compared entities or periods.
@@ -197,6 +215,14 @@ The correlation block MUST explain this range and MUST NOT imply that it calcula
 ### Data explanations
 
 Short interpretation labels MUST remain close to affected values, including “Global subscribers.”
+Every chart MUST show a concise plain-language explanation below its title, including relevant calculation and interpretation limits.
+Formulas MUST appear as compact blocks below the chart title and above their explanatory prose, using medium-weight monospace text in the dashboard's burnt-orange accent color.
+Each formula block MUST have a faint warm background, a subtle thin border, small rounded corners, and compact padding.
+Blocks MUST fit their text within the available width, with formulas wrapping naturally on narrow screens.
+The chart title MUST remain visually stronger than the formula, and explanatory prose MUST use muted text.
+Definition links MUST follow [requirements.md](requirements.md#metric-interpretation), use descriptive visible labels, and open in a new tab.
+Explanations MUST remain visible and accessible without hover or opening a disclosure.
+Online-average explanations MUST describe UTC-day sampling, the last available denominator, partial or sparse coverage, and the availability of sample details on hover.
 Detailed methodology, source limitations, all-server aggregation semantics, and archive coverage MUST be documented in the README.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.
@@ -284,6 +310,8 @@ The design MUST be reviewed with at least seven simultaneous series, including o
 
 Native chart hover MUST retain the exact-value and original UTC timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
 The first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time ending in “UTC,” with minute precision.
+Long value and series labels MAY wrap; the timestamp MUST remain on a separate following line, with aggregate sample details below it.
+Hover content MUST wrap to remain readable on narrow screens, and chart height MUST accommodate the displayed series' wrapped labels.
 
 **Example:** “429 All Servers” on the first line and “02 Oct 2026, 10:00 UTC” on the second.
 
@@ -307,7 +335,7 @@ Textures or game artwork MUST NOT appear behind plots, controls, or body text.
 
 The masthead and major section headings MUST use an old-style serif display treatment compatible with the game's visual identity.
 IM Fell English SHOULD be used for this limited display role because it matches the inspected official site; a readable serif fallback MAY be used where font loading is unavailable.
-Body copy, controls, chart labels, and metric values MUST use a legible sans-serif family.
+Body copy, controls, chart labels, and metric values MUST use a legible sans-serif family, except for the monospace formulas defined above.
 Metric values MUST use tabular numerals where supported.
 Display lettering MUST NOT be used for dense numbers or chart axes.
 
@@ -320,8 +348,7 @@ The title MUST remain subordinate to the dashboard's data on the initial screen.
 
 The page MUST use one centered content region with aligned controls, summary values, and chart edges.
 Wide-screen summaries MUST form one row of four values; narrow-screen summaries MUST use a two-by-two layout when labels fit and a single column when needed.
-Ordinary Relationships charts MAY use two columns where each plot remains readable.
-All Overview and Player activity charts and all comparison plots MUST use the full content width.
+All charts in Overview, Player activity, and Engagement MUST use the full content width, including comparison plots.
 Spacing MUST distinguish content sections more strongly than elements inside one chart or control group.
 
 At a 1440 by 900 CSS-pixel viewport, the default populated view MUST show the collection status, shared controls, four summary values, and plotted data without scrolling.

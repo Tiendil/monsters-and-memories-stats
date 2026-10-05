@@ -139,6 +139,13 @@ Shared metric and collection terms are defined in the [project dictionary](dicti
 Source investigation evidence is recorded in the [source analysis](../docs/source-analysis.md).
 
 The UI MUST distinguish source-reported counts from derived values.
+Every chart MUST have a concise explanation of what it measures and how to interpret it.
+Recognized metrics MUST link to a suitable definition, preferring GameAnalytics' [engagement metric dictionary](https://docs.gameanalytics.com/events-metrics-and-filtering/metrics/#engagement) for DAU, MAU, and DAU/MAU.
+General concepts MAY use Wikipedia definitions, including [concurrent users](https://en.wikipedia.org/wiki/Concurrent_user) and [Pearson correlation](https://en.wikipedia.org/wiki/Pearson_correlation_coefficient).
+Links MUST describe the referenced concept and MUST NOT imply that M&M's unverified counting semantics conform to an external definition.
+Custom ratios and source-specific counts MUST use explicit descriptions rather than borrowed KPI names such as conversion or retention.
+DAU/MAU MAY be identified as stickiness, with a qualification about unverified source windows and its distinction from returning-player retention.
+
 The README MUST explain that DAU/MAU are the source's daily/monthly active fields with unverified counting semantics.
 The UI MUST label subscriptions as subscriptions, without equating them with unique people.
 Missing fields MUST NOT become zero; a literal published zero MUST remain zero, with the source limitation visible.
@@ -310,6 +317,7 @@ It MUST use a readable date and end with `UTC`, without an ISO `T` separator or 
 The download MUST preserve each original timestamp at its full stored precision.
 This MUST work for every observation time-series chart and comparison mode, including dense series and overlapping comparison points.
 Aggregate heatmap details MUST follow Population insights below.
+Daily online-average ratios MUST identify their sample coverage as defined under Ratios and correlation below.
 Ratio details MUST include the exact numerator and denominator alongside the rounded percentage.
 Hover details MUST refer only to collected observations, MUST NOT invent points inside gaps, and MUST clear when the pointer leaves the plot or the selection changes.
 The following states MUST be understandable:
@@ -354,10 +362,27 @@ Two Monday 10:00–11:00 UTC observations of 20 and 40 give a heatmap mean of 30
 ### Ratios and correlation
 
 Ratios MUST include daily/monthly activity and activity/global-subscriptions for the available daily and monthly counts.
+They MUST also include sampled average online divided by daily activity, monthly activity, and global subscriptions.
 In per-server views, the subscription denominator MUST be explicitly labeled global.
 Values that compare activity with subscriptions MUST be described as ratios of reported counts, not as proven fractions of subscribers playing.
 They MUST NOT be clamped to 100 percent.
 A zero denominator or unavailable value MUST yield “not available,” never infinity or a fabricated zero.
+
+Online-average ratios MUST produce one aggregate per original UTC day, independently for each selected server scope and period.
+The numerator MUST be the arithmetic mean of available online observations inside that day and selected period, with equal weight per sample.
+The denominator MUST come from the last observation contributing to that mean; the plotted timestamp MUST be that observation's original timestamp.
+Missing hours and absent servers MUST NOT contribute zeros, interpolated values, or carried-forward observations.
+The current day and days clipped by a selection MUST use only the available samples inside the selection.
+Period alignment MUST occur after grouping by original UTC dates.
+All-server means MUST average the per-snapshot totals, without dividing by the number of servers.
+Hover details MUST show the exact online sum, sample count, denominator, first sample time, and final sample timestamp so the arithmetic and temporal coverage can be inspected.
+Aggregate points MUST retain the ordinary connection-interval rules; daily aggregation MUST NOT imply that missing hours were continuously measured.
+These ratios MUST be described as sampled online presence, without claiming measured playtime, session length, retention, or subscriber conversion.
+Average online divided by MAU MUST remain a daily indicator, not a monthly playtime estimate.
+
+**Example:** Online samples of 10 and 30 at 08:00 and 20:00 UTC give a sampled mean of 20.
+With a daily activity count of 100 in the 20:00 observation, the daily ratio is 20 percent and is plotted at 20:00, with two samples and their coverage exposed in its details.
+Missing hours contribute no values; a range starting at noon includes only the sample of 30.
 
 Correlation MUST use Pearson's r for available pairs among daily activity, monthly activity, and global subscriptions over the selected range, separately for each selected entity.
 To avoid treating repeated hourly daily/monthly counts as independent days, it MUST use the last jointly available observation per UTC day inside that range.
