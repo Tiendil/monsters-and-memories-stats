@@ -989,7 +989,7 @@ impl Browser {
         );
     }
 
-    fn verify_engagement(&self) {
+    fn verify_engagement(&self, expected: &Value) {
         self.servers(&[""]);
         self.select("#time-range", "all");
         self.click("#nav-relationships");
@@ -1003,16 +1003,20 @@ impl Browser {
                 .count(),
             1
         );
-        self.expect_count("#online-metrics-options input:checked", 1);
-        self.expect_count("#subscriber-metrics-options input:checked", 2);
-        self.expect_count("[data-metric='subscriber-activity'] .legend li", 2);
+        self.expect_count("#online-metrics-options input:checked", 2);
+        self.expect_count("#subscriber-metrics-options input:checked", 3);
+        self.expect_count("[data-metric='subscriber-activity'] .legend li", 3);
         self.click("#online-metrics-toggle");
+        self.click("#online-metrics-options label:nth-child(2)");
+        self.expect_count("#online-metrics-options input:checked", 1);
         self.click("#online-metrics-options label:nth-child(2)");
         self.expect_count("#online-metrics-options input:checked", 2);
         self.expect_count("[data-metric='online-presence'] .legend li", 2);
         self.click("#online-metrics-toggle");
         self.click("#subscriber-metrics-toggle");
-        self.click("#subscriber-metrics-options input[value='average-online-subscriptions']");
+        self.click("#subscriber-metrics-options input[value='online-subscriptions']");
+        self.expect_count("#subscriber-metrics-options input:checked", 2);
+        self.click("#subscriber-metrics-options input[value='online-subscriptions']");
         self.expect_count("#subscriber-metrics-options input:checked", 3);
         self.request(Method::POST, "/actions", json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e00c}"},{"type":"keyUp","value":"\u{e00c}"}]}]}));
         self.expect_count(".selection-picker[open]", 0);
@@ -1021,6 +1025,55 @@ impl Browser {
         self.click("#nav-relationships");
         self.expect_count("#online-metrics-options input:checked", 2);
         self.expect_count("#subscriber-metrics-options input:checked", 3);
+        for (chart, series, denominator_field) in [
+            ("online-presence", 0, "daily_active"),
+            ("online-presence", 1, "monthly_active"),
+            ("subscriber-activity", 2, "active_subscriptions"),
+        ] {
+            self.ready(chart);
+            let plotted = self.request(Method::POST, "/execute/sync", json!({
+                "script":"const t=document.querySelector(arguments[0]).data.filter(t=>t.hoverinfo!=='skip')[arguments[1]]; return t.x.flatMap((x,i)=>x===null?[]:[{x,y:t.y[i]}]);",
+                "args":[format!("[data-metric='{chart}'] .plot-surface"), series]
+            }));
+            let observations = expected["snapshots"].as_array().unwrap();
+            assert_eq!(
+                plotted.as_array().unwrap().len(),
+                observations.len(),
+                "{chart}: preserve every snapshot"
+            );
+            for (point, observation) in plotted.as_array().unwrap().iter().zip(observations) {
+                let servers = observation["servers"].as_array().unwrap();
+                let online: u64 = servers
+                    .iter()
+                    .map(|server| server["online"].as_u64().unwrap())
+                    .sum();
+                let denominator = if denominator_field == "active_subscriptions" {
+                    observation[denominator_field].as_u64().unwrap()
+                } else {
+                    servers
+                        .iter()
+                        .map(|server| server[denominator_field].as_u64().unwrap())
+                        .sum()
+                };
+                let at = chrono::DateTime::parse_from_rfc3339(
+                    observation["observed_at"].as_str().unwrap(),
+                )
+                .unwrap();
+                assert_eq!(
+                    point["x"].as_f64().unwrap(),
+                    at.timestamp_millis() as f64 / 1000.0
+                );
+                if denominator == 0 {
+                    assert!(point["y"].is_null());
+                } else {
+                    assert!(
+                        (point["y"].as_f64().unwrap() - 100.0 * online as f64 / denominator as f64)
+                            .abs()
+                            < 1e-10
+                    );
+                }
+            }
+        }
         self.hover("[data-metric='online-presence'] .scatterlayer .point");
         assert!(
             !self
@@ -1043,7 +1096,7 @@ impl Browser {
         self.click("#online-metrics-toggle");
         self.expect_count("[data-metric='online-presence'] .plot-surface", 0);
         self.click("[data-metric='online-presence'] button.secondary");
-        self.expect_count("#online-metrics-options input:checked", 1);
+        self.expect_count("#online-metrics-options input:checked", 2);
         self.ready("online-presence");
         self.click("#subscriber-metrics-toggle");
         for index in [1, 2, 3] {
@@ -1054,7 +1107,7 @@ impl Browser {
         self.click("#subscriber-metrics-toggle");
         self.expect_count("[data-metric='subscriber-activity'] .plot-surface", 0);
         self.click("[data-metric='subscriber-activity'] button.secondary");
-        self.expect_count("#subscriber-metrics-options input:checked", 2);
+        self.expect_count("#subscriber-metrics-options input:checked", 3);
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({
             "script":"return Array.from(document.querySelectorAll('.chart-explanation a, .correlations a')).every(a=>a.target==='_blank' && a.href.startsWith('https://') && a.textContent.trim().length>0);", "args":[]
         })), true);
@@ -1067,7 +1120,7 @@ impl Browser {
         self.verify_checkbox_labels("w", "a");
         self.verify_population(expected);
         self.verify_population_insights(expected);
-        self.verify_engagement();
+        self.verify_engagement(expected);
         let metrics = [
             "daily",
             "monthly",

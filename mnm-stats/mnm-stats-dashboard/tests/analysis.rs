@@ -1653,18 +1653,19 @@ fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
 }
 
 #[test]
-fn daily_online_means_use_selected_samples_last_denominators_and_exact_coverage() {
+fn online_ratios_use_each_snapshots_counts_and_preserve_gaps() {
     let mut samples = vec![
         snapshot("2024-02-28T23:00:00Z", 999, 999, 999),
-        snapshot("2024-02-29T08:00:00Z", 30, 300, 0),
+        snapshot("2024-02-29T08:00:00Z", 40, 200, 0),
+        snapshot("2024-02-29T09:00:00Z", 50, 0, 100),
         snapshot("2024-02-29T20:00:00Z", 100, 400, 200),
-        snapshot("2024-03-01T00:00:00Z", 100, 500, 0),
+        snapshot("2024-03-01T00:00:00Z", 0, 500, 200),
         snapshot("2024-03-03T12:00:00Z", 100, 500, 200),
     ];
-    for (sample, online) in samples.iter_mut().zip([900, 10, 31, 0, 50]) {
+    for (sample, online) in samples.iter_mut().zip([900, 10, 20, 31, 0, 50]) {
         sample.servers[0].online = online;
     }
-    samples[4].servers.remove(0); // No sample for Alpha that day.
+    samples[5].servers.remove(0);
     let history = History::new(samples).unwrap();
     let scope = Scope::Server("a".into());
     let range = TimeRange::custom("2024-02-29", "2024-03-03").unwrap();
@@ -1672,58 +1673,71 @@ fn daily_online_means_use_selected_samples_last_denominators_and_exact_coverage(
     let result = |metric: Metric, scope: Scope, range| {
         plot(&history, &metric, &[scope], range, now, &Comparison::None).unwrap()
     };
-    let daily = result(Metric::AverageOnlineDaily, scope.clone(), range);
-    let points = &daily.series[0].points;
-    assert_eq!(points.len(), 2);
-    assert_eq!(points[0].at, time("2024-02-29T20:00:00Z"));
+    for (metric, expected) in [
+        (
+            Metric::OnlineDaily,
+            [Some(25.0), Some(40.0), Some(31.0), None, None],
+        ),
+        (
+            Metric::OnlineMonthly,
+            [Some(5.0), None, Some(7.75), Some(0.0), None],
+        ),
+        (
+            Metric::OnlineSubscriptions,
+            [None, Some(20.0), Some(15.5), Some(0.0), None],
+        ),
+    ] {
+        let plotted = result(metric, scope.clone(), range);
+        let points = &plotted.series[0].points;
+        assert_eq!(points.len(), 5, "each snapshot remains a separate point");
+        for ((point, expected), snapshot) in
+            points.iter().zip(expected).zip(&history.snapshots()[1..])
+        {
+            assert_eq!(point.at, snapshot.observed_at);
+            assert_eq!(point.value.map(MetricValue::number), expected);
+        }
+    }
+    let daily = result(Metric::OnlineDaily, scope.clone(), range);
     assert_eq!(
-        points[0].value,
-        Some(MetricValue::SampledRatio {
-            online_sum: 41,
-            samples: 2,
-            denominator: 100,
-            first: time("2024-02-29T08:00:00Z"),
+        daily.series[0].points[0].value,
+        Some(MetricValue::Ratio {
+            numerator: 10,
+            denominator: 40
         })
     );
-    assert_eq!(points[0].value.unwrap().number(), 20.5);
-    assert_eq!(points[1].value.unwrap().number(), 0.0);
-    let subscriber = result(Metric::AverageOnlineSubscriptions, scope.clone(), range);
-    assert_eq!(
-        subscriber.series[0].points[0].value.unwrap().number(),
-        10.25
-    );
-    assert_eq!(subscriber.series[0].points[1].value, None); // Last denominator zero.
-    let monthly = result(Metric::AverageOnlineMonthly, scope.clone(), range);
-    assert_eq!(monthly.series[0].points[0].value.unwrap().number(), 5.125);
     let partial = result(
-        Metric::AverageOnlineDaily,
+        Metric::OnlineDaily,
         scope,
         TimeRange::Custom {
             start: time("2024-02-29T12:00:00Z"),
             end: time("2024-02-29T21:00:00Z"),
         },
     );
+    assert_eq!(partial.series[0].points.len(), 1);
     assert_eq!(partial.series[0].points[0].value.unwrap().number(), 31.0);
-    let all = result(Metric::AverageOnlineDaily, Scope::All, range);
-    assert!((all.series[0].points[0].value.unwrap().number() - 100.0 * 22.5 / 105.0).abs() < 1e-10);
-    let empty = result(
-        Metric::AverageOnlineMonthly,
-        Scope::Server("gone".into()),
-        range,
+    let all = result(Metric::OnlineDaily, Scope::All, range);
+    assert!((all.series[0].points[0].value.unwrap().number() - 100.0 * 12.0 / 45.0).abs() < 1e-10);
+    let global = result(Metric::OnlineSubscriptions, Scope::All, range);
+    assert_eq!(global.series[0].points[2].value.unwrap().number(), 16.5);
+    let absent = result(Metric::OnlineMonthly, Scope::Server("gone".into()), range);
+    assert!(
+        absent.series[0]
+            .points
+            .iter()
+            .all(|point| point.value.is_none())
     );
-    assert!(empty.series[0].points.is_empty());
     let figure: serde_json::Value = serde_json::from_str(
-        &mnm_stats_dashboard::charts::render(&daily, &Metric::AverageOnlineDaily).to_json(),
+        &mnm_stats_dashboard::charts::render(&daily, &Metric::OnlineDaily).to_json(),
     )
     .unwrap();
     assert_eq!(
-        figure["data"][0]["text"][0], "<b>20.50% Alpha</b><br>29 Feb 2024, 20:00 UTC",
-        "average tooltips contain only the percentage, series name, and final observation time"
+        figure["data"][0]["text"][0], "<b>25.00% Alpha</b><br>29 Feb 2024, 08:00 UTC",
+        "tooltips retain each snapshot's percentage and timestamp"
     );
 }
 
 #[test]
-fn engagement_metrics_combine_scopes_and_periods_without_cross_day_or_range_leaks() {
+fn engagement_metrics_combine_scopes_and_periods_preserving_each_snapshot() {
     let mut records = Vec::new();
     for month in [1, 2, 3] {
         for (hour, online) in [(1, 10), (22, 30)] {
@@ -1751,7 +1765,7 @@ fn engagement_metrics_combine_scopes_and_periods_without_cross_day_or_range_leak
     let metrics = [
         Metric::DailySubscriptions,
         Metric::MonthlySubscriptions,
-        Metric::AverageOnlineSubscriptions,
+        Metric::OnlineSubscriptions,
     ];
     let now = time("2024-04-01T00:00:00Z");
     let all = engagement_plot(&history, &metrics, &scopes, TimeRange::All, now, &periods).unwrap();
@@ -1761,9 +1775,10 @@ fn engagement_metrics_combine_scopes_and_periods_without_cross_day_or_range_leak
         assert!(identities.insert(series.identity.clone()));
     }
     for series in &all.series[18..] {
-        assert_eq!(series.points.len(), 1);
-        assert_eq!(series.points[0].x, 22.0 * 3600.0);
-        assert!(series.label.contains("Average online / global subscribers"));
+        assert_eq!(series.points.len(), 2);
+        assert_eq!(series.points[0].x, 3600.0);
+        assert_eq!(series.points[1].x, 22.0 * 3600.0);
+        assert!(series.label.contains("Online / global subscribers"));
     }
     let mut styles = mnm_stats_dashboard::charts::SeriesStyles::default();
     let mut all = all;
@@ -1785,7 +1800,8 @@ fn engagement_metrics_combine_scopes_and_periods_without_cross_day_or_range_leak
             .find(|s| s.identity == series.identity)
             .unwrap();
         assert_eq!(original.style, series.style);
-        assert_eq!(series.points[0].value.unwrap().number(), 10.0);
+        assert_eq!(series.points[0].value.unwrap().number(), 5.0);
+        assert_eq!(series.points[1].value.unwrap().number(), 15.0);
     }
     for (metrics, scopes) in [(&[][..], &scopes[..]), (&metrics[..], &[][..])] {
         let empty =

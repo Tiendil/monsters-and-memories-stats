@@ -362,28 +362,25 @@ Two Monday 10:00–11:00 UTC observations of 20 and 40 give a heatmap mean of 30
 ### Ratios and correlation
 
 Ratios MUST include daily/monthly activity and activity/global-subscriptions for the available daily and monthly counts.
-They MUST also include sampled average online divided by daily activity, monthly activity, and global subscriptions.
+They MUST also include online population divided by daily activity, monthly activity, and global subscriptions.
 In per-server views, the subscription denominator MUST be explicitly labeled global.
 Values that compare activity with subscriptions MUST be described as ratios of reported counts, not as proven fractions of subscribers playing.
 They MUST NOT be clamped to 100 percent.
 A zero denominator or unavailable value MUST yield “not available,” never infinity or a fabricated zero.
 
-Online-average ratios MUST produce one aggregate per original UTC day, independently for each selected server scope and period.
-The numerator MUST be the arithmetic mean of available online observations inside that day and selected period, with equal weight per sample.
-The denominator MUST come from the last observation contributing to that mean; the plotted timestamp MUST be that observation's original timestamp.
+Online ratios MUST use the online count and denominator from the same collected snapshot, independently for each selected server scope and period.
+Every selected observation MUST remain a separate point at its original timestamp, without daily aggregation.
 Missing hours and absent servers MUST NOT contribute zeros, interpolated values, or carried-forward observations.
-The current day and days clipped by a selection MUST use only the available samples inside the selection.
-Period alignment MUST occur after grouping by original UTC dates.
-All-server means MUST average the per-snapshot totals, without dividing by the number of servers.
-Online-average hover details MUST use the ordinary two-line format with the rounded percentage, series name, and final sample timestamp.
-The README MUST explain sampling, denominator selection, and coverage limitations, with a calculation example.
-Aggregate points MUST retain the ordinary connection-interval rules; daily aggregation MUST NOT imply that missing hours were continuously measured.
-These ratios MUST be described as sampled online presence, without claiming measured playtime, session length, retention, or subscriber conversion.
-Average online divided by MAU MUST remain a daily indicator, not a monthly playtime estimate.
+All-server ratios MUST divide the snapshot's summed online count by its summed daily or monthly active count, or by its global subscriber count.
+Period comparisons MUST preserve every original observation and its ratio while aligning timestamps using the ordinary comparison rules.
+Online-ratio hover details MUST use the ordinary two-line format with the rounded percentage, series name, and observation timestamp.
+These points MUST retain the ordinary connection-interval rules.
+The README MUST explain same-snapshot calculations, aggregation scope, and missing-data handling, with a calculation example.
+These ratios MUST be described as online presence at collection time, without claiming measured playtime, session length, retention, or subscriber conversion.
 
-**Example:** Online samples of 10 and 30 at 08:00 and 20:00 UTC give a sampled mean of 20.
-With a daily activity count of 100 in the 20:00 observation, the daily ratio is 20 percent and is plotted at 20:00.
-Missing hours contribute no values; a range starting at noon includes only the sample of 30.
+**Example:** A snapshot at 08:00 reports 10 online and 40 daily active, producing a 25-percent point at 08:00.
+A snapshot at 20:00 reports 30 online and 100 daily active, producing a separate 30-percent point at 20:00.
+Missing hours contribute no values; a range starting at noon includes only the 20:00 point.
 
 Correlation MUST use Pearson's r for available pairs among daily activity, monthly activity, and global subscriptions over the selected range, separately for each selected entity.
 To avoid treating repeated hourly daily/monthly counts as independent days, it MUST use the last jointly available observation per UTC day inside that range.

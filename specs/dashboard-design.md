@@ -109,7 +109,7 @@ The dashboard MUST provide three clearly named content sections:
 
 - Overview — trends for online population, daily activity, monthly activity, and global subscriptions.
 - Player activity — starting-zone populations, server population shares, and activity by weekday and hour.
-- Engagement — daily participation, sampled online presence, activity relative to subscribers, and supporting correlations.
+- Engagement — daily participation, online presence, activity relative to subscribers, and supporting correlations.
 
 Overview MUST be the initial section.
 One section MUST be presented at a time so visitors do not need to scan every metric to find a relevant chart.
@@ -192,12 +192,13 @@ An unavailable panel MUST identify its scope and period and show an empty-state 
 Engagement MUST show three full-width charts in this order:
 
 1. Daily participation — daily active divided by monthly active, without a local metric selector.
-2. Online presence — daily average online divided by daily or monthly active counts.
-3. Activity relative to subscribers — daily active, monthly active, or daily average online divided by global subscriptions.
+2. Online presence — online population divided by daily or monthly active counts from the same snapshot.
+3. Activity relative to subscribers — daily active, monthly active, or online population divided by global subscriptions from the same snapshot.
 
 The latter two charts MUST each have a checkbox dropdown labeled “Metrics,” using the Servers control's interaction and accessibility behavior.
-Online presence MUST initially select only Average online / daily active.
-Activity relative to subscribers MUST initially select daily and monthly activity, with average online available independently.
+Online presence MUST initially select both Online / daily active and Online / monthly active.
+Activity relative to subscribers MUST initially select daily activity, monthly activity, and online.
+Each metric MUST remain independently toggleable, and restoring defaults MUST select all metrics offered by that chart.
 Selections MUST persist across content sections and changes to the shared server, time-range, and comparison controls.
 An empty metric selection MUST plot no series and offer an explicit action to restore that chart's defaults.
 Every selected metric MUST combine with every selected server scope and period, with stable distinct series identities and labels identifying the metric, scope, and period when applicable.
@@ -222,9 +223,9 @@ Blocks MUST fit their text within the available width, with formulas wrapping na
 The chart title MUST remain visually stronger than the formula, and explanatory prose MUST use muted text.
 Definition links MUST follow [requirements.md](requirements.md#metric-interpretation), use descriptive visible labels, and open in a new tab.
 Explanations MUST remain visible and accessible without hover or opening a disclosure.
-Online-presence explanations MUST identify the average online population for each UTC day relative to daily or monthly active players.
+Online-presence explanations MUST identify the online population at collection time relative to daily or monthly active players.
 Subscriber-activity explanations MUST identify the global subscriber count and state that ratios can exceed 100 percent.
-Detailed sampling rules, denominator selection, and missing-data handling MUST remain in the README rather than repeated in chart explanations or time-series tooltips.
+Detailed calculation rules, aggregation scope, and missing-data handling MUST remain in the README rather than repeated in chart explanations or time-series tooltips.
 Detailed methodology, source limitations, all-server aggregation semantics, and archive coverage MUST be documented in the README.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.

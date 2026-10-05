@@ -97,8 +97,8 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Weekday/hour UTC means with exact sums and sample counts, uneven sampling, missing cells, published zeros, boundary timestamps, and absent servers.
 - Separate heatmaps for selected entities and periods, using original UTC buckets and common displayed color bounds, including more than two selections and empty ranges.
 - Ratio values, including zero denominators and values above 100 percent.
-- Daily sampled-online ratios with unequal sample counts, missing hours and servers, measured zeros, zero last denominators, partial UTC days, selection boundaries, and original-date grouping during comparisons.
-- Exact sum, sample count, denominator, and coverage details for online-average ratios, including fractional means and all-server totals.
+- Online ratios using each snapshot's online and denominator counts, including multiple observations within one UTC day, missing hours and servers, measured zeros, zero denominators, and selection boundaries.
+- All-server ratios using snapshot totals, global subscription denominators in per-server views, and preservation of every original observation and ratio during period comparisons.
 - Combined engagement metric selections with stable distinct identities across more than two scopes and periods, including empty selections.
 - Correlation with known expected results and selection of the last jointly available sample per UTC day.
 - Unavailable correlation for insufficient paired days or zero variance.
@@ -163,7 +163,8 @@ Automated tests MUST cover:
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes, with correlations grouped per selected entity over the shared range.
 - Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
-- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and two-line sampled-average tooltips without calculation or coverage details.
+- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and two-line online-ratio tooltips without calculation or coverage details.
+- Online presence and subscriber-activity series preserving individual collection points, with percentages calculated from the same snapshot and no daily averaging.
 - Visible explanations on every chart, relevant definition links with descriptive labels and new-tab behavior, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.

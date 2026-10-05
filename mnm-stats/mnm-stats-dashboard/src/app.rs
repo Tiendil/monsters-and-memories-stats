@@ -15,6 +15,12 @@ use wasm_bindgen::{JsCast, JsValue};
 const REPOSITORY_URL: &str = "https://github.com/Tiendil/monsters-and-memories-stats";
 const GAMEANALYTICS_METRICS: &str =
     "https://docs.gameanalytics.com/events-metrics-and-filtering/metrics/#engagement";
+const ONLINE_METRICS: [Metric; 2] = [Metric::OnlineDaily, Metric::OnlineMonthly];
+const SUBSCRIBER_METRICS: [Metric; 3] = [
+    Metric::DailySubscriptions,
+    Metric::MonthlySubscriptions,
+    Metric::OnlineSubscriptions,
+];
 
 #[component]
 fn DefinitionLink(href: &'static str, label: &'static str) -> impl IntoView {
@@ -62,13 +68,13 @@ fn ChartExplanation(metric: Metric) -> impl IntoView {
             "Often called stickiness, this compares daily participation with the monthly audience. It does not measure returning-player retention; M&M’s counting windows are unverified.",
             Some((GAMEANALYTICS_METRICS, "DAU/MAU definition")),
         ),
-        Metric::AverageOnlineDaily | Metric::AverageOnlineMonthly => (
-            Some("Daily average online / (DAU or MAU) × 100%"),
-            "Average online population for each UTC day, relative to daily or monthly active players.",
+        Metric::OnlineDaily | Metric::OnlineMonthly => (
+            Some("Online / (DAU or MAU) × 100%"),
+            "Online population at collection time, relative to daily or monthly active players.",
             None,
         ),
         _ => (
-            Some("(DAU, MAU, or daily average online) / global subscribers × 100%"),
+            Some("(DAU, MAU, or online) / global subscribers × 100%"),
             "Activity relative to the game’s total subscriber count. Values can exceed 100%.",
             Some((GAMEANALYTICS_METRICS, "Active-user definitions")),
         ),
@@ -347,7 +353,7 @@ fn ChartCard(
     metric_choices: Option<RwSignal<Vec<Metric>>>,
 ) -> impl IntoView {
     let (key, title) = if metric_choices.is_some() {
-        if metric == Metric::AverageOnlineDaily {
+        if metric == Metric::OnlineDaily {
             ("online-presence".into(), "Online presence".into())
         } else {
             (
@@ -405,12 +411,12 @@ fn ChartCard(
             <h3 class="chart-heading">{title.clone()}</h3>
             <ChartExplanation metric=explanation_metric/>
             {metric_choices.map(|selected| {
-                let online = picker_metric == Metric::AverageOnlineDaily;
+                let online = picker_metric == Metric::OnlineDaily;
                 view! {
                     <MetricPicker online selected/>
                     <Show when=move || selected.get().is_empty()>
                         <p class="chart-note">"Choose at least one metric."</p>
-                        <button class="secondary" on:click=move |_| selected.set(if online { vec![Metric::AverageOnlineDaily] } else { vec![Metric::DailySubscriptions, Metric::MonthlySubscriptions] })>"Restore default metrics"</button>
+                        <button class="secondary" on:click=move |_| selected.set(if online { ONLINE_METRICS.to_vec() } else { SUBSCRIBER_METRICS.to_vec() })>"Restore default metrics"</button>
                     </Show>
                 }
             })}
@@ -604,13 +610,9 @@ fn ZonePicker(names: BTreeMap<String, String>, zones: RwSignal<Vec<ZoneScope>>) 
 #[component]
 fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView {
     let options = if online {
-        vec![Metric::AverageOnlineDaily, Metric::AverageOnlineMonthly]
+        ONLINE_METRICS.to_vec()
     } else {
-        vec![
-            Metric::DailySubscriptions,
-            Metric::MonthlySubscriptions,
-            Metric::AverageOnlineSubscriptions,
-        ]
+        SUBSCRIBER_METRICS.to_vec()
     };
     let choices = options.iter().map(|m| (m.key(), m.title())).collect();
     let summary = Signal::derive(move || match selected.get().as_slice() {
@@ -677,11 +679,8 @@ pub fn App() -> impl IntoView {
     let names = servers(&history);
     let zone_names = zones(&history);
     let zone_scopes = RwSignal::new(vec![ZoneScope::All]);
-    let online_metrics = RwSignal::new(vec![Metric::AverageOnlineDaily]);
-    let subscriber_metrics = RwSignal::new(vec![
-        Metric::DailySubscriptions,
-        Metric::MonthlySubscriptions,
-    ]);
+    let online_metrics = RwSignal::new(ONLINE_METRICS.to_vec());
+    let subscriber_metrics = RwSignal::new(SUBSCRIBER_METRICS.to_vec());
     let utc_now =
         || DateTime::from_timestamp_millis(js_sys::Date::now() as i64).expect("browser timestamp");
     let now = RwSignal::new(utc_now());
@@ -767,7 +766,7 @@ pub fn App() -> impl IntoView {
                     let metrics = match selected {
                         Section::Overview => vec![Metric::Online, Metric::Daily, Metric::Monthly, Metric::Subscriptions],
                         Section::Population => vec![Metric::StartingZones, Metric::OnlineShare],
-                        Section::Relationships => vec![Metric::DailyMonthly, Metric::AverageOnlineDaily, Metric::DailySubscriptions],
+                        Section::Relationships => vec![Metric::DailyMonthly, Metric::OnlineDaily, Metric::DailySubscriptions],
                     };
                     let chart_history = history.clone();
                     let zone_options = zone_names.clone();
@@ -782,7 +781,7 @@ pub fn App() -> impl IntoView {
                         <div class="chart-grid" class:overview-chart=selected == Section::Overview class:population-chart=selected == Section::Population>{metrics.into_iter().map(|metric| {
                             let selected_zones = (metric == Metric::StartingZones).then_some(zone_scopes);
                             let metric_choices = match metric {
-                                Metric::AverageOnlineDaily => Some(online_metrics),
+                                Metric::OnlineDaily => Some(online_metrics),
                                 Metric::DailySubscriptions => Some(subscriber_metrics),
                                 _ => None,
                             };
