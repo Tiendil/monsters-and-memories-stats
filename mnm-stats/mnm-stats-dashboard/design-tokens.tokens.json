@@ -195,10 +195,6 @@
       "unavailable": {
         "$value": "{tailwind.color.stone.500}",
         "$description": "Dashed boundary of an unavailable-chart notice."
-      },
-      "correlation": {
-        "$value": "{tailwind.color.orange.700}",
-        "$description": "Accent rule beside a correlation result."
       }
     },
     "outline": {
@@ -324,10 +320,10 @@
         "$value": "{tailwind.text.3xl}",
         "$description": "Exact headline counts, stronger than explanatory text and timestamps."
       },
-      "coefficient": {
+      "summary-compact": {
         "$type": "dimension",
         "$value": "{scale.font-size.6}",
-        "$description": "Prominent numeric correlation result, independently adjustable from headings."
+        "$description": "Headline counts on narrow screens, independently adjustable from headings."
       }
     }
   },
@@ -689,12 +685,12 @@
         },
         "$description": "Thin boundary around controls and panels."
       },
-      "correlation": {
+      "demo-notice": {
         "$value": {
           "value": 3,
           "unit": "px"
         },
-        "$description": "Accent rule width beside a correlation result."
+        "$description": "Accent rule width beside the synthetic-data notice."
       }
     }
   },
@@ -770,10 +766,6 @@
       "padding": {
         "$value": "{scale.spacing.4}",
         "$description": "Inner padding of panels containing controls or explanatory content."
-      },
-      "compact-padding": {
-        "$value": "{scale.spacing.4}",
-        "$description": "Inner padding of panels and chart cards on narrow screens."
       }
     },
     "chart": {

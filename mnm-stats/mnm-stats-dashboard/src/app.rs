@@ -636,39 +636,6 @@ fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView 
 }
 
 #[component]
-fn Correlations(
-    history: Arc<History>,
-    scopes: RwSignal<Vec<Scope>>,
-    range: RwSignal<TimeRange>,
-    now: RwSignal<DateTime<Utc>>,
-) -> impl IntoView {
-    let names = servers(&history);
-    view! {
-        <section class="correlations" aria-labelledby="correlations-heading">
-            <h2 id="correlations-heading">"How metrics move together"</h2>
-            <p class="chart-note"><DefinitionLink href="https://en.wikipedia.org/wiki/Pearson_correlation_coefficient" label="Pearson’s r"/>" describes linear association: near +1 means counts tend to rise and fall together, near −1 means opposite movement, and near 0 means little linear association. It does not establish causation."</p>
-            <p class="chart-note">"Uses the last jointly available observation per UTC day in the primary time range for each selected server, including during comparisons. At least three paired days and variation in both counts are needed."</p>
-            {move || {
-                let (start, end) = range.get().bounds(&history, now.get());
-                scopes.get().into_iter().map(|scope| view! {
-                    <section class="correlation-entity">
-                        <h3 class="correlation-scope">{format!("{} · {} · {} – {}", scope.label(&names), range.get().label(), readable(start), readable(end))}</h3>
-                        <div class="correlation-grid">{[(Metric::Daily, Metric::Monthly), (Metric::Daily, Metric::Subscriptions), (Metric::Monthly, Metric::Subscriptions)].into_iter().map(|(a, b)| {
-                            let result = correlation(&history, &a, &b, &scope, start, end);
-                            view! { <div class="correlation-value"><h4>{format!("{} and {}", a.title(), if b == Metric::Subscriptions { "Global subscribers".into() } else { b.title() })}</h4>
-                                <p class="coefficient">{result.r.map_or_else(|| "not available".into(), |r| format!("r = {r:.3}"))}</p>
-                                <p>{format!("{} paired UTC days", result.paired_days)}</p>
-                            </div> }
-                        }).collect_view()}</div>
-                    </section>
-                }).collect_view()
-            }}
-            <p class="muted">"Shared trends and overlapping activity windows can inflate these associations. Subscriptions remain global; activity sums are not deduplicated."</p>
-        </section>
-    }
-}
-
-#[component]
 pub fn App() -> impl IntoView {
     let history = Arc::new(crate::embedded_history());
     provide_context(Arc::new(Mutex::new(charts::SeriesStyles::default())));
@@ -789,9 +756,6 @@ pub fn App() -> impl IntoView {
                         }).collect_view()}
                         {(selected == Section::Population).then(|| view! { <ActivityCard history=history.clone() scopes range now comparison/> })}
                         </div>
-                        {(selected == Section::Relationships).then(|| view! {
-                            <Correlations history=history.clone() scopes range now/>
-                        })}
                     }
                 }}
             </section>

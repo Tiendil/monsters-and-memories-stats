@@ -118,7 +118,7 @@ The intended hierarchy is:
 
 Activity holds the daily, monthly, and subscription charts.
 Population provides population trends and a dynamic selector for individual zones, preventing the first screen from growing with the zone roster.
-Relationships groups ratios and clearly scoped correlations.
+Relationships groups activity ratios.
 Comparisons remain available across every applicable section, with larger full-width charts and removable selected-series labels.
 
 The proposed visual treatment uses warm ivory, near-white plotting surfaces, dark ink, and restrained orange-brown accents.

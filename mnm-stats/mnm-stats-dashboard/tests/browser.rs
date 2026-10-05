@@ -1109,7 +1109,7 @@ impl Browser {
         self.click("[data-metric='subscriber-activity'] button.secondary");
         self.expect_count("#subscriber-metrics-options input:checked", 3);
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({
-            "script":"return Array.from(document.querySelectorAll('.chart-explanation a, .correlations a')).every(a=>a.target==='_blank' && a.href.startsWith('https://') && a.textContent.trim().length>0);", "args":[]
+            "script":"return Array.from(document.querySelectorAll('.chart-explanation a')).every(a=>a.target==='_blank' && a.href.startsWith('https://') && a.textContent.trim().length>0);", "args":[]
         })), true);
         self.select("#time-range", "30");
         self.click("#nav-overview");
@@ -1184,7 +1184,7 @@ impl Browser {
                     plotted_count,
                     count
                         * if metric == "subscriber-activity" {
-                            2
+                            3
                         } else {
                             1
                         },
@@ -1285,20 +1285,14 @@ impl Browser {
             );
         }
         self.ready("subscriptions");
-        self.servers(&["a"]);
-        self.click("#nav-relationships");
-        assert!(self.text(".correlation-scope").contains("Alpha"));
-        self.expect_count(".correlation-value", 3);
-        assert!(self.text(".correlations").contains("r ="));
         self.servers(&["", "a", "b"]);
-        self.expect_count(".correlation-entity", 3);
         for metric in metrics {
             self.expect_count(
                 &format!("[data-metric='{metric}'] .legend li"),
                 if metric == "subscriptions" {
                     1
                 } else if metric == "subscriber-activity" {
-                    6
+                    9
                 } else {
                     3
                 },
@@ -1382,7 +1376,7 @@ impl Browser {
                 self.expect_count(
                     &format!("[data-metric='{metric}'] .legend li"),
                     if metric == "subscriber-activity" {
-                        6
+                        9
                     } else {
                         3
                     },
@@ -1396,13 +1390,12 @@ impl Browser {
                     if metric == "subscriptions" {
                         3
                     } else if metric == "subscriber-activity" {
-                        12
+                        18
                     } else {
                         6
                     },
                 );
             }
-            self.expect_count(".correlation-entity", 2);
             self.toggle_server("server:b");
             // Constant zone counts coincide across all three periods. Every
             // series must retain its actual observation date, not its aligned x.

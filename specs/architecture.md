@@ -148,7 +148,7 @@ The `mnm-stats-dashboard` package MUST own:
 
 - rendering and user interaction.
 - filtering.
-- ratio and correlation calculations.
+- ratio calculations.
 - comparison alignment.
 - downloading the complete embedded history as JSON.
 
@@ -300,7 +300,6 @@ The following values MUST be derived rather than duplicated in storage:
 - starting-zone totals.
 - cross-server activity sums.
 - ratios.
-- correlations.
 
 The parser MUST validate published online and starting-zone totals before discarding that redundancy.
 Validation MUST reject the following before a file is changed:

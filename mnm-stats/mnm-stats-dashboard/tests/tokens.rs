@@ -240,7 +240,7 @@ fn shared_scales_propagate_without_coupling_component_overrides() {
                 .contains(&format!("--mnm-spacing-{role}: 1rem;"))
         );
     }
-    // A heading change must not silently resize the correlation result.
+    // A heading change must not silently resize compact headline counts.
     tokens["font"]["size"]["heading"]["section"]["$value"] = json!("{scale.font-size.5}");
     let independent = generate(&tokens);
     assert!(
@@ -251,7 +251,7 @@ fn shared_scales_propagate_without_coupling_component_overrides() {
     assert!(
         independent
             .css
-            .contains("--mnm-font-size-coefficient: 1.5rem;")
+            .contains("--mnm-font-size-summary-compact: 1.5rem;")
     );
 }
 

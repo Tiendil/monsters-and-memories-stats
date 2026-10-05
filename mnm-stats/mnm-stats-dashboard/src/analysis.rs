@@ -1001,50 +1001,6 @@ pub fn population_plot(
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Correlation {
-    pub paired_days: usize,
-    pub r: Option<f64>,
-}
-
-pub fn correlation(
-    history: &History,
-    a: &Metric,
-    b: &Metric,
-    scope: &Scope,
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
-) -> Correlation {
-    let mut days = BTreeMap::new();
-    for snapshot in history
-        .snapshots()
-        .iter()
-        .filter(|s| s.observed_at >= start && s.observed_at <= end)
-    {
-        if let Some((a, b)) = a.value(snapshot, scope).zip(b.value(snapshot, scope)) {
-            days.insert(snapshot.observed_at.date_naive(), (a.number(), b.number()));
-        }
-    }
-    let count = days.len();
-    // Online covariance avoids cancellation from subtracting large squared sums.
-    let (mut mx, mut my, mut xx, mut yy, mut xy) = (0.0, 0.0, 0.0, 0.0, 0.0);
-    for (i, (x, y)) in days.into_values().enumerate() {
-        let n = (i + 1) as f64;
-        let (dx, dy) = (x - mx, y - my);
-        mx += dx / n;
-        my += dy / n;
-        xx += dx * (x - mx);
-        yy += dy * (y - my);
-        xy += dx * (y - my);
-    }
-    let r =
-        (count >= 3 && xx > 0.0 && yy > 0.0).then(|| (xy / xx.sqrt() / yy.sqrt()).clamp(-1.0, 1.0));
-    Correlation {
-        paired_days: count,
-        r,
-    }
-}
-
 /// All headline values must use this same snapshot, including unavailable servers.
 pub fn latest_in_range(
     history: &History,

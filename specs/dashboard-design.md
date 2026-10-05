@@ -94,7 +94,7 @@ The default matching rule and period calculations MUST follow [requirements.md](
 Custom UTC date inputs, validation messages, Add period, and removable custom selections MUST live inside their menus.
 The comparison menu MUST show the resolved dates so weekday adjustments can be inspected before closing it.
 A separate comparison-information section or persistent editor above the charts MUST NOT be shown; chart legends identify the plotted periods and entities.
-The primary range MUST remain visible during comparisons and continue to control correlations.
+The primary range MUST remain visible during comparisons.
 The controls MUST NOT add keyboard shortcut bindings or shortcut badges.
 
 The menus MUST support mouse, touch, and standard keyboard activation and focus navigation.
@@ -109,7 +109,7 @@ The dashboard MUST provide three clearly named content sections:
 
 - Overview — trends for online population, daily activity, monthly activity, and global subscriptions.
 - Player activity — starting-zone populations, server population shares, and activity by weekday and hour.
-- Engagement — daily participation, online presence, activity relative to subscribers, and supporting correlations.
+- Engagement — daily participation, online presence, and activity relative to subscribers.
 
 Overview MUST be the initial section.
 One section MUST be presented at a time so visitors do not need to scan every metric to find a relevant chart.
@@ -206,13 +206,6 @@ The two metric selectors MUST affect only their own charts.
 Ratio axes MUST remain percentages without a 100-percent ceiling.
 The tab MUST NOT have a redundant “Ratios of reported counts” heading or additional summary cards.
 
-Engagement MUST place correlations after the three charts under “How metrics move together,” visually subordinate to the ratio trends.
-The explanation MUST describe the meaning of positive, negative, and near-zero Pearson coefficients as linear association, including the limitation that association does not establish causation.
-Metric pairs MUST use “and” rather than a division sign so coefficients are not confused with ratios.
-Correlation results MUST show their paired-day counts and actual shared range and server scope next to the coefficients.
-Correlations MUST be grouped separately for every selected entity using the shared time range, including during period comparisons.
-The correlation block MUST explain this range and MUST NOT imply that it calculates correlations between compared entities or periods.
-
 ### Data explanations
 
 Short interpretation labels MUST remain close to affected values, including “Global subscribers.”
@@ -253,7 +246,7 @@ The selected servers MUST apply to every chart in both ordinary viewing and peri
 Period comparisons MUST identify each selected entity and period in the chart legend or heatmap panel label.
 Server population share MUST expand All Servers into individual shares as defined in [requirements.md](requirements.md#population-insights).
 Global subscriptions MUST appear once per period, independently of the number of selected servers, and MUST disappear when no entities are selected.
-The primary range MUST control the primary chart series and the correlation calculations in every comparison mode.
+The primary range MUST control the primary chart series in every comparison mode.
 These stored selections MUST remain available when returning to ordinary mode.
 Controls MUST NOT appear to filter charts that do not use them.
 
@@ -262,7 +255,7 @@ Selected-series labels MUST identify the entity or period and distinguish sums f
 Global-only metrics MUST retain the scope rules defined in [requirements.md](requirements.md#entity-comparison).
 
 **Example:** Comparing three months for one server shows three period labels and a calendar-aligned chart.
-Its legend identifies the selected months; a separate correlation block identifies the shared rolling interval.
+Its legend identifies the selected months.
 
 ## Charts
 

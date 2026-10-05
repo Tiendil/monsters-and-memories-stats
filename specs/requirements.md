@@ -48,7 +48,7 @@ The dashboard MUST support totals and per-server views where the source permits 
 
 ### R8: Metric relationships
 
-The dashboard MUST show useful ratios, relationships, and correlations between activity and subscriptions without inventing unavailable statistics.
+The dashboard MUST show useful ratios and relationships between activity and subscriptions without inventing unavailable statistics.
 
 ### R9: Time ranges
 
@@ -141,7 +141,7 @@ Source investigation evidence is recorded in the [source analysis](../docs/sourc
 The UI MUST distinguish source-reported counts from derived values.
 Every chart MUST have a concise explanation of what it measures and how to interpret it.
 Recognized metrics MUST link to a suitable definition, preferring GameAnalytics' [engagement metric dictionary](https://docs.gameanalytics.com/events-metrics-and-filtering/metrics/#engagement) for DAU, MAU, and DAU/MAU.
-General concepts MAY use Wikipedia definitions, including [concurrent users](https://en.wikipedia.org/wiki/Concurrent_user) and [Pearson correlation](https://en.wikipedia.org/wiki/Pearson_correlation_coefficient).
+General concepts MAY use Wikipedia definitions, including [concurrent users](https://en.wikipedia.org/wiki/Concurrent_user).
 Links MUST describe the referenced concept and MUST NOT imply that M&M's unverified counting semantics conform to an external definition.
 Custom ratios and source-specific counts MUST use explicit descriptions rather than borrowed KPI names such as conversion or retention.
 DAU/MAU MAY be identified as stickiness, with a qualification about unverified source windows and its distinction from returning-player retention.
@@ -270,8 +270,8 @@ It MUST plot the following over time:
 Starting-zone totals and individual zones MUST be selectable together in one plot, with independent choices for “All Zones” and each discovered zone.
 These selections MUST combine with the selected server scopes and comparison periods without changing the aggregation and missing-value rules.
 
-All plots, ratio series, and correlation calculations MUST share one visible primary time-range selector.
-Time-frame comparisons MUST add periods alongside that primary range as defined under Comparisons below; correlations MUST continue to use the primary range.
+All plots and ratio series MUST share one visible primary time-range selector.
+Time-frame comparisons MUST add periods alongside that primary range as defined under Comparisons below.
 The available ranges MUST be:
 
 - today.
@@ -359,7 +359,7 @@ Starting-zone selections MUST affect only the starting-zone chart.
 **Example:** One server has 20 of 80 online players, giving a 25-percent share even when it is the only selected server.
 Two Monday 10:00–11:00 UTC observations of 20 and 40 give a heatmap mean of 30 from two records; an unobserved Monday hour remains blank.
 
-### Ratios and correlation
+### Ratios
 
 Ratios MUST include daily/monthly activity and activity/global-subscriptions for the available daily and monthly counts.
 They MUST also include online population divided by daily activity, monthly activity, and global subscriptions.
@@ -381,14 +381,6 @@ These ratios MUST be described as online presence at collection time, without cl
 **Example:** A snapshot at 08:00 reports 10 online and 40 daily active, producing a 25-percent point at 08:00.
 A snapshot at 20:00 reports 30 online and 100 daily active, producing a separate 30-percent point at 20:00.
 Missing hours contribute no values; a range starting at noon includes only the 20:00 point.
-
-Correlation MUST use Pearson's r for available pairs among daily activity, monthly activity, and global subscriptions over the selected range, separately for each selected entity.
-To avoid treating repeated hourly daily/monthly counts as independent days, it MUST use the last jointly available observation per UTC day inside that range.
-It MUST show the paired-day count and return “not available” for fewer than three paired days or zero variance.
-Missing data MUST NOT be interpolated for correlation.
-The UI MUST explain that correlation does not establish causation and that overlapping source activity windows limit interpretation.
-
-**Example:** Twenty-four hourly observations within one UTC day contribute at most one daily/monthly pair to correlation, not 24 independent pairs.
 
 ### Comparisons
 

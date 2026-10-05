@@ -100,8 +100,6 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Online ratios using each snapshot's online and denominator counts, including multiple observations within one UTC day, missing hours and servers, measured zeros, zero denominators, and selection boundaries.
 - All-server ratios using snapshot totals, global subscription denominators in per-server views, and preservation of every original observation and ratio during period comparisons.
 - Combined engagement metric selections with stable distinct identities across more than two scopes and periods, including empty selections.
-- Correlation with known expected results and selection of the last jointly available sample per UTC day.
-- Unavailable correlation for insufficient paired days or zero variance.
 - All range presets and custom inclusive UTC date boundaries, including invalid or reversed inputs.
 - Today and Yesterday at UTC midnight, month/year rollover, and leap-day boundaries; Today comparisons MUST use the same elapsed part of the prior day, and Yesterday comparisons MUST retain the full day.
 - Series-colored connections below 3 hours, subdued gray connections from 3 hours to less than 24 hours, and no connections at 24 hours or more, including values immediately below and at both boundaries.
@@ -161,7 +159,7 @@ Automated tests MUST cover:
 - Zone checkbox keyboard operation, Escape and outside dismissal, long labels at narrow widths, empty-selection recovery, and independence from the shared view controls.
 - Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
-- Shared server selections that persist across sections and period modes, with correlations grouped per selected entity over the shared range.
+- Shared server selections that persist across sections and period modes.
 - Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
 - Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and two-line online-ratio tooltips without calculation or coverage details.
 - Online presence and subscriber-activity series preserving individual collection points, with percentages calculated from the same snapshot and no daily averaging.
