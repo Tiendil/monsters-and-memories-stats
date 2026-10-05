@@ -251,6 +251,36 @@ impl Browser {
         );
     }
 
+    fn servers(&self, ids: &[&str]) {
+        self.click("#servers-toggle");
+        let selected: Vec<_> = ids
+            .iter()
+            .map(|id| {
+                if id.is_empty() {
+                    "all".to_string()
+                } else {
+                    format!("server:{id}")
+                }
+            })
+            .collect();
+        let choices = self.request(Method::POST, "/execute/sync", json!({
+            "script":"return Array.from(document.querySelectorAll('#server-options input'), e => ({value:e.value,checked:e.checked}));", "args":[]
+        }));
+        for choice in choices.as_array().unwrap() {
+            let value = choice["value"].as_str().unwrap();
+            if choice["checked"].as_bool().unwrap() != selected.iter().any(|id| id == value) {
+                self.click(&format!("#server-options input[value='{value}']"));
+            }
+        }
+        self.click("#servers-toggle");
+    }
+
+    fn toggle_server(&self, value: &str) {
+        self.click("#servers-toggle");
+        self.click(&format!("#server-options input[value='{value}']"));
+        self.click("#servers-toggle");
+    }
+
     fn move_pointer(&self, selector: &str, x: i32, y: i32) {
         let element = self.element(selector);
         self.request(
@@ -449,7 +479,7 @@ impl Browser {
             "[data-summary='daily'] .headline-value",
             &mnm_stats_dashboard::analysis::grouped_count(daily),
         );
-        self.select("#server-scope", "retired");
+        self.servers(&["retired"]);
         self.expect_text("[data-summary='daily'] .headline-value", "Not available");
         self.expect_text(
             "[data-summary='subscriptions'] .headline-value",
@@ -457,7 +487,7 @@ impl Browser {
                 last["active_subscriptions"].as_u64().unwrap().into(),
             ),
         );
-        self.select("#server-scope", "a");
+        self.servers(&["a"]);
         self.select("#time-range", "7");
         assert_eq!(self.text("#history-status"), coverage);
         self.click("#nav-population");
@@ -474,25 +504,36 @@ impl Browser {
         self.activate("#nav-activity");
         self.expect_count(".chart-card", 3);
         self.click("#nav-population");
-        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#server-scope').value,document.querySelector('#time-range').value,document.querySelector('#zone-scope').value];","args":[]})), json!(["a","7","w"]));
-        self.select("#comparison-mode", "entities");
-        self.expect_count(".entity-selections li", 3);
-        self.activate(".entity-selections li:last-child .remove-entity");
-        self.expect_count(".entity-selections li", 2);
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return [document.querySelector('#server-options input:checked').value,document.querySelector('#time-range').value,document.querySelector('#zone-scope').value];","args":[]})), json!(["server:a","7","w"]));
+        self.servers(&["", "a", "b"]);
+        self.expect_count("[data-metric='online'] .legend li", 3);
+        // The checkbox dropdown supports keyboard toggling and Escape restores focus.
+        self.activate("#servers-toggle");
+        self.request(
+            Method::POST,
+            &format!(
+                "/element/{}/value",
+                self.element("#server-options input[value='server:b']")
+            ),
+            json!({"text":" ","value":[" "]}),
+        );
+        self.request(Method::POST, "/actions", json!({"actions":[{"type":"key","id":"keyboard","actions":[{"type":"keyDown","value":"\u{e00c}"},{"type":"keyUp","value":"\u{e00c}"}]}]}));
+        self.expect_count("[data-metric='online'] .legend li", 2);
         assert_eq!(
             self.request(
                 Method::POST,
                 "/execute/sync",
                 json!({"script":"return document.activeElement.id;","args":[]})
             ),
-            "comparison-mode"
+            "servers-toggle"
         );
-        self.click("#entity-choices input[value='server:b']");
+        self.expect_count(".server-picker[open]", 0);
+        self.toggle_server("server:b");
         self.click("#nav-overview");
         self.expect_count(".headline", 0);
         self.expect_count(".comparison-summary", 1);
         assert_eq!(self.text("#history-status"), coverage);
-        self.select("#comparison-mode", "overview");
+        self.servers(&["a"]);
         self.expect_count(".headline", 4);
         // Test chart-engine failure without a network request: data and download survive.
         self.request(Method::POST, "/execute/sync", json!({"script":"window.savedPlot = Plotly.newPlot; Plotly.newPlot = () => Promise.reject(new Error('test failure'));","args":[]}));
@@ -555,7 +596,7 @@ impl Browser {
             "/execute/sync",
             json!({"script":"document.documentElement.style.fontSize='';","args":[]}),
         );
-        self.select("#server-scope", "");
+        self.servers(&[""]);
         self.select("#time-range", "30");
     }
 
@@ -581,7 +622,9 @@ impl Browser {
             json!({"width":1280,"height":1000}),
         );
         self.expect_count(".chart-card", 1);
-        assert!(self.text("#server-scope").contains("Retired server"));
+        self.click("#servers-toggle");
+        assert!(self.text("#server-options").contains("Retired server"));
+        self.click("#servers-toggle");
         for (key, days) in [
             ("7", Some(7)),
             ("30", Some(30)),
@@ -627,7 +670,7 @@ impl Browser {
         }
         // Hover details retain exact values and original observation timestamps.
         self.select("#time-range", "7");
-        self.select("#server-scope", "a");
+        self.servers(&["a"]);
         let first = records
             .iter()
             .find(|r| r["observed_at"] == "2026-05-25T12:00:00Z")
@@ -713,7 +756,7 @@ impl Browser {
             }
         }
         self.hover("[data-metric='daily'] .scatterlayer .point");
-        self.select("#server-scope", "retired");
+        self.servers(&["retired"]);
         self.expect_count(".hovertext", 0);
         for metric in metrics.into_iter().filter(|m| *m != "subscriptions") {
             self.expect_text(
@@ -722,12 +765,13 @@ impl Browser {
             );
         }
         self.ready("subscriptions");
-        self.select("#server-scope", "a");
+        self.servers(&["a"]);
         self.click("#nav-relationships");
-        assert!(self.text("#correlation-scope").contains("Alpha"));
+        assert!(self.text(".correlation-scope").contains("Alpha"));
         self.expect_count(".correlation-value", 3);
         assert!(self.text(".correlations").contains("r ="));
-        self.select("#comparison-mode", "entities");
+        self.servers(&["", "a", "b"]);
+        self.expect_count(".correlation-entity", 3);
         for metric in metrics {
             self.expect_count(
                 &format!("[data-metric='{metric}'] .legend li"),
@@ -742,14 +786,24 @@ impl Browser {
             "5",
         );
         // Three individual servers, then all servers alongside the three individuals.
-        self.click("#entity-choices input[value='all']");
-        self.click("#entity-choices input[value='server:c']");
+        self.toggle_server("all");
+        self.toggle_server("server:c");
         self.expect_count("[data-metric='daily'] .legend li", 3);
-        self.click("#entity-choices input[value='all']");
+        self.toggle_server("all");
         self.expect_count("[data-metric='daily'] .legend li", 4);
         self.verify_download(expected, scratch);
-        self.click("#entity-choices input[value='server:b']");
+        self.toggle_server("server:b");
         self.expect_count("[data-metric='daily'] .legend li", 3);
+        self.servers(&[]);
+        self.expect_count(".empty-servers", 1);
+        for metric in metrics {
+            self.expect_count(&format!("[data-metric='{metric}'] .plot-surface"), 0);
+        }
+        self.verify_download(expected, scratch);
+        self.click(".empty-servers button");
+        self.expect_count(".empty-servers", 0);
+        self.expect_text("#servers-selection", "All Servers");
+        self.servers(&["a"]);
         for (mode, periods) in [
             ("months", ["2024-02", "2024-03", "2024-04"]),
             ("years", ["2023", "2024", "2025"]),
@@ -766,6 +820,15 @@ impl Browser {
                 self.expect_count(&format!("[data-metric='{metric}'] .legend li"), 3);
                 self.ready(metric);
             }
+            self.toggle_server("server:b");
+            for metric in metrics {
+                self.expect_count(
+                    &format!("[data-metric='{metric}'] .legend li"),
+                    if metric == "subscriptions" { 3 } else { 6 },
+                );
+            }
+            self.expect_count(".correlation-entity", 2);
+            self.toggle_server("server:b");
             // Constant zone counts coincide across all three periods. Every
             // series must retain its actual observation date, not its aligned x.
             self.hover("[data-metric='zone-w'] .scatterlayer .point");
@@ -790,7 +853,7 @@ impl Browser {
             assert_eq!(
                 self.request(Method::POST, "/execute/sync", json!({
                     "script":"return document.querySelector('[data-metric=\"daily\"] .plot-surface').data.some(trace=>trace.text.some(text=>text.includes(arguments[0])));",
-                    "args":["2024-02-29T23:00:00Z"]
+                    "args":["29 Feb 2024, 23:00 UTC"]
                 })),
                 true,
                 "comparison hover details retain the leap-day observation timestamp"
@@ -837,7 +900,7 @@ impl Browser {
         self.hover("[data-metric='zone-w'] .scatterlayer .point");
         assert!(
             self.text("[data-metric='zone-w'] .hoverlayer")
-                .contains("2024-02-01T00:00:00Z UTC")
+                .contains("01 Feb 2024, 00:00 UTC")
         );
         self.move_pointer("[data-metric='zone-w'] .plot-surface", 0, 0);
         self.expect_count(".hovertext", 0);
@@ -851,7 +914,7 @@ impl Browser {
         self.verify_requests(url, false);
         self.select("#comparison-mode", "overview");
         // Capture the real browser for visual review; decoding is a separate local activity.
-        self.select("#server-scope", "");
+        self.servers(&[""]);
         self.request(Method::POST, "/url", json!({"url":url}));
         self.element("#history-count");
         fs::write(
@@ -873,7 +936,7 @@ impl Browser {
         );
         assert!(rect["width"].as_f64().unwrap() <= 375.0);
         self.select("#time-range", "7");
-        self.select("#server-scope", "a");
+        self.servers(&["a"]);
         // Boundary markers remain reachable in a plot sized to the narrow container.
         self.hover("[data-metric='daily'] .scatterlayer .trace:last-child .point:last-child");
         let last = records.last().unwrap();
@@ -907,6 +970,11 @@ impl Browser {
 
     fn expect_hover(&self, metric: &str, series: &str, at: &str, value: &str) {
         let selector = format!("[data-metric='{metric}'] .hovertext");
+        let displayed_time = chrono::DateTime::parse_from_rfc3339(at)
+            .unwrap()
+            .with_timezone(&chrono::Utc)
+            .format("%d %b %Y, %H:%M UTC")
+            .to_string();
         wait_until(
             || {
                 let rows = self.request(Method::POST, "/execute/sync", json!({
@@ -915,9 +983,8 @@ impl Browser {
             }));
                 rows.as_array().unwrap().iter().any(|row| {
                     let text = row.as_str().unwrap();
-                    text.contains(series)
-                        && text.contains(&format!("{at} UTC"))
-                        && text.ends_with(value)
+                    text.starts_with(&format!("{value} {series}"))
+                        && text.ends_with(&displayed_time)
                 })
             },
             &format!("{metric}: hover must show {series}, {at}, {value}"),
@@ -953,7 +1020,7 @@ impl Browser {
         self.select("#comparison-mode", "overview");
         // Seven days keeps demo observations sparse enough to draw point markers.
         self.select("#time-range", "7");
-        self.select("#server-scope", "");
+        self.servers(&[""]);
         self.show_metric("daily");
         self.ready("daily");
         self.request(
@@ -1069,10 +1136,8 @@ impl Browser {
                 "[data-metric='daily'] .scatterlayer .trace:nth-child({}) .js-line",
                 i + 1
             );
-            assert_eq!(
-                self.computed(&swatch, "stroke-dasharray"),
-                self.computed(&line, "stroke-dasharray")
-            );
+            assert_eq!(self.computed(&swatch, "stroke-dasharray"), "none");
+            assert_eq!(self.computed(&line, "stroke-dasharray"), "none");
             let label = self.text(&format!(
                 "[data-metric='daily'] .legend li:nth-child({})",
                 i + 1
@@ -1081,7 +1146,7 @@ impl Browser {
             wait_until(
                 || {
                     self.request(Method::POST, "/execute/sync", json!({
-                    "script":"const row = Array.from(document.querySelectorAll(arguments[0])).find(e => e.textContent.startsWith(arguments[1])); return row ? getComputedStyle(row.querySelector('path')).stroke : null;",
+                    "script":"const row = Array.from(document.querySelectorAll(arguments[0])).find(e => e.textContent.includes(' ' + arguments[1])); return row ? getComputedStyle(row.querySelector('path')).stroke : null;",
                     "args":["[data-metric='daily'] .hovertext", label]
                 })) == color
                 },
@@ -1492,14 +1557,14 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
         "mobile first view: {first_view}"
     );
     assert!(first_view["width"].as_u64().unwrap() <= first_view["viewport"].as_u64().unwrap());
-    browser.select("#server-scope", "demo-0");
+    browser.servers(&["demo-0"]);
     browser.request(
         Method::POST,
         "/execute/sync",
         json!({"script":"window.scrollTo(0,0);","args":[]}),
     );
     assert_eq!(browser.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('.plot-surface').getBoundingClientRect().top < 812 && document.documentElement.scrollWidth <= innerWidth;","args":[]})), true, "long source names fit the populated mobile overview");
-    browser.select("#server-scope", "");
+    browser.servers(&[""]);
 
     browser.request(
         Method::POST,

@@ -42,36 +42,6 @@ pub fn css_color(index: usize) -> String {
     )
 }
 
-pub fn dash(index: usize) -> DashType {
-    [
-        DashType::Solid,
-        DashType::Dash,
-        DashType::Dot,
-        DashType::DashDot,
-        DashType::LongDash,
-        DashType::LongDashDot,
-    ][index % 6]
-        .clone()
-}
-
-pub fn dash_array(index: usize) -> String {
-    // Plotly's named dash patterns use a unit of max(line width, 3px).
-    let unit = tokens::T_CHART_SERIES_LINE_WIDTH.px().max(3.0);
-    let pattern: &[f64] = match index % 6 {
-        0 => return "none".into(),
-        1 => &[3.0, 3.0],
-        2 => &[1.0, 1.0],
-        3 => &[3.0, 1.0, 1.0, 1.0],
-        4 => &[5.0, 5.0],
-        _ => &[5.0, 2.0, 1.0, 2.0],
-    };
-    pattern
-        .iter()
-        .map(|part| (part * unit).to_string())
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
 fn escape(text: &str) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -145,12 +115,10 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             y.push(point.value.map(|v| v.number()));
             text.push(point.value.map_or_else(String::new, |value| {
                 format!(
-                    "<b>{}</b><br>{} UTC<br>{}",
+                    "<b>{} {}</b><br>{}",
+                    value.display(),
                     escape(&series.label),
-                    point
-                        .at
-                        .to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true),
-                    value.display()
+                    point.at.format("%d %b %Y, %H:%M UTC")
                 )
             }));
             // Dense lines omit markers except where an observation has no connected neighbor.
@@ -183,7 +151,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
                 .line(
                     Line::new()
                         .color(color.clone())
-                        .dash(dash(series.style))
+                        .dash(DashType::Solid)
                         .width(tokens::T_CHART_SERIES_LINE_WIDTH.px())
                         .simplify(false),
                 )

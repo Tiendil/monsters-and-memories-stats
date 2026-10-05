@@ -3,6 +3,10 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike, Utc};
 use mnm_stats_model::{History, Snapshot};
 use std::collections::BTreeMap;
 
+pub fn display_name(id: &str, name: &str) -> String {
+    if name.trim().is_empty() { id } else { name }.to_owned()
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Scope {
     All,
@@ -13,7 +17,7 @@ impl Scope {
     pub fn label(&self, names: &BTreeMap<String, String>) -> String {
         match self {
             Self::All => "All Servers".into(),
-            Self::Server(id) => format!("{} [{id}]", names.get(id).unwrap_or(id)),
+            Self::Server(id) => display_name(id, names.get(id).map_or("", String::as_str)),
         }
     }
 }
@@ -73,7 +77,7 @@ impl Metric {
             Self::Subscriptions => "Active subscriptions",
             Self::Online => "Online population",
             Self::StartingZones => "Starting-zone population",
-            Self::Zone(_, name) => return name.clone(),
+            Self::Zone(id, name) => return display_name(id, name),
             Self::DailyMonthly => "Daily / monthly activity",
             Self::DailySubscriptions => "Daily activity / global subscriptions",
             Self::MonthlySubscriptions => "Monthly activity / global subscriptions",
@@ -392,7 +396,6 @@ impl Alignment {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Comparison {
     None,
-    Entities(Vec<Scope>),
     Periods(Vec<Period>),
 }
 
@@ -450,7 +453,7 @@ pub struct Plot {
 pub fn plot(
     history: &History,
     metric: &Metric,
-    scope: &Scope,
+    scopes: &[Scope],
     range: TimeRange,
     now: DateTime<Utc>,
     comparison: &Comparison,
@@ -469,6 +472,15 @@ pub fn plot(
         alignment: Alignment::Utc,
         x_bounds: (seconds(start), seconds(end)),
         note: String::new(),
+    };
+    if scopes.is_empty() {
+        result.note = "Select servers to show their data.".into();
+        return Ok(result);
+    }
+    let scopes = if *metric == Metric::Subscriptions {
+        &[Scope::All][..]
+    } else {
+        scopes
     };
     match comparison {
         Comparison::Periods(periods) => {
@@ -495,39 +507,27 @@ pub fn plot(
                 if result.alignment == Alignment::Elapsed && end - start != duration {
                     return Err("Intervals must have equal durations.".into());
                 }
-                result.series.push(Series {
-                    identity: format!("period:{}", period.label()),
-                    style: result.series.len(),
-                    label: format!("{} · {}", scope_label(scope), period.label()),
-                    points: history
-                        .snapshots()
-                        .iter()
-                        .filter(|s| s.observed_at >= start && s.observed_at < end)
-                        .map(|s| Point {
-                            at: s.observed_at,
-                            x: period.x(s.observed_at),
-                            value: metric.value(s, scope),
-                        })
-                        .collect(),
-                });
+                for scope in scopes {
+                    result.series.push(Series {
+                        identity: format!("period:{}:{scope:?}", period.label()),
+                        style: result.series.len(),
+                        label: format!("{} · {}", scope_label(scope), period.label()),
+                        points: history
+                            .snapshots()
+                            .iter()
+                            .filter(|s| s.observed_at >= start && s.observed_at < end)
+                            .map(|s| Point {
+                                at: s.observed_at,
+                                x: period.x(s.observed_at),
+                                value: metric.value(s, scope),
+                            })
+                            .collect(),
+                    });
+                }
             }
             result.note = "Missing dates and observations remain gaps; incomplete periods are not extrapolated.".into();
         }
-        other => {
-            let scopes = match other {
-                Comparison::Entities(scopes) => scopes.clone(),
-                _ => vec![scope.clone()],
-            };
-            let scopes = if *metric == Metric::Subscriptions {
-                if matches!(other, Comparison::Entities(_)) {
-                    result.note =
-                        "Subscriptions are global; server-specific comparison is unavailable."
-                            .into();
-                }
-                vec![Scope::All]
-            } else {
-                scopes
-            };
+        Comparison::None => {
             for scope in scopes {
                 result.series.push(Series {
                     identity: if *metric == Metric::Subscriptions {
@@ -536,7 +536,7 @@ pub fn plot(
                         format!("entity:{scope:?}")
                     },
                     style: result.series.len(),
-                    label: scope_label(&scope),
+                    label: scope_label(scope),
                     points: history
                         .snapshots()
                         .iter()
@@ -544,13 +544,10 @@ pub fn plot(
                         .map(|s| Point {
                             at: s.observed_at,
                             x: seconds(s.observed_at),
-                            value: metric.value(s, &scope),
+                            value: metric.value(s, scope),
                         })
                         .collect(),
                 });
-            }
-            if result.series.is_empty() {
-                result.note = "Select entities to compare.".into();
             }
         }
     }

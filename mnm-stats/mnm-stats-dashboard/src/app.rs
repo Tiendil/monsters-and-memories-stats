@@ -1,9 +1,9 @@
 use crate::{analysis::*, charts, charts::browser::InteractivePlot};
 use chrono::{DateTime, Datelike, Utc};
-use leptos::prelude::*;
+use leptos::{ev, prelude::*};
 use mnm_stats_model::History;
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     sync::{Arc, Mutex},
 };
 use wasm_bindgen::{JsCast, JsValue};
@@ -39,23 +39,15 @@ fn utc(time: DateTime<Utc>) -> String {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Mode {
     Overview,
-    Entities,
     Months,
     Years,
     Intervals,
 }
 impl Mode {
-    const ALL: [Self; 5] = [
-        Self::Overview,
-        Self::Entities,
-        Self::Months,
-        Self::Years,
-        Self::Intervals,
-    ];
+    const ALL: [Self; 4] = [Self::Overview, Self::Months, Self::Years, Self::Intervals];
     fn key(self) -> &'static str {
         match self {
             Self::Overview => "overview",
-            Self::Entities => "entities",
             Self::Months => "months",
             Self::Years => "years",
             Self::Intervals => "intervals",
@@ -64,7 +56,6 @@ impl Mode {
     fn label(self) -> &'static str {
         match self {
             Self::Overview => "No comparison",
-            Self::Entities => "Servers",
             Self::Months => "Periods · months",
             Self::Years => "Periods · years",
             Self::Intervals => "Periods · equal intervals",
@@ -110,7 +101,7 @@ fn readable(time: DateTime<Utc>) -> String {
 #[component]
 fn Summary(
     history: Arc<History>,
-    scope: RwSignal<Scope>,
+    scope: Memo<Scope>,
     range: RwSignal<TimeRange>,
     now: RwSignal<DateTime<Utc>>,
     section: RwSignal<Section>,
@@ -170,7 +161,7 @@ fn PeriodPicker(periods: RwSignal<Vec<Period>>, yearly: bool, initial: String) -
 fn ChartCard(
     history: Arc<History>,
     metric: Metric,
-    scope: RwSignal<Scope>,
+    scopes: RwSignal<Vec<Scope>>,
     range: RwSignal<TimeRange>,
     now: RwSignal<DateTime<Utc>>,
     comparison: Memo<Result<Comparison, String>>,
@@ -184,7 +175,7 @@ fn ChartCard(
             plot(
                 &history,
                 &metric,
-                &scope.get(),
+                &scopes.get(),
                 range.get(),
                 now.get(),
                 &comparison,
@@ -204,7 +195,7 @@ fn ChartCard(
                     let has_values = plot.series.iter().any(|s| s.points.iter().any(|p| p.value.is_some()));
                     view! {
                         <ul class="legend" aria-label="Chart series">{plot.series.iter().map(|series| view! {
-                            <li><span>{series.label.clone()}</span><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style) stroke-dasharray=charts::dash_array(series.style)/></svg></li>
+                            <li><span>{series.label.clone()}</span><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style)/></svg></li>
                         }).collect_view()}</ul>
                         <p class="chart-note">{plot.note.clone()}</p>
                         {if has_values {
@@ -220,29 +211,86 @@ fn ChartCard(
 }
 
 #[component]
+fn ServerPicker(names: BTreeMap<String, String>, scopes: RwSignal<Vec<Scope>>) -> impl IntoView {
+    let node = NodeRef::<leptos::html::Details>::new();
+    let summary_names = names.clone();
+    let summary = Memo::new(move |_| {
+        let selected = scopes.get();
+        match selected.as_slice() {
+            [] => "Choose servers".into(),
+            [scope] => scope.label(&summary_names),
+            _ if selected.contains(&Scope::All) => format!("All Servers + {}", selected.len() - 1),
+            _ => format!("{} servers", selected.len()),
+        }
+    });
+    let outside = window_event_listener(ev::click, move |event| {
+        if let (Some(element), Some(target)) = (
+            node.get(),
+            event
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::Node>().ok()),
+        ) && !element.contains(Some(&target))
+        {
+            let _ = element.remove_attribute("open");
+        }
+    });
+    on_cleanup(move || outside.remove());
+    view! {
+        <div class="server-control">
+            <span id="servers-label" class="control-label">"Servers"</span>
+            <details class="server-picker" node_ref=node on:keydown=move |event| {
+                if event.key() == "Escape" {
+                    if let Some(element) = node.get() { let _ = element.remove_attribute("open"); }
+                    if let Some(toggle) = document().get_element_by_id("servers-toggle").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = toggle.focus(); }
+                }
+            } on:focusout=move |event| {
+                if let (Some(element), Some(target)) = (node.get(), event.related_target().and_then(|t| t.dyn_into::<web_sys::Node>().ok())) && !element.contains(Some(&target)) {
+                    let _ = element.remove_attribute("open");
+                }
+            }>
+                <summary id="servers-toggle" aria-labelledby="servers-label servers-selection"><span id="servers-selection">{move || summary.get()}</span></summary>
+                <div id="server-options" role="group" aria-labelledby="servers-label">
+                    {std::iter::once(Scope::All).chain(names.keys().cloned().map(Scope::Server)).map(|scope| {
+                        let label = scope.label(&names);
+                        let checked = scope.clone();
+                        let value = match &scope { Scope::All => "all".to_string(), Scope::Server(id) => format!("server:{id}") };
+                        view! { <label class="checkbox"><input type="checkbox" value=value prop:checked=move || scopes.get().contains(&checked) on:change=move |_| scopes.update(|selected| {
+                            if selected.contains(&scope) { selected.retain(|s| s != &scope); } else { selected.push(scope.clone()); }
+                        })/><span>{label}</span></label> }
+                    }).collect_view()}
+                </div>
+            </details>
+        </div>
+    }
+}
+
+#[component]
 fn Correlations(
     history: Arc<History>,
-    scope: RwSignal<Scope>,
+    scopes: RwSignal<Vec<Scope>>,
     range: RwSignal<TimeRange>,
     now: RwSignal<DateTime<Utc>>,
 ) -> impl IntoView {
     let names = servers(&history);
-    let range_history = history.clone();
     view! {
         <section class="correlations" aria-labelledby="correlations-heading">
             <h2 id="correlations-heading">"Correlations"</h2>
             <p>"Pearson's r uses the last jointly available observation per UTC day in the shared time range. At least three paired days and variation in both counts are needed."</p>
-            <p id="correlation-scope">{move || { let (start, end) = range.get().bounds(&range_history, now.get()); format!("{} · {} · {} – {}", scope.get().label(&names), range.get().label(), readable(start), readable(end)) }}</p>
-            <div class="correlation-grid">{move || {
+            {move || {
                 let (start, end) = range.get().bounds(&history, now.get());
-                [(Metric::Daily, Metric::Monthly), (Metric::Daily, Metric::Subscriptions), (Metric::Monthly, Metric::Subscriptions)].into_iter().map(|(a, b)| {
-                    let result = correlation(&history, &a, &b, &scope.get(), start, end);
-                    view! { <div class="correlation-value"><h3>{format!("{} / {}", a.title(), b.title())}</h3>
-                        <p class="coefficient">{result.r.map_or_else(|| "not available".into(), |r| format!("r = {r:.3}"))}</p>
-                        <p>{format!("{} paired UTC days", result.paired_days)}</p>
-                    </div> }
+                scopes.get().into_iter().map(|scope| view! {
+                    <section class="correlation-entity">
+                        <h3 class="correlation-scope">{format!("{} · {} · {} – {}", scope.label(&names), range.get().label(), readable(start), readable(end))}</h3>
+                        <div class="correlation-grid">{[(Metric::Daily, Metric::Monthly), (Metric::Daily, Metric::Subscriptions), (Metric::Monthly, Metric::Subscriptions)].into_iter().map(|(a, b)| {
+                            let result = correlation(&history, &a, &b, &scope, start, end);
+                            view! { <div class="correlation-value"><h4>{format!("{} / {}", a.title(), b.title())}</h4>
+                                <p class="coefficient">{result.r.map_or_else(|| "not available".into(), |r| format!("r = {r:.3}"))}</p>
+                                <p>{format!("{} paired UTC days", result.paired_days)}</p>
+                            </div> }
+                        }).collect_view()}</div>
+                    </section>
                 }).collect_view()
-            }}</div>
+            }}
             <p class="muted">"Correlation does not establish causation. Overlapping source activity windows limit interpretation. Subscriptions remain global; activity sums are not deduplicated."</p>
         </section>
     }
@@ -268,12 +316,10 @@ pub fn App() -> impl IntoView {
     )
     .expect("browser timer");
     on_cleanup(move || timer.clear());
-    let scope = RwSignal::new(Scope::All);
+    let scopes = RwSignal::new(vec![Scope::All]);
+    let scope = Memo::new(move |_| scopes.get().first().cloned().unwrap_or(Scope::All));
     let range = RwSignal::new(TimeRange::default());
     let mode = RwSignal::new(Mode::Overview);
-    let mut initial_entities = vec![Scope::All];
-    initial_entities.extend(names.keys().take(2).cloned().map(Scope::Server));
-    let entities = RwSignal::new(initial_entities);
     let distinct_months: BTreeSet<_> = history
         .snapshots()
         .iter()
@@ -315,7 +361,6 @@ pub fn App() -> impl IntoView {
     let comparison = Memo::new(move |_| -> Result<Comparison, String> {
         Ok(match mode.get() {
             Mode::Overview => Comparison::None,
-            Mode::Entities => Comparison::Entities(entities.get()),
             Mode::Months => Comparison::Periods(months.get()),
             Mode::Years => Comparison::Periods(years.get()),
             Mode::Intervals => {
@@ -336,15 +381,14 @@ pub fn App() -> impl IntoView {
         })
     });
     let download_history = history.clone();
-    let entities_names = names.clone();
     let month_default = latest.unwrap_or_else(utc_now).format("%Y-%m").to_string();
     let year_default = latest.unwrap_or_else(utc_now).format("%Y").to_string();
     let summary_history = history.clone();
     let empty_history = history.clone();
     let empty_range =
         Memo::new(move |_| latest_in_range(&empty_history, range.get(), now.get()).is_none());
-    let chip_names = StoredValue::new(entities_names.clone());
-    let summary_names = StoredValue::new(entities_names.clone());
+    let summary_names = StoredValue::new(names.clone());
+    let comparing = Memo::new(move |_| mode.get() != Mode::Overview || scopes.get().len() > 1);
     view! {
         <style>{include_str!(concat!(env!("OUT_DIR"), "/style.css"))}</style>
         <a class="skip-link" href="#content">"Skip to dashboard content"</a>
@@ -377,10 +421,8 @@ pub fn App() -> impl IntoView {
             <section class="controls" aria-labelledby="controls-heading">
                 <h2 id="controls-heading" class="visually-hidden">"Explore the archive"</h2>
                 <div class="control-grid">
-                    <label class:hidden=move || mode.get() == Mode::Entities && section.get() != Section::Relationships>{move || if mode.get() == Mode::Entities { "Correlation scope" } else { "Server scope" }}<select id="server-scope" prop:value=move || match scope.get() { Scope::All => String::new(), Scope::Server(id) => id } on:change=move |ev| {
-                        let value = event_target_value(&ev); scope.set(if value.is_empty() { Scope::All } else { Scope::Server(value) });
-                    }><option value="">"All Servers"</option>{names.into_iter().map(|(id, name)| view! { <option value=id.clone()>{format!("{name} [{id}]")}</option> }).collect_view()}</select></label>
-                    <label class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships>{move || if mode.get() == Mode::Overview || mode.get() == Mode::Entities { "Time range" } else { "Correlation range" }}<select id="time-range" prop:value=move || range.get().key() on:change=move |ev| {
+                    <ServerPicker names scopes/>
+                    <label class:hidden=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals) && section.get() != Section::Relationships>{move || if mode.get() == Mode::Overview { "Time range" } else { "Correlation range" }}<select id="time-range" prop:value=move || range.get().key() on:change=move |ev| {
                         let value = event_target_value(&ev);
                         if let Some(selected) = TimeRange::ALL.into_iter().find(|r| r.key() == value) { range.set(selected); }
                     }>{TimeRange::ALL.into_iter().map(|r| view! { <option value=r.key()>{r.label()}</option> }).collect_view()}</select></label>
@@ -388,22 +430,6 @@ pub fn App() -> impl IntoView {
                         let value = event_target_value(&ev); if let Some(selected) = Mode::ALL.into_iter().find(|m| m.key() == value) { mode.set(selected); }
                     }>{Mode::ALL.into_iter().map(|m| view! { <option value=m.key()>{m.label()}</option> }).collect_view()}</select></label>
                 </div>
-                <Show when=move || mode.get() == Mode::Entities>
-                    <fieldset id="entity-choices"><legend>"Compare entities · select any number"</legend>
-                        {std::iter::once(Scope::All).chain(entities_names.keys().cloned().map(Scope::Server)).map(|entity| {
-                            let label = entity.label(&entities_names); let checked = entity.clone();
-                            let value = match &entity { Scope::All => "all".to_string(), Scope::Server(id) => format!("server:{id}") };
-                            view! { <label class="checkbox"><input type="checkbox" value=value prop:checked=move || entities.get().contains(&checked) on:change=move |_| entities.update(|list| {
-                                if list.contains(&entity) { list.retain(|e| e != &entity); } else { list.push(entity.clone()); }
-                            })/>{label}</label> }
-                        }).collect_view()}
-                        <p>"All-server sums include the selected individual servers; activity counts are not deduplicated."</p>
-                    </fieldset>
-                    <ul class="selections entity-selections">{move || entities.get().into_iter().map(|entity| {
-                        let label = entity.label(&chip_names.get_value());
-                        view! { <li><span>{label.clone()}</span><button class="secondary remove-entity" aria-label=format!("Remove {label}") on:click=move |_| { entities.update(|list| list.retain(|e| e != &entity)); if let Some(el) = document().get_element_by_id("comparison-mode").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = el.focus(); } }>"Remove"</button></li> }
-                    }).collect_view()}</ul>
-                </Show>
                 {move || match mode.get() {
                     Mode::Months => view! { <PeriodPicker periods=months yearly=false initial=month_default.clone()/> }.into_any(),
                     Mode::Years => view! { <PeriodPicker periods=years yearly=true initial=year_default.clone()/> }.into_any(),
@@ -427,25 +453,28 @@ pub fn App() -> impl IntoView {
                     _ => ().into_any(),
                 }}
                 <Show when=move || matches!(mode.get(), Mode::Months | Mode::Years | Mode::Intervals)>
-                    <p class="comparison-explanation">"Periods align by calendar date or elapsed hours. Incomplete periods remain gaps. Correlations use their own shared range and scope."</p>
+                    <p class="comparison-explanation">"Periods align by calendar date or elapsed hours for each selected server. Incomplete periods remain gaps. Correlations use the shared time range."</p>
                 </Show>
             </section>
             <nav class="section-nav" aria-label="Dashboard sections">{Section::ALL.into_iter().map(|item| view! {
                 <button id=format!("nav-{}", item.key()) aria-pressed=move || (section.get() == item).to_string() on:click=move |_| section.set(item)>{item.label()}</button>
             }).collect_view()}</nav>
-            <section id="content" tabindex="-1" class:comparing=move || mode.get() != Mode::Overview aria-label=move || section.get().label()>
-                <Show when=move || mode.get() == Mode::Overview && empty_range.get()>
+            <section id="content" tabindex="-1" class:comparing=move || comparing.get() aria-label=move || section.get().label()>
+                <Show when=move || scopes.get().is_empty()>
+                    <div class="empty-servers" role="status"><p>"Select at least one server to show statistics."</p><button class="secondary" on:click=move |_| scopes.set(vec![Scope::All])>"Show All Servers"</button></div>
+                </Show>
+                <Show when=move || mode.get() == Mode::Overview && !scopes.get().is_empty() && empty_range.get()>
                     <div class="empty-selection" role="status"><p>{if count == 0 { "No history yet. The first successful collection will appear in a future dashboard build." } else { "No observations in this interval. Choose All time to explore the available archive." }}</p>
                     {(count > 0).then(|| view! { <button class="secondary" on:click=move |_| range.set(TimeRange::All)>"Show All time"</button> })}</div>
                 </Show>
-                <Show when=move || section.get() == Section::Overview && mode.get() == Mode::Overview>
+                <Show when=move || section.get() == Section::Overview && mode.get() == Mode::Overview && scopes.get().len() == 1>
                     <Summary history=summary_history.clone() scope range now section/>
                 </Show>
-                <Show when=move || mode.get() != Mode::Overview>
+                <Show when=move || comparing.get() && !scopes.get().is_empty()>
                     <div class="comparison-summary" role="status"><h2>"Comparison"</h2><p>{move || match comparison.get() {
-                        Ok(Comparison::Entities(items)) => if items.is_empty() { "Select servers above to compare.".into() } else { items.iter().map(|s| s.label(&summary_names.get_value())).collect::<Vec<_>>().join(" · ") },
+                        Ok(Comparison::None) => scopes.get().iter().map(|s| s.label(&summary_names.get_value())).collect::<Vec<_>>().join(" · "),
                         Ok(Comparison::Periods(items)) => if items.is_empty() { "Add a period above to compare.".into() } else { items.iter().map(Period::label).collect::<Vec<_>>().join(" · ") },
-                        Err(e) => e, _ => String::new()
+                        Err(e) => e
                     }}</p></div>
                 </Show>
                 {move || {
@@ -462,16 +491,16 @@ pub fn App() -> impl IntoView {
                     let zone_labels = zone_names.clone();
                     view! {
                         <h2 class="section-title">{match selected { Section::Overview => "Online over time", Section::Activity => "Activity over time", Section::Population => "Population over time", Section::Relationships => "Ratios of reported counts" }}</h2>
-                        <div class="chart-grid" class:overview-chart=selected == Section::Overview>{metrics.into_iter().map(|metric| view! { <ChartCard history=chart_history.clone() metric scope range now comparison/> }).collect_view()}</div>
+                        <div class="chart-grid" class:overview-chart=selected == Section::Overview>{metrics.into_iter().map(|metric| view! { <ChartCard history=chart_history.clone() metric scopes range now comparison/> }).collect_view()}</div>
                         {(selected == Section::Population).then(move || view! {
                             <section class="zone-detail" aria-label="Individual starting zone"><h2>"Explore a starting zone"</h2>
-                                <label>"Starting zone"<select id="zone-scope" prop:value=move || zone.get() on:change=move |ev| zone.set(event_target_value(&ev))>{zone_options.into_iter().map(|(id, name)| view! { <option value=id.clone()>{format!("{name} [{id}]")}</option> }).collect_view()}</select></label>
-                                {move || zone_labels.get(&zone.get()).map(|name| view! { <ChartCard history=zone_history.clone() metric=Metric::Zone(zone.get(), name.clone()) scope range now comparison/> })}
+                                <label>"Starting zone"<select id="zone-scope" prop:value=move || zone.get() on:change=move |ev| zone.set(event_target_value(&ev))>{zone_options.into_iter().map(|(id, name)| view! { <option value=id.clone()>{display_name(&id, &name)}</option> }).collect_view()}</select></label>
+                                {move || zone_labels.get(&zone.get()).map(|name| view! { <ChartCard history=zone_history.clone() metric=Metric::Zone(zone.get(), name.clone()) scopes range now comparison/> })}
                             </section>
                         })}
                         {(selected == Section::Relationships).then(|| view! {
-                            <p class="correlation-explanation">"Correlations below always use the shared range and server scope, including when the charts compare different servers or periods."</p>
-                            <Correlations history=history.clone() scope range now/>
+                            <p class="correlation-explanation">"Correlations below use the shared time range for each selected server, including when the charts compare different periods."</p>
+                            <Correlations history=history.clone() scopes range now/>
                         })}
                     }
                 }}

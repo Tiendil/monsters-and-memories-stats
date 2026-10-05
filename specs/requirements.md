@@ -251,6 +251,8 @@ The dashboard MUST provide a visible link labeled “Star on GitHub” to the [p
 The dashboard MUST provide a visible link labeled “Request a feature” to the repository's new-issue page so visitors can suggest dashboard improvements.
 
 The dashboard MUST have an all-servers view and derive its server selector from collected history, including entities present only in historical data.
+Visible server and zone labels MUST use the source display name when it is nonblank, otherwise the source ID.
+Labels MUST NOT append technical IDs to available display names; internal identities and downloaded data MUST remain unchanged.
 It MUST plot the following over time:
 
 - source-reported daily/monthly activity.
@@ -280,7 +282,10 @@ Missing samples MUST NOT be plotted as zeros; line charts MUST break across gaps
 Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
 Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSON.
-Hovering a plotted observation with the mouse MUST show its series, exact value, and original collection timestamp labeled UTC.
+Hovering a plotted observation with the mouse MUST show its exact value followed by its series name on the first line and its collection date and time on the second line.
+The displayed time MUST use the original observation's UTC date, hour, and minute, omitting seconds and fractional seconds.
+It MUST use a readable date and end with `UTC`, without an ISO `T` separator or `Z` suffix.
+The download MUST preserve each original timestamp at its full stored precision.
 This MUST work for every chart family and comparison mode, including dense series and overlapping comparison points.
 Ratio details MUST include the exact numerator and denominator alongside the rounded percentage.
 Hover details MUST refer only to collected observations, MUST NOT invent points inside gaps, and MUST clear when the pointer leaves the plot or the selection changes.
@@ -298,7 +303,7 @@ Values that compare activity with subscriptions MUST be described as ratios of r
 They MUST NOT be clamped to 100 percent.
 A zero denominator or unavailable value MUST yield “not available,” never infinity or a fabricated zero.
 
-Correlation MUST use Pearson's r for available pairs among daily activity, monthly activity, and global subscriptions over the selected range and server scope.
+Correlation MUST use Pearson's r for available pairs among daily activity, monthly activity, and global subscriptions over the selected range, separately for each selected entity.
 To avoid treating repeated hourly daily/monthly counts as independent days, it MUST use the last jointly available observation per UTC day inside that range.
 It MUST show the paired-day count and return “not available” for fewer than three paired days or zero variance.
 Missing data MUST NOT be interpolated for correlation.
@@ -318,7 +323,7 @@ The existing rules for aggregation labels and unavailable values MUST also apply
 Users MUST be able to select the periods to compare without restricting every period to end at the current time.
 Equal-duration intervals MUST align by elapsed time from their respective starts.
 Calendar months MUST align by day of month and time of day; calendar years MUST align by month, day, and time of day.
-Calendar boundaries MUST use UTC, and exact-value inspection MUST retain each observation's original UTC timestamp.
+Calendar boundaries MUST use UTC, and exact-value inspection MUST display each observation's original UTC date and time to the minute rather than the aligned comparison coordinate.
 Calendar-year comparison MUST be distinguished from the standard rolling “last year” range of 365 days.
 Dates absent from a compared period, such as a leap day in a non-leap year, MUST remain absent.
 Missing observations and incomplete periods MUST remain visible as gaps or partial coverage, without invented zeros or extrapolated values.
@@ -330,8 +335,13 @@ March's day 31 has no corresponding value in the February or April series.
 
 Entity comparisons MUST use the same selected time interval for every series.
 Entity choices MUST come from collected history, including historical servers, and MUST support selecting the all-servers view alongside individual servers.
+One shared multi-select labeled “Servers” MUST control the visible entities across charts and period comparisons.
+Each selected entity MUST have its own series; when periods are compared, each selected entity and period MUST have its own series.
+Users MUST be able to turn individual entities on or off independently, including clearing the selection.
+An empty selection MUST show no data series and MUST offer an explicit selection prompt.
 The all-servers series MUST retain its ordinary aggregation semantics, including contributions from the individually selected servers where applicable.
 Metrics available only globally MUST NOT be offered as if they had server-specific values.
+Global subscriptions MUST appear once in ordinary viewing or once per comparison period when at least one entity is selected.
 Periods when a selected entity has no observations MUST remain gaps.
 
 **Example:** An online-population comparison of all servers, Server A, and Server B displays three series.

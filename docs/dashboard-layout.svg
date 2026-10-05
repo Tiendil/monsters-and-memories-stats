@@ -23,7 +23,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="887" y="161" class="body">Download history (JSON)</text>
 <text x="57" y="220" class="small muted">Data from 4 Sep 2026 to 4 Oct 2026, 10:00 UTC · 712 records · collected roughly hourly from <a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener" class="accent" text-decoration="underline">M&amp;M’s public statistics</a></text>
 <line x1="56" y1="240" x2="1088" y2="240" stroke="#d8d2c5" stroke-width="1"/>
-<text x="56" y="271" class="label muted">SERVER SCOPE</text>
+<text x="56" y="271" class="label muted">SERVERS</text>
 <text x="408" y="271" class="label muted">TIME RANGE</text>
 <rect x="56" y="282" width="330" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <text x="70" y="309" class="body">All Servers</text>
@@ -90,7 +90,7 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1180" y="239" class="small muted">712 records · collected roughly hourly<tspan x="1180" dy="18">from <a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener" class="accent" text-decoration="underline">M&amp;M’s public statistics</a></tspan></text>
 <text x="1453" y="239" class="small accent">Download JSON</text>
 <line x1="1180" y1="270" x2="1552" y2="270" stroke="#d8d2c5" stroke-width="1"/>
-<text x="1180" y="284" class="label muted">SERVER SCOPE</text>
+<text x="1180" y="284" class="label muted">SERVERS</text>
 <text x="1377" y="284" class="label muted">TIME RANGE</text>
 <rect x="1180" y="295" width="181" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
 <rect x="1377" y="295" width="175" height="42" rx="6" fill="#fffefa" stroke="#9c9383"/>
@@ -137,6 +137,6 @@ text { font-family: Arial, sans-serif; fill: #282720; }
 <text x="1489" y="940" class="small muted">4 Oct</text>
 <line x1="1180" y1="992" x2="1552" y2="992" class="rule"/>
 <text x="1552" y="1012" text-anchor="end" class="small accent"><a href="https://plotly.com/javascript/" text-decoration="underline">Charts by Plotly</a></text>
-<text x="34" y="1058" class="body">Shared selections persist across Activity, Population, and Relationships. Comparisons use full-width charts.</text>
+<text x="34" y="1058" class="body">Servers is a checkbox dropdown; selections persist across Activity, Population, and Relationships. Comparisons use full-width charts.</text>
 <text x="34" y="1087" class="body muted">Warm surfaces and serif identity frame the dashboard; sans-serif numbers and plain chart backgrounds carry the analysis.</text>
 </svg>

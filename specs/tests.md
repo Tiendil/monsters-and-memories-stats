@@ -99,6 +99,7 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Gaps between observations.
 - Equal-duration and calendar-period comparison alignment, including unequal month lengths and leap days.
 - Comparisons with more than two periods or entities and with missing observations.
+- Combined server-and-period selections, distinct identities for each pair, global subscriptions without duplicate series, and empty server selections.
 
 ### Dashboard integration
 
@@ -108,11 +109,11 @@ They MUST use the same chart-engine URL and asset-loading behavior as ordinary b
 Browser coverage MUST include:
 
 - Rendering and exact-value inspection for the supported metric families.
-- Mouse hover details with exact counts, ratio numerators and denominators, series identity, and original UTC timestamps, including comparison plots, overlapping points, and resized or horizontally scrolled charts.
+- Mouse hover details with exact counts or ratios followed by the series name on the first line and the original UTC date and time to the minute on the second, including comparison plots, overlapping points, and resized or horizontally scrolled charts; ratio numerators and denominators MUST remain available.
 - Native chart hover on dense series without visible point markers.
 - Chart-engine loading from the pinned CDN URL at both root and subpath URLs, and successful chart initialization after selection changes.
 - Clearing hover details when leaving a plot or changing selections, without showing values inside gaps or for unavailable observations.
-- Range selection and server selection, including historical servers.
+- Range selection and independent server checkbox toggles, including historical servers, “All Servers,” and clearing/restoring the selection.
 - Unavailable metrics and empty or invalid data states.
 - Month-to-month and year-to-year comparisons with at least three periods.
 - Server-to-server and all-servers-to-server comparisons with at least three series.
@@ -139,9 +140,11 @@ Automated tests MUST cover:
 - Explicit global subscription scope in the headline summary.
 - Replacement of the ordinary summary when a comparison is active.
 - Dynamic individual-zone selection, including historical and unavailable zones, without losing other selections.
-- Comparison controls that expose only relevant inputs and identify the separate scope of correlations.
+- Shared server selections that persist across sections and period modes, with correlations grouped per selected entity over the shared range.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
+- Display names without appended technical IDs, with ID fallback for missing or blank names.
 - Keyboard operation of navigation, comparison editing, and downloads.
+- Keyboard toggling in the Servers dropdown, Escape and outside dismissal, focus restoration, and long server names at narrow widths.
 - Accessible names, selected states, useful focus retention, and local validation messages.
 - Empty-range recovery through all time, preserving server scope.
 - Chart-engine failure leaving summary values and history download usable.
@@ -150,9 +153,9 @@ Rendered review MUST cover:
 
 - The initial-view hierarchy at 1440 by 900 and 375 by 812 CSS pixels, including the synthetic-data notice and long source names.
 - Page reflow at 320 CSS pixels, intermediate widths, and 200-percent text enlargement.
-- Readable value-axis titles and legends on single-series and comparison charts, with each name followed by its matching line sample; include dense comparisons and any confined horizontal scrolling.
+- Readable value-axis titles and vertical legends on single-series and comparison charts, with one series per row and each name followed by its matching solid line sample; include dense comparisons and any confined horizontal scrolling.
 - Text and essential-graphic contrast from the actual token colors and rendered backgrounds.
-- Distinctions between series without relying solely on color, and matching line, legend, and hover encodings.
+- Stable series labels in legends and hover details, matching series colors, and solid data-series lines.
 - Visible focus, touch target sizes, control states, and unobscured content when controls are sticky.
 - Empty, unavailable, initialization, and chart-failure states.
 - Reduced-motion behavior and preservation of chart information without decorative animation.

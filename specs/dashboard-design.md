@@ -52,12 +52,21 @@ Empty history MUST show a clear no-statistics message and zero records without i
 
 The summary's latest collection time MUST communicate data age without a separate freshness warning or status message.
 Synthetic-data notices MUST remain visible without opening another view or disclosure.
-Human-readable UTC dates SHOULD be used in the summary to reduce scanning effort; exact original timestamps MUST remain available in point details and downloads.
+Human-readable UTC dates SHOULD be used in the summary to reduce scanning effort; point details MUST show the original observation time to the minute, and downloads MUST retain full timestamp precision.
 
 ### Exploration controls
 
-A shared control area MUST precede the active content and expose the server scope, time range, and comparison entry point.
-The selected server and time range MUST remain apparent when a control is closed.
+A shared control area MUST precede the active content and expose a multi-select labeled “Servers,” the time range, and period comparison.
+The Servers control MUST provide independently toggleable checkboxes for “All Servers” and every server discovered in the complete history.
+Server and zone names throughout the dashboard MUST use their display name when available, falling back to the ID for a missing or blank name without appending an ID to a display name.
+Only “All Servers” MUST be selected initially; selecting it MUST NOT select the individual-server checkboxes.
+The closed control MUST identify a single selected entity or summarize multiple selections, including whether “All Servers” is included; chart legends MUST show the selected identities.
+The dropdown MUST support mouse, touch, and keyboard use without modifier keys, and MUST remain open while toggling choices.
+Escape MUST close the dropdown and restore focus to its trigger; clicking or moving focus outside MUST close it.
+Option labels MUST wrap long names, and long option lists MUST scroll within the dropdown.
+The closed control MAY truncate a long name visually when its full label remains accessible in the open dropdown and to assistive technology.
+An empty selection MUST show an explicit prompt to choose servers and a way to restore “All Servers,” without silently selecting an entity or plotting data.
+The selected time range MUST remain apparent when its control is closed.
 The all-servers scope MUST be labeled “All Servers” in controls, chart labels, and value details.
 The six existing time ranges MUST remain available, with the default defined by [requirements.md](requirements.md#dashboard-behavior).
 The control area MUST NOT repeat the selected interval and observation count in a separate summary row; the selected range MUST remain apparent from the controls and chart ticks.
@@ -87,7 +96,7 @@ Section changes MUST NOT reset an open comparison or silently change its meaning
 
 ### Overview
 
-In ordinary mode, Overview MUST show four headline counts:
+When one entity is selected without a period comparison, Overview MUST show four headline counts:
 
 - Online population.
 - Daily active count.
@@ -109,7 +118,7 @@ They MUST be visually stronger than supporting text.
 An online-population chart MUST follow the summary and occupy the full content width.
 The summary MUST offer clear links to the relevant detailed sections without making hover the only way to discover navigation.
 
-In comparison mode, the single-snapshot summary MUST be replaced by a concise summary of the compared entities or periods.
+When multiple entities or comparison periods are selected, the single-snapshot summary MUST be replaced by a concise summary of the compared entities or periods.
 It MUST NOT present one entity's or period's counts as the result of the whole comparison.
 
 ### Detailed sections
@@ -125,7 +134,8 @@ Changing zone MUST preserve the current server, range, and comparison selections
 
 Relationships MUST group ratios separately from correlations.
 Correlation results MUST show their paired-day counts and actual shared range and server scope next to the coefficients.
-When chart comparisons use other entities or periods, the correlation block MUST explicitly state that it still uses the shared range and server scope; it MUST NOT appear to calculate a correlation between the compared series.
+Correlations MUST be grouped separately for every selected entity using the shared time range, including during period comparisons.
+The correlation block MUST explain this range and MUST NOT imply that it calculates correlations between compared entities or periods.
 
 ### Data explanations
 
@@ -141,8 +151,8 @@ The dashboard MUST NOT include an “About the data” disclosure.
 
 ## Comparisons
 
-The comparison entry point MUST distinguish ordinary viewing, server comparison, and period comparison.
-Server comparison MUST expose dynamic entity choices, including the all-servers sum, and show selected entities as removable labeled items.
+Server comparisons MUST use the shared Servers multi-select without a separate server-comparison mode or duplicate selection controls.
+The comparison entry point MUST distinguish ordinary chronological viewing from period comparison.
 Period comparison MUST distinguish calendar months, calendar years, and equal-duration intervals.
 It MUST reveal only the inputs relevant to the chosen comparison type.
 
@@ -152,14 +162,16 @@ Duplicate entries MUST NOT produce indistinguishable duplicate series.
 Invalid input MUST have a local explanation associated with the relevant field.
 An incomplete comparison MUST explain the next action, such as adding a period, instead of presenting an unexplained blank chart.
 
-In server-comparison mode, the ordinary server selector MUST be identified as the correlation scope or omitted when it has no effect in the active section.
+The selected servers MUST apply to every chart in both ordinary viewing and period comparisons, preserving selections across section and mode changes.
+Period comparisons MUST show a series for each selected entity and period, with both identities in its legend label.
+Global subscriptions MUST appear once per period, independently of the number of selected servers, and MUST disappear when no entities are selected.
 In period-comparison mode, the shared range MUST be identified as the correlation range or omitted when it has no effect in the active section.
 These stored selections MUST remain available when returning to ordinary mode.
 Controls MUST NOT appear to filter charts that do not use them.
 
 Comparison charts MUST use the full available content width.
 Selected-series labels MUST identify the entity or period and distinguish sums from individual servers.
-Global-only metrics MUST retain the unavailable-state behavior defined in [requirements.md](requirements.md#entity-comparison).
+Global-only metrics MUST retain the scope rules defined in [requirements.md](requirements.md#entity-comparison).
 
 **Example:** Comparing three months for one server shows three period labels and a calendar-aligned chart.
 Its caption identifies the selected months; a separate correlation block identifies the shared rolling interval instead of borrowing the comparison caption.
@@ -191,10 +203,12 @@ Missing observations and gaps MUST retain the behavior defined in [requirements.
 Markers SHOULD be reserved for isolated or sparse observations so dense hourly series remain readable.
 
 Every chart MUST have a legend, including single-series charts.
+The legend MUST be a vertical list with one series per row at every viewport width.
 Each legend entry MUST show the entity or period name followed by a colored line sample, without a numeric prefix.
 Legends MUST appear consistently near the chart and wrap readable labels rather than truncate identities.
 Line samples, labels, and chart hover styling MUST use matching series encodings.
-Color MUST NOT be the only series distinction; comparison series MUST also have stable labels and distinguishable line styles or marker shapes.
+All data-series lines and legend line samples MUST be solid.
+Legends and hover details MUST identify each series by its stable label alongside its color.
 An entity or period MUST retain its visual encoding across the active charts and when other selections are added or removed during the session.
 Entity identities and their style assignment MUST remain application data rather than become hardcoded design tokens.
 
@@ -205,6 +219,10 @@ The design MUST be reviewed with at least seven simultaneous series, including o
 ### Value inspection
 
 Native chart hover MUST retain the exact-value and original UTC timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
+The first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time ending in “UTC,” with minute precision.
+
+**Example:** “429 All Servers” on the first line and “02 Oct 2026, 10:00 UTC” on the second.
+
 The complete-history JSON download MUST remain available independently of chart hover, including to touch and keyboard users.
 
 ## Visual language

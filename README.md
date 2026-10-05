@@ -33,7 +33,7 @@ GitHub jobs reuse `.github/actions/setup/` to build this image with a Docker lay
 
 Overview shows the last counts in the selected interval and the online trend. Activity, Population, and Relationships expose the detailed charts while preserving the selected server, range, and comparison. Population includes a zone selector drawn from the full archive.
 
-Use Compare for multiple servers, calendar months/years, or equal-duration intervals. Chart colors and line patterns stay attached to the selected series during the session. Chart hover provides exact timestamps and values; “Download JSON” always includes the complete archive.
+Use Servers to toggle individual servers and All Servers independently. Use Compare for calendar months/years or equal-duration intervals. Chart colors stay attached to the selected series during the session. All series use solid lines, with each legend entry on its own row. Chart hover provides exact values and UTC observation times to the minute; “Download JSON” always includes the complete archive.
 
 Presentation follows [the dashboard design](specs/dashboard-design.md) and [design tokens](specs/design-tokens.md). IM Fell English is distributed locally with its [SIL Open Font License](mnm-stats/mnm-stats-dashboard/fonts/OFL.txt) and [source attribution](mnm-stats/mnm-stats-dashboard/fonts/README.txt).
 
@@ -94,20 +94,21 @@ History contains hourly current-state snapshots only. Pre-collection history and
 
 “All Servers” adds each observed server's daily/monthly counts without deduplication. One account may contribute on multiple servers, so these sums are not counts of unique game-wide players.
 
-The dashboard plots daily and monthly activity, global subscriptions, online population, starting-zone totals and individual zones, and the three activity ratios. The shared time range applies to ordinary charts, entity comparisons, and correlations. Server choices and zone charts come from the complete embedded history, including historical entities.
+The dashboard plots daily and monthly activity, global subscriptions, online population, starting-zone totals and individual zones, and the three activity ratios. The shared time range applies to ordinary charts, entity comparisons, and correlations. Server choices and zone charts come from the complete embedded history, including historical entities. Labels show display names when available and IDs otherwise.
 
 An omitted individual zone is unavailable for that server and observation, leaving a chart gap. Its all-server value is also unavailable if any observed server omits it, so a partial sum is not shown as a complete total. Starting-zone totals sum the reported rows; an empty list validated against a published zero total contributes zero.
 
-Use **View** to choose a comparison:
+Use **Servers** to toggle any number of servers and the independent **All Servers** sum. The selection persists across sections and period comparisons. Clear every checkbox to hide all series; **Show All Servers** restores the default. The dropdown supports keyboard selection, Escape, and clicking outside to close.
 
-- **Compare entities:** select any number of servers and optionally the all-server sum. Subscriptions remain a single global series.
+Use **Compare** to choose a period comparison:
+
 - **Compare months:** add calendar months as `YYYY-MM`; observations align by day of month and time.
 - **Compare calendar years:** add years; observations align by month, day, and time, preserving a gap for February 29 in non-leap years.
 - **Compare equal-duration intervals:** choose a positive duration in hours and add UTC starts as `YYYY-MM-DDTHH:MM`; observations align by elapsed time.
 
-Period comparisons use their selected periods and the server scope; the shared range still controls correlations. Remove individual selections with their **Remove** buttons. There is no two-series limit. Incomplete periods are not extrapolated, and lines break at missing values or gaps longer than two hours.
+Period comparisons plot each selected server for each selected period. Global subscriptions appear once per period. The shared range controls correlations separately for each selected entity. Remove periods with their **Remove** buttons and toggle servers in **Servers**. There is no two-series limit. Incomplete periods are not extrapolated, and lines break at missing values or gaps longer than two hours.
 
-Hover a plotted point to see its series, exact value, and original UTC collection timestamp, including in comparisons. Overlapping points show their individual details. The **Download JSON** action provides all recorded observations. Counts are exact; ratios show a rounded percentage together with the exact numerator and denominator. Zero denominators produce gaps, and ratios may exceed 100 percent. Narrow screens can scroll comparison charts horizontally when needed.
+Hover a plotted point to see its exact value and series name on the first line, with its original UTC collection date and time to the minute on the second, including in comparisons. Overlapping points show their individual details. The **Download JSON** action provides all recorded observations with full timestamp precision. Counts are exact; ratios show a rounded percentage together with the exact numerator and denominator. Zero denominators produce gaps, and ratios may exceed 100 percent. Narrow screens can scroll comparison charts horizontally when needed.
 
 Correlations use Pearson's r on the last jointly available observation per UTC day, show the paired-day count, and require at least three days with variation in both metrics. Correlation does not establish causation, and overlapping source activity windows limit interpretation.
 

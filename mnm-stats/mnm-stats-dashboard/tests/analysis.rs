@@ -126,10 +126,10 @@ fn changing_zone_membership_preserves_gaps_totals_and_exported_rows() {
     let chart = plot(
         &history,
         &zone,
-        &a,
+        &[Scope::All, a.clone(), Scope::Server("b".into())],
         TimeRange::All,
         time("2024-01-01T03:00:00Z"),
-        &Comparison::Entities(vec![Scope::All, a.clone(), Scope::Server("b".into())]),
+        &Comparison::None,
     )
     .unwrap();
     for series in &chart.series[..2] {
@@ -171,7 +171,7 @@ fn ranges_end_at_now_and_include_their_exact_utc_boundaries() {
         let plot = plot(
             &history,
             &Metric::Daily,
-            &Scope::All,
+            &[Scope::All],
             range,
             now,
             &Comparison::None,
@@ -295,7 +295,7 @@ fn calendar_alignment_preserves_leap_days_unequal_months_and_half_open_bounds() 
     let plot = plot(
         &history,
         &Metric::Daily,
-        &Scope::All,
+        &[Scope::All],
         TimeRange::Days7,
         time("2026-01-01T00:00:00Z"),
         &Comparison::Periods(vec![february, march, Period::month("2024-04").unwrap()]),
@@ -325,32 +325,44 @@ fn entity_and_interval_comparisons_allow_many_series_and_reject_mixed_intervals(
     ])
     .unwrap();
     let now = time("2024-01-01T03:00:00Z");
-    let entities = Comparison::Entities(vec![
+    let entities = vec![
         Scope::All,
         Scope::Server("a".into()),
         Scope::Server("b".into()),
         Scope::Server("absent".into()),
-    ]);
+    ];
     let values = plot(
         &history,
         &Metric::Daily,
-        &Scope::All,
+        &entities,
         TimeRange::All,
         now,
-        &entities,
+        &Comparison::None,
     )
     .unwrap();
     assert_eq!(values.series.len(), 4);
+    assert_eq!(
+        values
+            .series
+            .iter()
+            .map(|series| series.label.as_str())
+            .collect::<Vec<_>>(),
+        ["All Servers", "Alpha", "Beta", "absent"]
+    );
+    let mut names = servers(&history);
+    names.insert("a".into(), "  ".into());
+    assert_eq!(Scope::Server("a".into()).label(&names), "a");
+    assert_eq!(Metric::Zone("z".into(), "".into()).title(), "z");
     assert_eq!(values.series[1].segments().len(), 2);
     assert!(values.series[3].segments().is_empty());
     assert_eq!(
         plot(
             &history,
             &Metric::Subscriptions,
-            &Scope::All,
+            &entities,
             TimeRange::All,
             now,
-            &entities
+            &Comparison::None
         )
         .unwrap()
         .series
@@ -363,7 +375,7 @@ fn entity_and_interval_comparisons_allow_many_series_and_reject_mixed_intervals(
     let values = plot(
         &history,
         &Metric::Daily,
-        &Scope::All,
+        &[Scope::All],
         TimeRange::All,
         now,
         &Comparison::Periods(periods),
@@ -380,7 +392,7 @@ fn entity_and_interval_comparisons_allow_many_series_and_reject_mixed_intervals(
         plot(
             &history,
             &Metric::Daily,
-            &Scope::All,
+            &[Scope::All],
             TimeRange::All,
             now,
             &Comparison::Periods(unequal)
@@ -427,7 +439,7 @@ fn plotly_keeps_zero_and_singleton_observations() {
     let plot = plot(
         &history,
         &Metric::Daily,
-        &Scope::Server("a".into()),
+        &[Scope::Server("a".into())],
         TimeRange::All,
         time("2024-01-02T00:00:00Z"),
         &Comparison::None,
@@ -438,17 +450,15 @@ fn plotly_keeps_zero_and_singleton_observations() {
             .unwrap();
     assert_eq!(figure["data"][0]["y"], serde_json::json!([0.0]));
     assert_eq!(figure["data"][0]["mode"], "lines+markers");
-    assert!(
-        figure["data"][0]["text"][0]
-            .as_str()
-            .unwrap()
-            .contains("2024-01-01T00:00:00Z UTC")
+    assert_eq!(
+        figure["data"][0]["text"][0],
+        "<b>0 Alpha</b><br>01 Jan 2024, 00:00 UTC"
     );
 }
 
 #[test]
 fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
-    let start = time("2024-02-01T00:00:00.123Z");
+    let start = time("2024-02-01T12:34:56.123Z");
     let plot = Plot {
         series: vec![Series {
             identity: "test".into(),
@@ -484,11 +494,9 @@ fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
     assert_eq!(series["x"], serde_json::json!([0.0, 3600.0, null, 18000.0]));
     assert!(series["y"][1].is_null() && series["y"][2].is_null());
     let text = series["text"][0].as_str().unwrap();
-    assert!(text.contains("Alpha &lt;island&gt; &amp; West"));
-    assert!(text.contains("2024-02-01T00:00:00.123Z UTC"));
-    assert!(
-        text.contains("9007199254740993"),
-        "exact hover text must survive JS numeric rounding"
+    assert_eq!(
+        text, "<b>9007199254740993 Alpha &lt;island&gt; &amp; West</b><br>01 Feb 2024, 12:34 UTC",
+        "hover keeps the exact value and literal name, with minute precision on the second line"
     );
     assert_eq!(series["text"][1], "");
     assert_eq!(series["text"][2], "");
@@ -530,11 +538,9 @@ fn dense_plots_keep_every_observation_for_hover() {
         200
     );
     assert!(series["y"][100].is_null());
-    assert!(
-        series["text"][200]
-            .as_str()
-            .unwrap()
-            .contains("2024-01-09T08:00:00Z UTC<br>200")
+    assert_eq!(
+        series["text"][200],
+        "<b>200 Dense series</b><br>09 Jan 2024, 08:00 UTC"
     );
 }
 
@@ -616,7 +622,7 @@ fn comparison_encodings_survive_other_selections_and_metric_changes() {
     let mut original = plot(
         &history,
         &Metric::Daily,
-        &Scope::All,
+        &[Scope::All],
         TimeRange::All,
         now,
         &Comparison::Periods(periods.clone()),
@@ -626,7 +632,7 @@ fn comparison_encodings_survive_other_selections_and_metric_changes() {
     let mut subset = plot(
         &history,
         &Metric::Monthly,
-        &Scope::Server("a".into()),
+        &[Scope::All],
         TimeRange::All,
         now,
         &Comparison::Periods(periods[2..].to_vec()),
@@ -648,6 +654,98 @@ fn comparison_encodings_survive_other_selections_and_metric_changes() {
     assert_eq!(lines.len(), 7);
     for (i, line) in lines.iter().enumerate() {
         assert!(!lines[..i].contains(line));
+        assert_eq!(line["dash"], "solid");
     }
-    assert_ne!(lines[0]["dash"], lines[1]["dash"]);
+}
+
+#[test]
+fn server_selection_applies_to_every_period_without_duplicating_global_counts() {
+    let history = History::new(
+        (2..=4)
+            .map(|month| snapshot(&format!("2024-{month:02}-01T00:00:00Z"), 15, 25, 10))
+            .collect(),
+    )
+    .unwrap();
+    let scopes = [
+        Scope::All,
+        Scope::Server("a".into()),
+        Scope::Server("b".into()),
+    ];
+    let comparison = Comparison::Periods(
+        (2..=4)
+            .map(|month| Period::month(&format!("2024-{month:02}")).unwrap())
+            .collect(),
+    );
+    let now = time("2024-05-01T00:00:00Z");
+    let daily = plot(
+        &history,
+        &Metric::Daily,
+        &scopes,
+        TimeRange::All,
+        now,
+        &comparison,
+    )
+    .unwrap();
+    assert_eq!(daily.series.len(), 9);
+    let identities: std::collections::BTreeSet<_> =
+        daily.series.iter().map(|s| &s.identity).collect();
+    assert_eq!(identities.len(), 9);
+    for series in daily.series.chunks(3) {
+        let values: Vec<_> = series
+            .iter()
+            .map(|s| s.points[0].value.unwrap().number())
+            .collect();
+        assert_eq!(values, [20.0, 15.0, 5.0]);
+        assert!(series[0].label.starts_with("All Servers ·"));
+        assert!(series[1].label.starts_with("Alpha ·"));
+    }
+    let mut styles = mnm_stats_dashboard::charts::SeriesStyles::default();
+    let mut original = daily;
+    styles.assign(&mut original);
+    let mut subset = plot(
+        &history,
+        &Metric::Daily,
+        &scopes[1..],
+        TimeRange::All,
+        now,
+        &comparison,
+    )
+    .unwrap();
+    styles.assign(&mut subset);
+    for series in &subset.series {
+        assert_eq!(
+            series.style,
+            original
+                .series
+                .iter()
+                .find(|s| s.identity == series.identity)
+                .unwrap()
+                .style
+        );
+    }
+    for comparison in [Comparison::None, comparison] {
+        let global = plot(
+            &history,
+            &Metric::Subscriptions,
+            &scopes,
+            TimeRange::All,
+            now,
+            &comparison,
+        )
+        .unwrap();
+        assert_eq!(
+            global.series.len(),
+            if comparison == Comparison::None { 1 } else { 3 }
+        );
+        assert!(global.series.iter().all(|s| {
+            s.points
+                .iter()
+                .all(|p| p.value == Some(MetricValue::Count(10)))
+        }));
+        for metric in [Metric::Daily, Metric::Subscriptions] {
+            let empty = plot(&history, &metric, &[], TimeRange::All, now, &comparison).unwrap();
+            assert!(empty.series.is_empty());
+            assert!(empty.note.contains("Select servers"));
+        }
+    }
 }
