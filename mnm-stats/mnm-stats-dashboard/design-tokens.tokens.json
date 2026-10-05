@@ -594,12 +594,20 @@
       "color": {
         "$type": "color",
         "low": {
-          "$value": "{tailwind.color.teal.600}",
-          "$description": "Low end of the sequential mean-online color scale, visibly distinct from unobserved cells."
+          "$value": "{tailwind.color.orange.200}",
+          "$description": "Pale-peach low end of the sequential mean-online color scale, including measured zero; unobserved cells retain the neutral chart surface."
+        },
+        "mid-low": {
+          "$value": "{tailwind.color.orange.500}",
+          "$description": "Orange at one third of the sequential mean-online color scale."
+        },
+        "mid-high": {
+          "$value": "{tailwind.color.orange.800}",
+          "$description": "Burnt orange at two thirds of the sequential mean-online color scale."
         },
         "high": {
-          "$value": "{tailwind.color.teal.950}",
-          "$description": "High end of the sequential mean-online color scale; darker cells indicate larger observed means."
+          "$value": "{tailwind.color.orange.950}",
+          "$description": "Dark-rust high end of the sequential mean-online color scale; darker cells indicate larger observed means."
         }
       },
       "height": {

@@ -371,6 +371,8 @@ pub fn render_heatmap(map: &ActivityHeatmap, maximum: f64) -> Figure {
         .zmax(if maximum > 0.0 { maximum } else { 1.0 })
         .color_scale(ColorScale::Vector(vec![
             ColorScaleElement(0.0, tokens::T_CHART_HEATMAP_COLOR_LOW.into()),
+            ColorScaleElement(1.0 / 3.0, tokens::T_CHART_HEATMAP_COLOR_MID_LOW.into()),
+            ColorScaleElement(2.0 / 3.0, tokens::T_CHART_HEATMAP_COLOR_MID_HIGH.into()),
             ColorScaleElement(1.0, tokens::T_CHART_HEATMAP_COLOR_HIGH.into()),
         ]))
         .x_gap(tokens::T_CHART_HEATMAP_CELL_GAP.pixels())

@@ -182,6 +182,8 @@ A short note MUST explain that “All Servers” shows individual shares of the 
 Activity heatmap MUST use separate labeled panels for each selected server scope and period, arranged vertically at full width.
 Each panel MUST show weekday rows ordered Monday through Sunday and hour columns ordered 00 through 23, with the hour axis explicitly labeled UTC.
 A labeled sequential color scale MUST show mean online counts and use common bounds across the displayed panels.
+The scale MUST progress from pale peach through orange and burnt orange to dark rust, with higher activity appearing darker.
+Unobserved cells MUST retain the neutral chart surface and remain distinguishable from the pale-peach fill for measured zero.
 The heatmap MUST NOT use categorical line swatches to represent its intensity scale.
 A short note MUST explain sampled averages, uneven coverage, and blank cells for missing observations.
 Cell hover MUST expose the aggregate details defined in [requirements.md](requirements.md#population-insights).
