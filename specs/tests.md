@@ -160,7 +160,7 @@ Rendered review MUST cover:
 
 - The initial-view hierarchy at 1440 by 900 and 375 by 812 CSS pixels, including the synthetic-data notice and long source names.
 - Page reflow at 320 CSS pixels, intermediate widths, and 200-percent text enlargement.
-- Readable value-axis titles and vertical legends on single-series and comparison charts, with one series per row and each name followed by its matching solid line sample; include dense comparisons and any confined horizontal scrolling.
+- Readable value-axis titles and vertical legends on single-series and comparison charts, with one series per row and each fixed-width solid line sample followed by its name; include aligned swatches, wrapped names aligned beneath their first text line, dense comparisons, and any confined horizontal scrolling.
 - Text and essential-graphic contrast from the actual token colors and rendered backgrounds.
 - Stable series labels in legends and hover details, matching series colors, and series-colored or subdued gray solid connections according to collection intervals.
 - Visible focus, touch target sizes, control states, and unobscured content when controls are sticky.

@@ -228,7 +228,9 @@ Markers SHOULD be reserved for isolated or sparse observations so dense hourly s
 
 Every chart MUST have a legend, including single-series charts.
 The legend MUST be a vertical list with one series per row at every viewport width.
-Each legend entry MUST show the entity or period name followed by a colored line sample, without a numeric prefix.
+Each legend entry MUST show a fixed-width colored line sample followed by the entity or period name, without a numeric prefix.
+Line samples MUST align in one column, with a consistent gap before left-aligned names.
+Wrapped names MUST align with their first text line, and line samples MUST remain beside that first line.
 Legends MUST appear consistently near the chart and wrap readable labels rather than truncate identities.
 Line samples, labels, and chart hover styling MUST use matching series encodings.
 All data-series lines and legend line samples MUST be solid.

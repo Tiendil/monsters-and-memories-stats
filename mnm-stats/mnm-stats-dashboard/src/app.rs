@@ -290,7 +290,7 @@ fn ChartCard(
                     let has_values = plot.series.iter().any(|s| s.points.iter().any(|p| p.value.is_some()));
                     view! {
                         <ul class="legend" aria-label="Chart series">{plot.series.iter().map(|series| view! {
-                            <li><span>{series.label.clone()}</span><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style)/></svg></li>
+                            <li><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style)/></svg><span>{series.label.clone()}</span></li>
                         }).collect_view()}</ul>
                         <p class="chart-note">{plot.note.clone()}</p>
                         {if has_values {

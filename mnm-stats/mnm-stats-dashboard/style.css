@@ -69,7 +69,8 @@ legend { padding-inline: var(--mnm-spacing-fieldset-legend-padding); }
 .chart-note { color: var(--mnm-color-text-muted); font-size: var(--mnm-font-size-body-small); }
 .chart-note:empty { display: none; }
 .legend { list-style: none; padding: 0; margin: var(--mnm-spacing-gap-small) 0; font-size: var(--mnm-font-size-body-small); display: flex; flex-direction: column; align-items: flex-start; gap: var(--mnm-spacing-gap-small); }
-.legend li { display: flex; align-items: center; gap: var(--mnm-spacing-gap-small); overflow-wrap: anywhere; }
+.legend li { display: flex; align-items: baseline; max-width: 100%; gap: var(--mnm-spacing-gap-small); overflow-wrap: anywhere; }
+.legend li > span { min-width: 0; }
 .swatch { width: var(--mnm-chart-legend-swatch-width); height: var(--mnm-chart-legend-swatch-height); flex-shrink: 0; overflow: visible; }
 .plot { overflow-x: auto; }
 .plot-surface .hoverlayer .axistext { display: none; }

@@ -497,7 +497,7 @@ impl Browser {
         self.expect_count(".chart-card", 1);
         self.expect_count(".legend li", 1);
         self.expect_text(".legend li", "All Servers");
-        self.expect_count(".legend li > span + .swatch", 1);
+        self.expect_count(".legend li > .swatch + span", 1);
         let last = expected["snapshots"].as_array().unwrap().last().unwrap();
         let daily: u128 = last["servers"]
             .as_array()
