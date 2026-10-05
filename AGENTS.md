@@ -58,11 +58,15 @@ When editing a specification, also inspect its `governs` results for affected ar
 Maintain both governance directions, using only `governs` and `governed_by`.
 Add implementation coverage to Depmesh when approved implementation files are introduced.
 
-Run `donna -p llm run @/workflows/polish.donna.md` for deterministic checks before each handoff.
-Follow its action requests and use the exact completion commands Donna returns.
+Run `donna -p llm run @/workflows/polish.donna.md` for regular code changes.
+Also run `donna -p llm run @/workflows/polish-build.donna.md` when changes affect build logic, including compilation, packaging, history/token embedding, preview rebuilding, build metadata, toolchain/dependency configuration, or the commands/workflows that validate those behaviors.
+Ordinary application logic, UI copy, styles, token values, and history-data changes do not by themselves require build polish. Rendered frontend changes still require the Playwright MCP review above.
+Choose workflows from the edits reviewed during the task; do not use Git inspection to classify changes.
+Follow each workflow's action requests and use the exact completion commands Donna returns.
 Review changed artifacts against their governing specifications and the user's requirements using Depmesh guidance above.
 Polish gives each check a focused repair action and restarts the sequence after repairs.
-The current checks cover Donna and GitHub workflows, governance configuration, Compose and shell syntax, Rust formatting and linting, native tests, browser/build integration, and the release WASM build.
+Regular polish covers Donna and GitHub workflows, governance configuration, Compose and shell syntax, Rust formatting and linting, and native tests.
+Build polish covers collector build-metadata changes, browser/build integration with repeated rebuilds and preview checks, and the release WASM build.
 Extend the checks alongside approved implementation and report only coverage that exists.
 
 Use `rg` for file/text discovery and `difft --display=inline --color=never` for reviewing edits when available.

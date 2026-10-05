@@ -227,7 +227,10 @@ Automated checks MUST validate GitHub workflow syntax and expressions without di
 Each implementation step MUST include passing tests for the behavior it introduces.
 Regression fixes to covered behavior MUST include a test that demonstrates the corrected result.
 Tests run locally and in CI MUST follow the same rules for local data and internet requests.
-Required suites MUST run through Donna polish once their implementation exists.
+Native behavior tests MUST run through regular Donna polish for code changes.
+Collector build-metadata checks, browser/build integration, and the release WASM build MUST run through build polish when build logic changes, following the workflow selection rules in [development.md](development.md#donna).
+Ordinary code changes MUST NOT require repeated build-validation scenarios; rendered frontend changes MUST retain the interactive browser review required by [development.md](development.md#browser-inspection).
+CI MUST continue running the complete test and build coverage through the shared commands.
 Missing or skipped required tests MUST NOT be reported as passing coverage.
 Test reports MUST identify failed cases and the relevant local inputs without relying on responses from the original statistics service.
 

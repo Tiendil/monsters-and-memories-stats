@@ -5,9 +5,9 @@ kind = "donna.lib.workflow"
 start_operation_id = "validate_workflows"
 ```
 
-Run the available deterministic repository checks in order.
+Run regular code checks in order; use Build Polish Workflow for changes to build logic.
 Each failure has a focused repair action; every repair restarts the check sequence so success describes the final files.
-Checks cover Donna and GitHub workflow syntax, Depmesh configuration, Compose and shell syntax, Rust formatting and linting, native behavior tests, browser/build integration, and the release WASM build.
+Checks cover Donna and GitHub workflow syntax, Depmesh configuration, Compose and shell syntax, Rust formatting and linting, and native behavior tests.
 All checks run locally without project Git operations or hosted workflows.
 Normal build dependency resolution and downloads are allowed; tests use local metric inputs and must not contact the original statistics service.
 Third-party runtime assets may load from the internet.
@@ -223,7 +223,7 @@ id = "test_native"
 kind = "donna.lib.run_script"
 save_stdout_to = "test_native_stdout"
 save_stderr_to = "test_native_stderr"
-goto_on_success = "test_browser"
+goto_on_success = "finish"
 goto_on_failure = "fix_test_native"
 timeout = 600
 ```
@@ -250,74 +250,6 @@ Repair the reported model or CLI behavior using local test inputs.
 After the repair, {{ donna.lib.goto("validate_workflows") }}.
 If an external action is required, leave this request pending and report the concrete blocker.
 
-## Test browser and build integration
-
-```toml donna
-id = "test_browser"
-kind = "donna.lib.run_script"
-save_stdout_to = "test_browser_stdout"
-save_stderr_to = "test_browser_stderr"
-goto_on_success = "build_dashboard"
-goto_on_failure = "fix_test_browser"
-timeout = 1200
-```
-
-```bash donna script
-#!/usr/bin/env bash
-set -euo pipefail
-./bin/test-browser.sh
-```
-
-## Repair: test browser and build integration
-
-```toml donna
-id = "fix_test_browser"
-kind = "donna.lib.request_action"
-```
-
-```text
-{{ donna.lib.task_variable("test_browser_stdout") }}
-{{ donna.lib.task_variable("test_browser_stderr") }}
-```
-
-Repair the reported browser, embedded-history, download, or rebuild failure. Use local metric inputs and never contact the original statistics service; third-party runtime assets may load from the internet. Tool installation is a separate setup step.
-After the repair, {{ donna.lib.goto("validate_workflows") }}.
-If an external action is required, leave this request pending and report the concrete blocker.
-
-## Build release dashboard
-
-```toml donna
-id = "build_dashboard"
-kind = "donna.lib.run_script"
-save_stdout_to = "build_dashboard_stdout"
-save_stderr_to = "build_dashboard_stderr"
-goto_on_success = "finish"
-goto_on_failure = "fix_build_dashboard"
-timeout = 600
-```
-
-```bash donna script
-#!/usr/bin/env bash
-set -euo pipefail
-./bin/build-dashboard.sh
-```
-
-## Repair: build release dashboard
-
-```toml donna
-id = "fix_build_dashboard"
-kind = "donna.lib.request_action"
-```
-
-```text
-{{ donna.lib.task_variable("build_dashboard_stdout") }}
-{{ donna.lib.task_variable("build_dashboard_stderr") }}
-```
-
-Repair the reported release WASM build failure.
-After the repair, {{ donna.lib.goto("validate_workflows") }}.
-If an external action is required, leave this request pending and report the concrete blocker.
-
 ## Finish
 
 ```toml donna
@@ -325,6 +257,7 @@ id = "finish"
 kind = "donna.lib.finish"
 ```
 
-The current deterministic checks passed.
+The regular code checks passed.
+Build validation belongs to the separate Build Polish Workflow.
 This result does not establish specification consistency or application correctness.
 Report the checks performed, then follow the caller's remaining review instructions.

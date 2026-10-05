@@ -30,6 +30,8 @@ jobs:
         run: ./bin/check-lints.sh
       - name: Test native behavior
         run: ./bin/test.sh
+      - name: Test collector build metadata
+        run: ./bin/test-build-metadata.sh
       - name: Test browser and build integration
         run: ./bin/test-browser.sh
       - name: Build release dashboard

@@ -218,7 +218,8 @@ docs/
   pages.yml              # orchestrates dashboard build and Pages deployment
 specs/                   # project specifications, indexed by specs/intro.md
 workflows/
-  polish.donna.md        # agent check sequence and repair actions
+  polish.donna.md        # regular code checks and repair actions
+  polish-build.donna.md  # build validation and repair actions
 .agents/skills/          # project agent skills
 donna.toml
 depmesh.toml

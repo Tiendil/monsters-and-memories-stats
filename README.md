@@ -158,6 +158,7 @@ mkdir -p .session/manual-replay
 ./bin/check-format.sh
 ./bin/check-lints.sh
 ./bin/test.sh
+./bin/test-build-metadata.sh
 ./bin/test-browser.sh
 ./bin/build-dashboard.sh
 ```
@@ -168,7 +169,9 @@ The notification-probe test uses a local malformed fixture. `check-actions.sh` u
 
 Token tests cover Tailwind theme imports, reference changes, structured values, aliases, invalid inputs, name collisions, self-contained DTCG output, and equivalent CSS/Rust output. Browser tests also check computed styles, breakpoints, matching chart/legend/hover colors beyond the explicit palette, cached token-only builds, and preview reloads after token-only atomic replacements. They use isolated token copies and never modify the authored token file.
 
-Donna runs these checks locally with focused repair actions, without project Git operations or hosted workflows. Normal build dependency resolution and downloads are allowed. Tests use local metric inputs and must not contact the original statistics service; third-party runtime assets may load from the internet:
+Donna separates regular code checks from build validation. Both workflows run locally with focused repair actions, without project Git operations or hosted workflows. Normal build dependency resolution and downloads are allowed. Tests use local metric inputs and must not contact the original statistics service; third-party runtime assets may load from the internet.
+
+For regular code changes, run configuration checks, formatting, linting, and native tests:
 
 ```bash
 donna -p llm status
@@ -176,6 +179,14 @@ donna -p llm list
 depmesh -p llm relations
 donna -p llm run @/workflows/polish.donna.md
 ```
+
+When changing build logic, also run collector build-metadata checks, browser/build integration (including repeated history/token rebuilds and preview checks), and the release WASM build:
+
+```bash
+donna -p llm run @/workflows/polish-build.donna.md
+```
+
+Build logic includes build scripts, packaging and embedding, preview rebuilding, build metadata, toolchain/dependency configuration, and their verification commands and workflows. Ordinary application code, UI copy, styles, token values, and history-data changes use regular polish; frontend changes still receive Playwright MCP review. Test compilation and linting may compile code during regular polish. CI retains the complete check coverage through the same commands.
 
 Depmesh exposes only `governs` and `governed_by`. Agents use those relationships to review changes against the specifications. Each implementation step ends with user review and a commit before the next begins; task plans and approval records stay under `.session/`.
 

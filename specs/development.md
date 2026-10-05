@@ -58,13 +58,25 @@ Agents MUST stop temporary services they start before handoff unless the user as
 ## Donna
 
 Donna MUST discover project workflows under `workflows/` and keep runtime state under ignored `.session/donna/`.
-The polish workflow MUST run deterministic checks for artifacts that exist at the current delivery stage.
+Polish MUST separate regular code checks from build validation, with deterministic checks for artifacts that exist at the current delivery stage.
+Agents MUST run `workflows/polish.donna.md` for regular code changes.
+Agents MUST additionally run `workflows/polish-build.donna.md` when changes affect how application artifacts are built or how that build behavior is verified.
+Build logic includes:
+
+- compilation and packaging.
+- history/token embedding.
+- preview rebuilding.
+- build metadata.
+- toolchain or dependency configuration.
+
+Changes confined to application behavior, presentation, or input data MUST NOT by themselves require build polish.
+Workflow selection MUST use the reviewed task changes without requiring Git inspection.
 Polish MUST run locally without project Git operations or invoking hosted workflows, deployments, or repository-management APIs.
 Normal builds MAY resolve and download package dependencies.
 Tests MUST use local fixtures or synthetic metric data and MUST NOT contact the original statistics service.
 Third-party runtime assets MAY be loaded from the internet.
 Each check MUST have a focused failure handler that exposes its diagnostics.
-Every repair MUST restart the check sequence so successful completion applies to the final artifact state.
+Every repair MUST restart its workflow's check sequence so successful completion applies to the final artifact state.
 Checks MUST NOT report skipped or nonexistent application checks as passed.
 Donna's own event journal is sufficient; external journaling infrastructure is not required.
 
@@ -73,7 +85,7 @@ Donna's own event journal is sufficient; external journaling infrastructure is n
 The documentation foundation MUST pass Donna workflow validation and representative Depmesh queries in both directions.
 Agents MUST review artifacts against their governing specifications and the user's requirements directly, using Depmesh to discover relevant relationships.
 Successful discovery commands alone MUST NOT count as a consistency judgment.
-After a consistency repair, polish MUST pass and the affected relationships MUST be reviewed again.
+After a consistency repair, the applicable polish workflows MUST pass and the affected relationships MUST be reviewed again.
 Agents MUST review the following before handing off a step:
 
 - changed and newly added files.
@@ -81,12 +93,22 @@ Agents MUST review the following before handing off a step:
 - approval records for the implementation scope.
 - requirement coverage.
 
-Rust implementation MUST incorporate the following into polish:
+Regular polish MUST include:
 
+- workflow, governance, and environment syntax checks.
 - formatting.
 - linting.
-- focused behavior tests.
+- native behavior tests.
+
+Build polish MUST include:
+
+- collector build-metadata checks with reused caches.
+- browser/build integration, including repeated history/token rebuilds and preview checks.
 - a release WebAssembly build.
+
+Compilation needed to run native tests or linting MAY occur during regular polish.
+The complete automated browser suite MUST remain available through build polish and CI; regular frontend changes MUST retain the interactive review required under Browser inspection.
+CI MUST retain both regular and build-validation coverage through the shared project commands.
 
 Tests SHOULD cover failure-prone contracts such as source parsing, history preservation, and metric calculations rather than mirror incidental implementation details.
 This keeps regression coverage useful when implementation details change.
