@@ -64,12 +64,12 @@ fn ChartExplanation(metric: Metric) -> impl IntoView {
         ),
         Metric::AverageOnlineDaily | Metric::AverageOnlineMonthly => (
             Some("Daily average online / (DAU or MAU) × 100%"),
-            "Shows sampled online presence relative to the active audience, rather than measured playtime. Each point averages available samples within one UTC day and uses that day’s last available activity count in the selected period. Sparse and partial days can differ in coverage; hover shows the samples used.",
+            "Average online population for each UTC day, relative to daily or monthly active players.",
             None,
         ),
         _ => (
             Some("(DAU, MAU, or daily average online) / global subscribers × 100%"),
-            "Compares activity with the subscription base; it does not measure subscriber conversion or the fraction of subscribers playing. The denominator stays global when selecting individual servers.",
+            "Activity relative to the game’s total subscriber count. Values can exceed 100%.",
             Some((GAMEANALYTICS_METRICS, "Active-user definitions")),
         ),
     };
@@ -411,9 +411,6 @@ fn ChartCard(
                     <Show when=move || selected.get().is_empty()>
                         <p class="chart-note">"Choose at least one metric."</p>
                         <button class="secondary" on:click=move |_| selected.set(if online { vec![Metric::AverageOnlineDaily] } else { vec![Metric::DailySubscriptions, Metric::MonthlySubscriptions] })>"Restore default metrics"</button>
-                    </Show>
-                    <Show when=move || selected.get().contains(&Metric::AverageOnlineSubscriptions)>
-                        <p class="chart-note">"Average online uses equally weighted samples within each UTC day and the last available global subscriber count in that day and selected period. Missing hours are omitted; partial days and uneven coverage can affect the result. Hover shows the samples used."</p>
                     </Show>
                 }
             })}

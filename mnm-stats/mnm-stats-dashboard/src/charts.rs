@@ -78,24 +78,8 @@ fn time_ticks(plot: &Plot) -> Vec<f64> {
 }
 
 fn height(plot: &Plot) -> usize {
-    let hover_height: usize = plot
-        .series
-        .iter()
-        .map(|series| {
-            let lines = series
-                .points
-                .iter()
-                .filter_map(|point| {
-                    point
-                        .value
-                        .map(|_| hover_text(point, &series.label).matches("<br>").count() + 1)
-                })
-                .max()
-                .unwrap_or(1);
-            (tokens::T_CHART_HOVER_SERIES_MIN_HEIGHT.pixels() as usize)
-                .max(lines * tokens::T_CHART_HOVER_LINE_HEIGHT.pixels() as usize)
-        })
-        .sum();
+    let hover_height =
+        plot.series.len() * tokens::T_CHART_HOVER_SERIES_MIN_HEIGHT.pixels() as usize;
     (tokens::T_CHART_VIEWPORT_MIN_HEIGHT.pixels() as usize).max(
         hover_height
             + tokens::T_CHART_VIEWPORT_MARGIN.pixels() as usize * 2
@@ -105,17 +89,11 @@ fn height(plot: &Plot) -> usize {
 
 fn hover_text(point: &crate::analysis::Point, label: &str) -> String {
     point.value.map_or_else(String::new, |value| {
-        let limit = tokens::T_CHART_HOVER_LINE_LENGTH as usize;
         format!(
-            "<b>{}</b><br>{}{}",
-            wrapped_label(&format!("{} {label}", value.display()), limit),
+            "<b>{} {}</b><br>{}",
+            value.display(),
+            escape(label),
             point.at.format("%d %b %Y, %H:%M UTC"),
-            value
-                .sample_details()
-                .map_or_else(String::new, |details| format!(
-                    "<br>{}",
-                    wrapped_label(&details, limit)
-                )),
         )
     })
 }
@@ -326,30 +304,6 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
     figure
 }
 
-fn wrapped_label(label: &str, limit: usize) -> String {
-    let mut result = String::new();
-    let mut column = 0;
-    for word in label.split_whitespace() {
-        if column > 0 {
-            result.push(' ');
-            column += 1;
-            if column + word.chars().count() > limit {
-                result.push_str("<br>");
-                column = 0;
-            }
-        }
-        for character in word.chars() {
-            if column >= limit {
-                result.push_str("<br>");
-                column = 0;
-            }
-            result.push_str(&escape(&character.to_string()));
-            column += 1;
-        }
-    }
-    result
-}
-
 /// Render an observed weekday/hour mean without interpolation or hover on empty buckets.
 pub fn render_heatmap(map: &ActivityHeatmap, maximum: f64) -> Figure {
     let weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -374,7 +328,7 @@ pub fn render_heatmap(map: &ActivityHeatmap, maximum: f64) -> Figure {
                     cell.mean().map_or_else(String::new, |mean| {
                         format!(
                             "<b>{mean:.2} mean online</b><br>{}<br>{} {hour:02}:00–{:02}:00 UTC<br>{} {} · sum {}",
-                            wrapped_label(&map.label, tokens::T_CHART_HEATMAP_HOVER_LINE_LENGTH as usize), weekdays[day], hour + 1, cell.samples,
+                            escape(&map.label), weekdays[day], hour + 1, cell.samples,
                             if cell.samples == 1 { "record" } else { "records" }, cell.total
                         )
                     })

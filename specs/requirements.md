@@ -317,8 +317,8 @@ It MUST use a readable date and end with `UTC`, without an ISO `T` separator or 
 The download MUST preserve each original timestamp at its full stored precision.
 This MUST work for every observation time-series chart and comparison mode, including dense series and overlapping comparison points.
 Aggregate heatmap details MUST follow Population insights below.
-Daily online-average ratios MUST identify their sample coverage as defined under Ratios and correlation below.
-Ratio details MUST include the exact numerator and denominator alongside the rounded percentage.
+Ratio details MUST show a percentage rounded to two decimal places, without a numerator/denominator breakdown or sample-coverage text.
+Series names MUST remain on one line without an authored tooltip-width or character-count limit.
 Hover details MUST refer only to collected observations, MUST NOT invent points inside gaps, and MUST clear when the pointer leaves the plot or the selection changes.
 The following states MUST be understandable:
 
@@ -333,7 +333,7 @@ Server population share MUST divide a server's online count by the sum of all se
 Selecting individual servers MUST NOT change that denominator.
 For this chart, “All Servers” MUST expand to all discovered individual servers, without a redundant 100-percent total or duplicate lines when individual servers are also selected.
 An absent server or zero all-server total MUST yield an unavailable share; a published zero with a positive total MUST remain zero.
-Share lines MUST retain ordinary observation gaps, exact numerator/denominator details, and server/period identities.
+Share lines MUST retain ordinary observation gaps, percentage hover values, and server/period identities.
 
 The activity heatmap MUST group available online observations by their original UTC weekday and hour, with Monday through Sunday and hours 00 through 23.
 Each cell MUST show the arithmetic mean of the available observations for that bucket within the selected range or comparison period.
@@ -375,13 +375,14 @@ Missing hours and absent servers MUST NOT contribute zeros, interpolated values,
 The current day and days clipped by a selection MUST use only the available samples inside the selection.
 Period alignment MUST occur after grouping by original UTC dates.
 All-server means MUST average the per-snapshot totals, without dividing by the number of servers.
-Hover details MUST show the exact online sum, sample count, denominator, first sample time, and final sample timestamp so the arithmetic and temporal coverage can be inspected.
+Online-average hover details MUST use the ordinary two-line format with the rounded percentage, series name, and final sample timestamp.
+The README MUST explain sampling, denominator selection, and coverage limitations, with a calculation example.
 Aggregate points MUST retain the ordinary connection-interval rules; daily aggregation MUST NOT imply that missing hours were continuously measured.
 These ratios MUST be described as sampled online presence, without claiming measured playtime, session length, retention, or subscriber conversion.
 Average online divided by MAU MUST remain a daily indicator, not a monthly playtime estimate.
 
 **Example:** Online samples of 10 and 30 at 08:00 and 20:00 UTC give a sampled mean of 20.
-With a daily activity count of 100 in the 20:00 observation, the daily ratio is 20 percent and is plotted at 20:00, with two samples and their coverage exposed in its details.
+With a daily activity count of 100 in the 20:00 observation, the daily ratio is 20 percent and is plotted at 20:00.
 Missing hours contribute no values; a range starting at noon includes only the sample of 30.
 
 Correlation MUST use Pearson's r for available pairs among daily activity, monthly activity, and global subscriptions over the selected range, separately for each selected entity.

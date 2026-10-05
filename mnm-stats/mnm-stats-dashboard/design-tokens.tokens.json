@@ -418,15 +418,6 @@
   "chart": {
     "hover": {
       "$type": "dimension",
-      "line-length": {
-        "$type": "number",
-        "$value": 32,
-        "$description": "Maximum characters per time-series hover line, keeping exact values and long series labels readable on narrow charts."
-      },
-      "line-height": {
-        "$value": { "value": 22, "unit": "px" },
-        "$description": "Vertical space reserved per wrapped time-series hover line when sizing charts for simultaneous labels."
-      },
       "hit-radius": {
         "$value": {
           "value": 8,
@@ -439,7 +430,7 @@
           "value": 64,
           "unit": "px"
         },
-        "$description": "Minimum plot-area height reserved per comparison series so native three-line hover labels can appear together."
+        "$description": "Minimum plot-area height reserved per comparison series so native two-line hover labels can appear together."
       }
     },
     "legend": {
@@ -666,11 +657,6 @@
           "unit": "px"
         },
         "$description": "Gutter between neighboring heatmap cells, in CSS pixels."
-      },
-      "hover-line-length": {
-        "$type": "number",
-        "$value": 28,
-        "$description": "Maximum characters per line in heatmap scope labels, wrapping long names and periods for narrow-screen hover details."
       }
     }
   },

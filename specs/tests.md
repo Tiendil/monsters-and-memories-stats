@@ -120,7 +120,7 @@ They MUST use the same chart-engine URL and asset-loading behavior as ordinary b
 Browser coverage MUST include:
 
 - Rendering and exact-value inspection for the supported metric families.
-- Mouse hover details with exact counts or ratios followed by the series name on the first line and the original UTC date and time to the minute on the second, including comparison plots, overlapping points, and resized or horizontally scrolled charts; ratio numerators and denominators MUST remain available.
+- Mouse hover details with exact counts or percentages rounded to two decimal places followed by the complete unwrapped series name on the first line and the original UTC date and time to the minute on the second, including comparison plots, overlapping points, and resized or horizontally scrolled charts.
 - Native chart hover on dense series without visible point markers.
 - Mixed series-colored and subdued gray solid connections with matching widths, without duplicate hover details at shared endpoints or invented values along connections.
 - Chart-engine loading from the pinned CDN URL at both root and subpath URLs, and successful chart initialization after selection changes.
@@ -163,7 +163,7 @@ Automated tests MUST cover:
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes, with correlations grouped per selected entity over the shared range.
 - Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
-- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and sampled-average hover details.
+- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and two-line sampled-average tooltips without calculation or coverage details.
 - Visible explanations on every chart, relevant definition links with descriptive labels and new-tab behavior, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.

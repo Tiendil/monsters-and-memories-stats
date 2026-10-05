@@ -273,26 +273,7 @@ impl MetricValue {
     pub fn display(self) -> String {
         match self {
             Self::Count(n) => n.to_string(),
-            Self::Ratio {
-                numerator,
-                denominator,
-            } => format!("{:.2}% ({numerator} / {denominator})", self.number()),
-            Self::SampledRatio { .. } => format!("{:.2}%", self.number()),
-        }
-    }
-
-    pub fn sample_details(self) -> Option<String> {
-        match self {
-            Self::SampledRatio {
-                online_sum,
-                samples,
-                denominator,
-                first,
-            } => Some(format!(
-                "Online mean: {online_sum} / {samples} samples; denominator: {denominator}; samples from {} UTC",
-                first.format("%H:%M")
-            )),
-            _ => None,
+            Self::Ratio { .. } | Self::SampledRatio { .. } => format!("{:.2}%", self.number()),
         }
     }
 }

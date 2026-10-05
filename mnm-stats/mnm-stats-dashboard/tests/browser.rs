@@ -886,10 +886,7 @@ impl Browser {
             "online-share",
             "Alpha <island> & West",
             "2026-05-25T12:00:00Z",
-            &format!(
-                "{:.2}% ({numerator} / {denominator})",
-                numerator as f64 * 100.0 / denominator as f64
-            ),
+            &format!("{:.2}%", numerator as f64 * 100.0 / denominator as f64),
         );
         let mut sums = [[0_u64; 24]; 7];
         let mut counts = [[0_usize; 24]; 7];
@@ -1026,8 +1023,13 @@ impl Browser {
         self.expect_count("#subscriber-metrics-options input:checked", 3);
         self.hover("[data-metric='online-presence'] .scatterlayer .point");
         assert!(
-            self.text("[data-metric='online-presence'] .hoverlayer")
+            !self
+                .text("[data-metric='online-presence'] .hoverlayer")
                 .contains("samples")
+        );
+        assert!(
+            self.text("[data-metric='online-presence'] .hoverlayer")
+                .contains('%')
         );
         assert!(
             self.text("[data-metric='online-presence'] .hoverlayer")
@@ -1169,19 +1171,15 @@ impl Browser {
             (
                 "daily-monthly",
                 format!(
-                    "{:.2}% ({} / {})",
-                    n("daily_active") as f64 / n("monthly_active") as f64 * 100.0,
-                    n("daily_active"),
-                    n("monthly_active")
+                    "{:.2}%",
+                    n("daily_active") as f64 / n("monthly_active") as f64 * 100.0
                 ),
             ),
             (
                 "subscriber-activity",
                 format!(
-                    "{:.2}% ({} / {})",
-                    n("daily_active") as f64 / subscriptions as f64 * 100.0,
-                    n("daily_active"),
-                    subscriptions
+                    "{:.2}%",
+                    n("daily_active") as f64 / subscriptions as f64 * 100.0
                 ),
             ),
         ] {
@@ -1206,10 +1204,8 @@ impl Browser {
                     "Monthly activity / global subscribers · Alpha <island> & West",
                     "2026-05-25T12:00:00Z",
                     &format!(
-                        "{:.2}% ({} / {})",
-                        n("monthly_active") as f64 / subscriptions as f64 * 100.0,
-                        n("monthly_active"),
-                        subscriptions
+                        "{:.2}%",
+                        n("monthly_active") as f64 / subscriptions as f64 * 100.0
                     ),
                 );
             }

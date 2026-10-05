@@ -61,7 +61,7 @@ fn aggregation_ratios_and_missing_entities_preserve_their_semantics() {
     assert_eq!(number(Metric::MonthlySubscriptions, &s, &a), Some(100.0));
     assert_eq!(
         Metric::DailyMonthly.value(&s, &a).unwrap().display(),
-        "150.00% (15 / 10)"
+        "150.00%"
     );
     let mut zero = s.clone();
     zero.active_subscriptions = 0;
@@ -656,13 +656,13 @@ fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
     assert_eq!(series["y"][2], 7.0);
     let text = series["text"][0].as_str().unwrap();
     assert_eq!(
-        text.replace(" <br>", " "),
-        "<b>9007199254740993 Alpha &lt;island&gt; &amp; West</b><br>01 Feb 2024, 12:34 UTC",
+        text, "<b>9007199254740993 Alpha &lt;island&gt; &amp; West</b><br>01 Feb 2024, 12:34 UTC",
         "hover keeps the exact value and literal name, with minute precision on the second line"
     );
-    assert!(
-        text.split("</b>").next().unwrap().contains("<br>"),
-        "long value/name content wraps within its own block"
+    assert_eq!(
+        text.matches("<br>").count(),
+        1,
+        "long names stay on one line"
     );
     assert_eq!(series["text"][1], "");
     assert_eq!(figure["data"].as_array().unwrap().len(), 1);
@@ -1624,7 +1624,7 @@ fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
 fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
     use mnm_stats_dashboard::charts::render_heatmap;
     let mut map = ActivityHeatmap {
-        label: "<West> & friends".into(),
+        label: "<West> & friends — Eastern North American realm".into(),
         cells: [[ActivityCell::default(); 24]; 7],
     };
     map.cells[0][0] = ActivityCell {
@@ -1636,11 +1636,10 @@ fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
     assert_eq!(zero["data"][0]["z"][0][0], 0.0);
     assert!(zero["data"][0]["z"][0][1].is_null());
     assert!(zero["data"][0]["zmax"].as_f64().unwrap() > 0.0);
-    assert!(
-        zero["data"][0]["text"][0][0]
-            .as_str()
-            .unwrap()
-            .contains("&lt;West&gt; &amp; friends")
+    assert_eq!(
+        zero["data"][0]["text"][0][0],
+        "<b>0.00 mean online</b><br>&lt;West&gt; &amp; friends — Eastern North American realm<br>Mon 00:00–01:00 UTC<br>1 record · sum 0",
+        "heatmap names stay on one line while escaping source markup"
     );
     map.cells[0][1] = ActivityCell {
         total: 1,
@@ -1717,14 +1716,10 @@ fn daily_online_means_use_selected_samples_last_denominators_and_exact_coverage(
         &mnm_stats_dashboard::charts::render(&daily, &Metric::AverageOnlineDaily).to_json(),
     )
     .unwrap();
-    let hover = figure["data"][0]["text"][0]
-        .as_str()
-        .unwrap()
-        .replace("<br>", "");
-    assert!(
-        hover.contains("Online mean: 41 / 2 samples; denominator: 100; samples from 08:00 UTC")
+    assert_eq!(
+        figure["data"][0]["text"][0], "<b>20.50% Alpha</b><br>29 Feb 2024, 20:00 UTC",
+        "average tooltips contain only the percentage, series name, and final observation time"
     );
-    assert!(hover.contains("29 Feb 2024, 20:00 UTC"));
 }
 
 #[test]

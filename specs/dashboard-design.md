@@ -222,7 +222,9 @@ Blocks MUST fit their text within the available width, with formulas wrapping na
 The chart title MUST remain visually stronger than the formula, and explanatory prose MUST use muted text.
 Definition links MUST follow [requirements.md](requirements.md#metric-interpretation), use descriptive visible labels, and open in a new tab.
 Explanations MUST remain visible and accessible without hover or opening a disclosure.
-Online-average explanations MUST describe UTC-day sampling, the last available denominator, partial or sparse coverage, and the availability of sample details on hover.
+Online-presence explanations MUST identify the average online population for each UTC day relative to daily or monthly active players.
+Subscriber-activity explanations MUST identify the global subscriber count and state that ratios can exceed 100 percent.
+Detailed sampling rules, denominator selection, and missing-data handling MUST remain in the README rather than repeated in chart explanations or time-series tooltips.
 Detailed methodology, source limitations, all-server aggregation semantics, and archive coverage MUST be documented in the README.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.
@@ -310,8 +312,9 @@ The design MUST be reviewed with at least seven simultaneous series, including o
 
 Native chart hover MUST retain the exact-value and original UTC timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
 The first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time ending in “UTC,” with minute precision.
-Long value and series labels MAY wrap; the timestamp MUST remain on a separate following line, with aggregate sample details below it.
-Hover content MUST wrap to remain readable on narrow screens, and chart height MUST accommodate the displayed series' wrapped labels.
+Time-series tooltips MUST contain only the value and series name followed by the timestamp, without calculation breakdowns or sample-coverage text.
+Tooltip widths MUST follow their content without an authored width or character-count limit, and series names MUST remain on one line, including in heatmap tooltips.
+Chart height MUST accommodate simultaneous two-line time-series labels.
 
 **Example:** “429 All Servers” on the first line and “02 Oct 2026, 10:00 UTC” on the second.
 
