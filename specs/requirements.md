@@ -261,7 +261,9 @@ They MUST also restore the Trends busiest-hours grouping.
 
 The dashboard footer MUST credit Plotly with a link to its JavaScript charting library.
 The dashboard MUST provide a visible link labeled “Star on GitHub” to the [project repository](https://github.com/Tiendil/monsters-and-memories-stats), inviting visitors to star it on GitHub.
-The dashboard MUST provide a visible link labeled “Request a feature” to the repository's new-issue page so visitors can suggest dashboard improvements.
+The dashboard MUST provide a visible link labeled “Request a feature” that opens the repository's feature-request issue form directly.
+The form MUST require a feature or change description and provide optional fields for its purpose and examples or references.
+“Request a feature” and “Star on GitHub” MUST open in a new tab or window without giving the destination access to the dashboard's opener.
 
 The dashboard MUST have an all-servers view and derive its server selector from collected history, including entities present only in historical data.
 Visible server and zone labels MUST use the source display name when it is nonblank, otherwise the source ID.

@@ -1067,11 +1067,11 @@ pub fn App() -> impl IntoView {
                 <div class="header-actions">
                     <a class="button-link secondary" id="download-history" href="history.jsonl" download="history.jsonl">"Download JSONL"</a>
                     <div class="community-actions">
-                        <a class="button-link secondary" href=REPOSITORY_URL>
+                        <a class="button-link secondary" href=REPOSITORY_URL target="_blank" rel="noopener">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 3 14.8 8.7 21 9.6 16.5 14 17.6 20.2 12 17.3 6.4 20.2 7.5 14 3 9.6 9.2 8.7"/></svg>
                             "Star on GitHub"
                         </a>
-                        <a class="button-link secondary feature-request" href=format!("{REPOSITORY_URL}/issues/new")>"Request a feature"</a>
+                        <a class="button-link secondary feature-request" href=format!("{REPOSITORY_URL}/issues/new?template=feature_request.yml") target="_blank" rel="noopener">"Request a feature"</a>
                     </div>
                 </div>
             </header>

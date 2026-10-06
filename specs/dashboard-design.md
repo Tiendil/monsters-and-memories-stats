@@ -44,6 +44,7 @@ Production metadata URLs MUST be updated together when the public site address c
 The masthead MUST use the heading “Statistics for Monsters & Memories” and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
 The name “Tiendil” MUST link to `https://tiendil.org`, open in a new tab, and be visibly identifiable as a link.
 Its action group MUST provide “Download JSONL,” “Star on GitHub,” and “Request a feature.”
+“Star on GitHub” and “Request a feature” MUST open in a new tab or window; the latter MUST link directly to the feature-request form.
 It MUST remain compact rather than use a promotional hero layout.
 On wide screens, the action group MUST sit beside the title; on narrow screens, the title MUST precede a compact action row.
 On wide screens, the actions MUST share a control height, neutral surfaces, and subtle borders.
