@@ -2,6 +2,7 @@ use crate::{
     analysis::*,
     charts,
     charts::browser::{InteractiveHeatmap, InteractivePlot},
+    time::{TimeMode, TimeZone, browser_time_zone},
     view_state::*,
 };
 use chrono::{DateTime, Utc};
@@ -66,6 +67,7 @@ struct ViewSignals {
     target: RwSignal<String>,
     scopes: RwSignal<Vec<Scope>>,
     range: RwSignal<TimeRange>,
+    time_mode: RwSignal<TimeMode>,
     comparison: RwSignal<ComparisonMode>,
     matching: RwSignal<DateMatching>,
     periods: RwSignal<Vec<Period>>,
@@ -81,6 +83,7 @@ impl ViewSignals {
             target: RwSignal::new(state.target.clone()),
             scopes: RwSignal::new(state.scopes.clone()),
             range: RwSignal::new(state.range),
+            time_mode: RwSignal::new(state.time_mode),
             comparison: RwSignal::new(state.comparison),
             matching: RwSignal::new(state.matching),
             periods: RwSignal::new(state.periods.clone()),
@@ -96,6 +99,7 @@ impl ViewSignals {
             target: self.target.get(),
             scopes: self.scopes.get(),
             range: self.range.get(),
+            time_mode: self.time_mode.get(),
             comparison: self.comparison.get(),
             matching: self.matching.get(),
             periods: self.periods.get(),
@@ -127,6 +131,7 @@ impl ViewSignals {
         restore!(target, target);
         restore!(scopes, scopes);
         restore!(range, range);
+        restore!(time_mode, time_mode);
         restore!(comparison, comparison);
         restore!(matching, matching);
         restore!(periods, periods);
@@ -172,10 +177,6 @@ fn focus_target(target: &str) {
         let _ = element.focus();
         element.scroll_into_view();
     }
-}
-
-fn readable(time: DateTime<Utc>) -> String {
-    time.format("%d %b %Y, %H:%M UTC").to_string()
 }
 
 #[component]
@@ -277,10 +278,11 @@ fn DateFields(
     end: RwSignal<String>,
     error: RwSignal<Option<String>>,
 ) -> impl IntoView {
+    let time_zone = expect_context::<Memo<TimeZone>>();
     view! {
         <div class="date-fields">
-            <label>"From (UTC)"<input id=format!("{prefix}-start") type="date" min="0001-01-01" max="9998-12-31" prop:value=move || start.get() aria-describedby=format!("{prefix}-error") aria-invalid=move || error.get().is_some().to_string() on:input=move |ev| start.set(event_target_value(&ev))/></label>
-            <label>"To (UTC)"<input id=format!("{prefix}-end") type="date" min="0001-01-01" max="9998-12-31" prop:value=move || end.get() aria-describedby=format!("{prefix}-error") aria-invalid=move || error.get().is_some().to_string() on:input=move |ev| end.set(event_target_value(&ev))/></label>
+            <label>{move || format!("From ({})", time_zone.get().short_label())}<input id=format!("{prefix}-start") type="date" min="0001-01-01" max="9998-12-31" prop:value=move || start.get() aria-describedby=format!("{prefix}-error") aria-invalid=move || error.get().is_some().to_string() on:input=move |ev| start.set(event_target_value(&ev))/></label>
+            <label>{move || format!("To ({})", time_zone.get().short_label())}<input id=format!("{prefix}-end") type="date" min="0001-01-01" max="9998-12-31" prop:value=move || end.get() aria-describedby=format!("{prefix}-error") aria-invalid=move || error.get().is_some().to_string() on:input=move |ev| end.set(event_target_value(&ev))/></label>
         </div>
         <p id=format!("{prefix}-error") role="alert">{move || error.get()}</p>
     }
@@ -296,6 +298,7 @@ fn DateControls(
     custom: RwSignal<Vec<Period>>,
     comparison: Memo<Result<Comparison, String>>,
 ) -> impl IntoView {
+    let time_zone = expect_context::<Memo<TimeZone>>();
     let primary_node = NodeRef::<leptos::html::Details>::new();
     let comparison_node = NodeRef::<leptos::html::Details>::new();
     let editing_primary = RwSignal::new(false);
@@ -316,8 +319,8 @@ fn DateControls(
                             <button class="menu-choice" data-range=item.key() aria-pressed=move || (range.get() == item).to_string() on:click=move |_| { range.set(item); editing_primary.set(false); close_menu(primary_node, "time-range"); }>{item.label()}</button>
                         }).collect_view()}
                         <button class="menu-choice" id="custom-range" aria-pressed=move || matches!(range.get(), TimeRange::Custom { .. }).to_string() on:click=move |_| {
-                            let (first, last) = range.get().bounds(&history, now.get());
-                            start.set(first.format("%Y-%m-%d").to_string()); end.set(last.format("%Y-%m-%d").to_string()); error.set(None); editing_primary.set(true);
+                            let (first, last) = range.get().bounds(&history, now.get(), time_zone.get());
+                            start.set(time_zone.get().format(first, "%Y-%m-%d")); end.set(time_zone.get().format(last, "%Y-%m-%d")); error.set(None); editing_primary.set(true);
                         }>"Custom range"</button>
                     </div>
                     <Show when=move || editing_primary.get()>
@@ -359,7 +362,7 @@ fn DateControls(
                                 Err(message) => compare_error.set(Some(message)),
                             }>"Add period"</button>
                             <ul class="selected-periods">{move || custom.get().into_iter().enumerate().map(|(i, period)| view! {
-                                <li><span>{period.label()}</span><button class="secondary remove-period" aria-label=format!("Remove {}", period.label()) on:click=move |_| {
+                                <li><span>{period.label(time_zone.get())}</span><button class="secondary remove-period" aria-label=format!("Remove {}", period.label(time_zone.get())) on:click=move |_| {
                                     if let Some(input) = document().get_element_by_id("compare-start").and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()) { let _ = input.focus(); }
                                     custom.update(|selected| { selected.remove(i); });
                                 }>"Remove"</button></li>
@@ -372,7 +375,7 @@ fn DateControls(
                     </div>
                     <Show when=move || mode.get() != ComparisonMode::Disabled && (mode.get() != ComparisonMode::Custom || matching.get() == DateMatching::Weekday || custom.get().is_empty())>
                         <div class="resolved-periods" aria-label="Compared dates">{move || match comparison.get() {
-                            Ok(Comparison::Periods(periods)) => periods.into_iter().skip(1).map(|p| view! { <p>{p.period.label()}</p> }).collect_view().into_any(),
+                            Ok(Comparison::Periods(periods)) => periods.into_iter().skip(1).map(|p| view! { <p>{p.period.label(time_zone.get())}</p> }).collect_view().into_any(),
                             Err(message) => view! { <p role="alert">{message}</p> }.into_any(),
                             _ => view! { <p>"Choose dates to add a comparison."</p> }.into_any(),
                         }}</div>
@@ -395,6 +398,7 @@ fn ChartCard(
     zone_scopes: Option<RwSignal<Vec<ZoneScope>>>,
     metric_choices: Option<RwSignal<Vec<Metric>>>,
 ) -> impl IntoView {
+    let time_zone = expect_context::<Memo<TimeZone>>();
     let (key, title) = if metric_choices.is_some() {
         if metric == Metric::OnlineDaily {
             ("online-presence".into(), "Online presence".into())
@@ -424,6 +428,7 @@ fn ChartCard(
                     range.get(),
                     now.get(),
                     &comparison,
+                    time_zone.get(),
                 )
             } else if let Some(selected) = zone_scopes {
                 population_plot(
@@ -433,6 +438,7 @@ fn ChartCard(
                     range.get(),
                     now.get(),
                     &comparison,
+                    time_zone.get(),
                 )
             } else {
                 plot(
@@ -442,6 +448,7 @@ fn ChartCard(
                     range.get(),
                     now.get(),
                     &comparison,
+                    time_zone.get(),
                 )
             };
             result.map(|mut plot| {
@@ -499,15 +506,23 @@ fn ActivityCard(
     now: RwSignal<DateTime<Utc>>,
     comparison: Memo<Result<Comparison, String>>,
 ) -> impl IntoView {
+    let time_zone = expect_context::<Memo<TimeZone>>();
     let maps = Memo::new(move |_| {
         comparison.get().and_then(|comparison| {
-            activity_heatmaps(&history, &scopes.get(), range.get(), now.get(), &comparison)
+            activity_heatmaps(
+                &history,
+                &scopes.get(),
+                range.get(),
+                now.get(),
+                &comparison,
+                time_zone.get(),
+            )
         })
     });
     view! {
         <article class="chart-card" id="chart-activity-heatmap" data-metric="activity-heatmap" tabindex="-1">
             <ChartHeading target="chart-activity-heatmap".into() title="Activity heatmap".into()/>
-            <p class="chart-note chart-explanation">"Average online population by weekday and hour (UTC). Brighter colors indicate more players; blank cells have no records. Individual servers share a scale that includes unchecked servers. “All Servers” uses a separate scale so larger totals don’t hide differences between individual servers. Both scales cover the selected periods."</p>
+            <p class="chart-note chart-explanation">{move || format!("Average online population by weekday and hour ({}).", time_zone.get().short_label())}" Brighter colors indicate more players; blank cells have no records. Individual servers share a scale that includes unchecked servers. “All Servers” uses a separate scale so larger totals don’t hide differences between individual servers. Both scales cover the selected periods."</p>
             {move || match maps.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(maps) if maps.is_empty() => view! { <p class="empty-chart">"Select servers and a period to show activity."</p> }.into_any(),
@@ -713,9 +728,16 @@ fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView 
 pub fn App() -> impl IntoView {
     let history = Arc::new(crate::embedded_history());
     provide_context(Arc::new(Mutex::new(charts::SeriesStyles::default())));
+    let local_zone = browser_time_zone();
     let initial = ViewState::from_fragment(&window().location().hash().unwrap_or_default());
     let navigation = ViewSignals::new(initial);
     provide_context(navigation);
+    let time_mode = navigation.time_mode;
+    let time_zone = Memo::new(move |_| match time_mode.get() {
+        TimeMode::Utc => TimeZone::UTC,
+        TimeMode::Local => local_zone.unwrap_or(TimeZone::UTC),
+    });
+    provide_context(time_zone);
     let section = Memo::new(move |_| {
         Section::from_fragment(&format!("#{}", navigation.target.get()))
             .unwrap_or(Section::Overview)
@@ -770,11 +792,13 @@ pub fn App() -> impl IntoView {
             mode.get(),
             matching.get(),
             &custom.get(),
+            time_zone.get(),
         )
     });
     let empty_history = history.clone();
-    let empty_range =
-        Memo::new(move |_| latest_in_range(&empty_history, range.get(), now.get()).is_none());
+    let empty_range = Memo::new(move |_| {
+        latest_in_range(&empty_history, range.get(), now.get(), time_zone.get()).is_none()
+    });
     let comparing =
         Memo::new(move |_| mode.get() != ComparisonMode::Disabled || scopes.get().len() > 1);
     view! {
@@ -800,10 +824,14 @@ pub fn App() -> impl IntoView {
             <section class="history-summary" aria-label="Statistics coverage">
                 <p id="history-status">
                     {first.zip(latest).map_or_else(|| "No statistics collected yet".into_any(), |(first, last)| view! {
-                        "Data from "<time id="first-collection" datetime=utc(first)>{first.format("%d %b %Y").to_string()}</time>" to "<time id="latest-collection" datetime=utc(last)>{readable(last)}</time>
+                        "Data from "<time id="first-collection" datetime=utc(first)>{move || time_zone.get().format(first, "%d %b %Y")}</time>" to "<time id="latest-collection" datetime=utc(last)>{move || time_zone.get().format(last, "%d %b %Y, %H:%M")}</time>
                     }.into_any())}
                     " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly from "<a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a>
                 </p>
+                <div class="time-zone-switch" role="group" aria-label="Time zone">
+                    <button id="time-zone-utc" aria-pressed=move || (time_mode.get() == TimeMode::Utc).to_string() on:click=move |_| time_mode.set(TimeMode::Utc)>"UTC"</button>
+                    <button id="time-zone-local" aria-pressed=move || (time_mode.get() == TimeMode::Local).to_string() disabled=local_zone.is_none() on:click=move |_| time_mode.set(TimeMode::Local)>{local_zone.map_or_else(|| "Local time unavailable; using UTC".to_owned(), |zone| format!("{} (local)", zone.name()))}</button>
+                </div>
             </section>
             <Summary history=history.clone()/>
             <section class="controls" aria-labelledby="controls-heading">

@@ -93,16 +93,16 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Combined starting-zone series for each selected zone/total, server scope, and period, with consistent axes, stable distinct identities, and no observations for empty selections.
 - Zero starting-zone totals for validated empty lists, historical zone discovery, and preservation of differing per-server zone membership in the original observations.
 - Server population shares with the complete snapshot denominator, individual selections, All Servers expansion without duplicate lines, missing servers, and zero denominators.
-- Weekday/hour UTC means with exact sums and sample counts, uneven sampling, missing cells, published zeros, boundary timestamps, and absent servers.
-- Separate heatmaps for selected entities and periods, using original UTC buckets and separate total and individual-server color bounds, including more than two selections and empty ranges.
+- Weekday/hour means in UTC and local time with exact sums and sample counts, uneven sampling, missing cells, published zeros, boundary timestamps, and absent servers.
+- Separate heatmaps for selected entities and periods, using original-instant buckets in the selected zone and separate total and individual-server color bounds, including more than two selections and empty ranges.
 - Heatmap bounds from available cell means, including nonzero minima, measured zeros, missing cells, empty selections, constant values, and fractional or narrowly separated averages, preserving shared bounds within each scale group.
 - Individual-server bounds including unchecked and historical servers only within selected periods, excluding totals, and remaining unchanged when panels are hidden or restored.
 - Ratio values, including zero denominators and values above 100 percent.
 - Online ratios using each snapshot's online and denominator counts, including multiple observations within one UTC day, missing hours and servers, measured zeros, zero denominators, and selection boundaries.
 - All-server ratios using snapshot totals, global subscription denominators in per-server views, and preservation of every original observation and ratio during period comparisons.
 - Combined engagement metric selections with stable distinct identities across more than two scopes and periods, including empty selections.
-- All range presets and custom inclusive UTC date boundaries, including invalid or reversed inputs.
-- Today and Yesterday at UTC midnight, month/year rollover, and leap-day boundaries; Today comparisons MUST use the same elapsed part of the prior day, and Yesterday comparisons MUST retain the full day.
+- All range presets and custom inclusive date boundaries in UTC and local time, including invalid or reversed inputs.
+- Today and Yesterday at midnight in the selected zone, month/year rollover, and leap-day boundaries; Today comparisons MUST use the same clock-time span on the prior day, and Yesterday comparisons MUST retain the full calendar day.
 - Series-colored connections below 3 hours, subdued gray connections from 3 hours to less than 24 hours, and no connections at 24 hours or more, including values immediately below and at both boundaries.
 - Interrupted connections for unavailable metric values and absent calendar dates, independently of interval styling.
 - Automatic previous-period and year-over-year calculation when the primary range changes; exact-date and weekday matching, including leap-day boundaries and ranges crossing a year.
@@ -111,9 +111,17 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Comparisons with more than two periods or entities and with missing observations.
 - Combined server-and-period selections, distinct identities for each pair, global subscriptions without duplicate series, and empty server selections.
 
+### Dashboard time zones
+
+Native tests MUST cover time-zone formatting and calendar boundaries using positive, negative, and fractional-hour offsets, daylight-saving transitions, midnight gaps, and repeated local hours.
+Tooltip formatting MUST use the selected zone’s name, while summary timestamps MUST omit zone suffixes.
+Coverage MUST include 23- and 25-hour calendar days, unchanged elapsed rolling ranges, local date and weekday comparisons, heatmap rebucketing, and calendar-alignment connection breaks at repeated clock times.
+Repeated heatmap hours MUST retain both samples and missing hours MUST remain blank.
+
 ### Dashboard URL state
 
-Native tests MUST cover complete view-state encoding and decoding, stable output, default omission, explicit empty selections, all destinations and presets, fixed custom UTC dates, multiple comparison periods, retained inactive selections, and changing only the link destination.
+Native tests MUST cover complete view-state encoding and decoding, stable output, default omission, explicit empty selections, all destinations and presets, fixed custom calendar dates and the UTC/local choice, multiple comparison periods, retained inactive selections, and changing only the link destination.
+Time-zone cases MUST include local time by default, explicit UTC overrides, and acceptance of explicit local links while omitting that default from generated links.
 Coverage MUST include encoded punctuation and Unicode in entity IDs, unknown IDs and parameters, duplicates, invalid or reversed dates, and recovery of individual invalid settings without discarding valid settings.
 
 ### Dashboard integration
@@ -126,7 +134,7 @@ Browser coverage MUST include:
 - Search and Open Graph metadata in the initial HTML, with matching titles and descriptions, a fragment-free production canonical URL, and consistent sharing URLs.
 - Direct HTTP access to the static sharing image at root and repository-subpath deployments, with its actual format and dimensions matching the image metadata.
 - Rendering and exact-value inspection for the supported metric families.
-- Mouse hover details with exact counts or percentages rounded to two decimal places followed by the complete unwrapped series name on the first line and the original UTC date and time to the minute on the second, including comparison plots, overlapping points, and resized or horizontally scrolled charts.
+- Mouse hover details with exact counts or percentages rounded to two decimal places followed by the complete unwrapped series name on the first line and the original instant formatted in the selected zone to the minute on the second, including comparison plots, overlapping points, and resized or horizontally scrolled charts.
 - Native chart hover on dense series without visible point markers.
 - Mixed series-colored and subdued gray solid connections with matching widths, without duplicate hover details at shared endpoints or invented values along connections.
 - Chart-engine loading from the pinned CDN URL at both root and subpath URLs, and successful chart initialization after selection changes.
@@ -156,10 +164,11 @@ Coverage MUST include empty files, history paths containing spaces, root and rep
 Presentation coverage MUST verify [dashboard-design.md](dashboard-design.md) alongside the metric and comparison contracts.
 Automated tests MUST cover:
 
-- A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
+- The summary-row time-zone switch, its selected state and persistent “zone name (local)” button label, local summary and tooltip times, heatmap rebucketing, date-control labels, and restoration through refresh and Back/Forward.
+- A visible coverage summary with the complete history's first date, latest date and time in the selected zone, and record count, independently of filters and comparisons, including empty history and a single record.
 - Navigation between Overview, Player activity, and Engagement while retaining the selected scope, range, and comparisons.
 - Direct visits to every tab and plot fragment, plot focus and scrolling after section mounting, refresh, and browser Back/Forward.
-- Complete applied settings restored from copied URLs, including custom UTC dates, multiple comparisons, inactive chart selectors, explicit empty selections, and removable unavailable entity IDs.
+- Complete applied settings restored from copied URLs, including the UTC/local choice, custom calendar dates, multiple comparisons, inactive chart selectors, explicit empty selections, and removable unavailable entity IDs.
 - Back/Forward restoring filters without extra history entries or scrolling again to an unchanged plot target.
 - Menu opening, unapplied date drafts, and validation errors leaving the URL and history unchanged.
 - Native plot-header links with correct destinations and accessible names, keyboard activation, repeated activation of the current fragment, and retained filters during in-page navigation.

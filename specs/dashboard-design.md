@@ -53,8 +53,9 @@ The repository action required by [requirements.md](requirements.md#dashboard-be
 The download action MUST retain native link behavior so users can copy and share the static archive address.
 All masthead actions MUST remain available from every content section.
 
-One visible summary near the masthead MUST show the first observation's date and the latest observation's date and time in UTC.
+One visible summary near the masthead MUST show the first observation's date and the latest observation's date and time in the selected time zone.
 It MUST also show the total number of records and describe collection as approximately hourly, without labeling the data “live.”
+Summary dates and times MUST omit time-zone suffixes; the adjacent switch MUST identify the selected zone.
 The collection phrase MUST link “M&M’s public statistics” to `https://account.monstersandmemories.com/metrics` using the normal link styling.
 This link MUST open in a new tab or window.
 The dates and record count MUST represent the complete loaded history, independently of selected filters or comparisons; one record means one collected observation.
@@ -62,11 +63,21 @@ The dates and record count MUST use a medium font weight in the normal dark text
 The summary MUST wrap naturally on narrow screens without requiring an archive-details disclosure.
 Empty history MUST show a clear no-statistics message and zero records without inventing dates.
 
-**Example:** “Data from 2 Oct 2026 to 4 Oct 2026, 20:00 UTC · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
+**Example:** “Data from 2 Oct 2026 to 4 Oct 2026, 20:00 · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
 
 The summary's latest collection time MUST communicate data age without a separate freshness warning or status message.
 Synthetic-data notices MUST remain visible without opening another view or disclosure.
-Human-readable UTC dates SHOULD be used in the summary to reduce scanning effort; point details MUST show the original observation time to the minute, and downloads MUST retain full timestamp precision.
+Human-readable dates in the selected time zone SHOULD be used in the summary to reduce scanning effort; point details MUST show the original observation time to the minute, and downloads MUST retain full timestamp precision.
+
+### Time-zone switch
+
+The summary row MUST include a compact segmented control labeled “UTC” and the browser’s IANA zone name followed by “(local),” such as “Europe/Berlin (local).”
+It MUST sit to the right of the summary on wide screens and wrap below the text when space is limited, without horizontal page overflow.
+The selected choice MUST be visibly distinct and exposed through `aria-pressed` within a group named “Time zone.”
+Both choices MUST support keyboard activation and the existing compact-control touch target.
+Both button labels and the control’s dimensions MUST remain unchanged when switching modes, without a separate conditional zone-name label.
+The switch MUST affect the complete dashboard rather than only the current tab.
+Unavailable local time MUST follow the UTC fallback defined in [requirements.md](requirements.md#time-zones).
 
 ### Exploration controls
 
@@ -105,7 +116,7 @@ The comparison button MUST read “Compare” while disabled and identify the ac
 Its menu MUST offer Disable comparison, Previous period, Year over year, and Custom period, followed by a visually separated choice between Match day of week and Match exact date.
 The default matching rule and period calculations MUST follow [requirements.md](requirements.md#time-frame-comparison).
 
-Custom UTC date inputs, validation messages, Add period, and removable custom selections MUST live inside their menus.
+Custom date inputs labeled with the selected time zone, validation messages, Add period, and removable custom selections MUST live inside their menus.
 The comparison menu MUST show the resolved dates so weekday adjustments can be inspected before closing it.
 A separate comparison-information section or persistent editor above the charts MUST NOT be shown; chart legends identify the plotted periods and entities.
 The primary range MUST remain visible during comparisons.
@@ -158,8 +169,9 @@ Section navigation and “Now” links MUST use the same behavior and include th
 The fragment MUST use `#destination?key=value&key=value` with URL-encoded keys and values.
 Parameters MUST encode applied view settings with these names:
 
+- `tz`: `utc` or `local`, with the default `local` omitted.
 - `range`: `today`, `yesterday`, `7`, `30`, `90`, `180`, `365`, `all`, or `custom`.
-- `from` and `to`: inclusive UTC dates in `YYYY-MM-DD` form for a custom primary range.
+- `from` and `to`: inclusive dates in the selected time zone in `YYYY-MM-DD` form for a custom primary range.
 - Repeated `scope`: `all` or `server:<source ID>`.
 - `compare`: `disabled`, `previous`, `year-over-year`, or `custom`.
 - `match`: `date` or `weekday`.
@@ -173,7 +185,8 @@ Missing entity IDs MUST remain selected and appear as removable options labeled 
 Generated links MUST omit default settings, retain selection order, and use a consistent parameter order.
 An explicit empty value for a selection parameter MUST represent no selections; an omitted parameter MUST use that control's defaults.
 Simple tab and plot fragments without parameters MUST remain supported and use default selections on a fresh visit.
-Relative presets MUST remain relative to the current UTC time; custom ranges and comparison periods MUST retain their fixed dates.
+Relative presets MUST follow the current instant and the calendar rules for the selected zone; custom ranges and comparison periods MUST retain their fixed calendar dates.
+A `tz=local` link MUST use the recipient’s browser zone.
 Saved custom periods and chart-local selections MUST survive temporary mode or section changes.
 Unknown parameters MUST be ignored; malformed values MUST fall back only for the affected setting.
 Valid entries in repeated parameters MUST be preserved and duplicates removed; if no valid selection remains, use its default unless an explicit empty value was supplied.
@@ -250,8 +263,8 @@ Zone/server/period combinations MUST have distinct, stable series identities, pr
 Server population share MUST use the time-series chart anatomy and a 0–100 percent axis.
 A short note MUST explain that “All Servers” shows individual shares of the complete observed total.
 Activity heatmap MUST use separate labeled panels for each selected server scope and period, arranged vertically at full width.
-Each panel MUST show weekday rows ordered Monday through Sunday and hour columns ordered 00 through 23, with the hour axis explicitly labeled UTC.
-Each panel MUST have a visible horizontal axis below its cells, labeled “Time of day (UTC),” with 24-hour `HH:MM` tick labels.
+Each panel MUST show weekday rows ordered Monday through Sunday and hour columns ordered 00 through 23, with the hour axis explicitly identifying UTC or local time.
+Each panel MUST have a visible horizontal axis below its cells, labeled “Time of day (UTC)” or “Time of day (local),” according to the selected zone, with 24-hour `HH:MM` tick labels.
 Time labels MUST remain horizontal and readable without overlap at narrow widths.
 A labeled sequential color scale MUST show mean online counts, with independent bounds for all-servers totals and individual servers as defined in [requirements.md](requirements.md#population-insights).
 The scale MUST use the published Inferno sequential palette, progressing from near-black through purple and orange to bright yellow as activity increases.
@@ -366,7 +379,7 @@ Qualifications necessary to interpret a chart MUST remain close to the affected 
 Axis labels MUST remain readable at narrow widths; reduce tick density before reducing text size.
 Counts MAY use compact axis labels when their scale is clear, while hover details MUST retain exact values.
 
-Normal time axes MUST run chronologically from left to right; the page's collection summary and point details MUST identify UTC.
+Normal time axes MUST run chronologically from left to right; the summary’s time-zone switch and point details MUST identify the selected zone.
 Period-comparison axes MUST describe their alignment in human terms beside the horizontal axis, retaining original timestamps in details.
 Gridlines MUST be visually subordinate to series and use a small number of labeled, meaningful intervals.
 Charts MUST use a linear value scale and MUST NOT combine unrelated units with dual axes.
@@ -400,8 +413,8 @@ The design MUST be reviewed with at least seven simultaneous series, including o
 
 ### Value inspection
 
-Native chart hover MUST retain the exact-value and original UTC timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
-The first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time ending in “UTC,” with minute precision.
+Native chart hover MUST retain the exact-value and original-instant timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
+The first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time with minute precision, ending in “UTC” or the browser’s IANA zone name such as “Europe/Berlin.”
 Time-series tooltips MUST contain only the value and series name followed by the timestamp, without calculation breakdowns or sample-coverage text.
 Tooltip widths MUST follow their content without an authored width or character-count limit, and series names MUST remain on one line, including in heatmap tooltips.
 Chart height MUST accommodate simultaneous two-line time-series labels.

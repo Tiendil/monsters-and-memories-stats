@@ -54,6 +54,8 @@ The frontend build validates and embeds the complete JSONL history and packages 
 
 The dashboard uses Leptos client-side rendering, built by Trunk, with Plotly.rs constructing figures in Rust and Plotly.js rendering interactive charts in the browser.
 Rust owns metric calculations, heatmap aggregation, time alignment, gap detection, series selection, and exact hover text; Plotly owns chart layout and native hover labels.
+Rust obtains the browser’s IANA time-zone name through the `Intl.DateTimeFormat` bindings and uses shared time-zone functions for calendar boundaries, comparisons, heatmap buckets, and timestamp formatting.
+Presentation time-zone changes MUST NOT alter stored UTC instants or the static history download.
 The frontend MUST load a pinned Plotly.js cartesian bundle compatible with the Rust wrapper from Plotly's official CDN.
 The versioned CDN URL MUST be owned by the frontend HTML and work at both root and Pages subpath URLs.
 Browser tests MUST load the same CDN script as ordinary builds and previews.
@@ -165,6 +167,7 @@ The application uses the following libraries and build tools:
 
 - `serde`, `serde_json` — shared typed JSONL records and serialization.
 - `chrono` — UTC timestamps and date/range calculations.
+- [`chrono-tz`](https://docs.rs/chrono-tz/0.10.4/chrono_tz/) — IANA time-zone rules for dashboard calendar calculations and presentation.
 - `reqwest` with blocking support and Rustls — HTTP initialization, session cookies, explicit timeout, and status handling.
 - `tungstenite` with Rustls — synchronous WebSocket connection and message transport for the LiveView session.
 - `scraper` — HTML parsing and scoped DOM selectors; no regex-only HTML extraction.

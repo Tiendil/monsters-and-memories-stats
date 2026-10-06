@@ -1,5 +1,6 @@
 use chrono::{DateTime, Duration, Utc};
 use mnm_stats_dashboard::analysis::*;
+use mnm_stats_dashboard::time::TimeZone;
 use mnm_stats_model::{History, Server, Snapshot, StartingZone};
 
 fn time(s: &str) -> DateTime<Utc> {
@@ -130,6 +131,7 @@ fn changing_zone_membership_preserves_gaps_totals_and_original_rows() {
         TimeRange::All,
         time("2024-01-01T03:00:00Z"),
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     for series in &chart.series[..2] {
@@ -181,6 +183,7 @@ fn population_combines_zones_servers_and_periods_without_partial_totals() {
         TimeRange::All,
         now,
         &comparison,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(chart.series.len(), 18);
@@ -231,21 +234,38 @@ fn population_combines_zones_servers_and_periods_without_partial_totals() {
         TimeRange::All,
         now,
         &comparison,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(single.x_bounds, chart.x_bounds);
     assert_eq!(single.alignment, chart.alignment);
     assert!(
-        population_plot(&history, &[], &scopes, TimeRange::All, now, &comparison)
-            .unwrap()
-            .series
-            .is_empty()
+        population_plot(
+            &history,
+            &[],
+            &scopes,
+            TimeRange::All,
+            now,
+            &comparison,
+            TimeZone::UTC
+        )
+        .unwrap()
+        .series
+        .is_empty()
     );
     assert!(
-        population_plot(&history, &selected, &[], TimeRange::All, now, &comparison)
-            .unwrap()
-            .series
-            .is_empty()
+        population_plot(
+            &history,
+            &selected,
+            &[],
+            TimeRange::All,
+            now,
+            &comparison,
+            TimeZone::UTC
+        )
+        .unwrap()
+        .series
+        .is_empty()
     );
 }
 
@@ -263,6 +283,7 @@ fn population_colors_survive_zone_reordering_and_renaming() {
         TimeRange::All,
         now,
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     let mut styles = mnm_stats_dashboard::charts::SeriesStyles::default();
@@ -282,6 +303,7 @@ fn population_colors_survive_zone_reordering_and_renaming() {
             TimeRange::All,
             now,
             &Comparison::None,
+            TimeZone::UTC,
         )
         .unwrap();
         styles.assign(&mut changed);
@@ -326,7 +348,7 @@ fn ranges_end_at_now_and_include_their_exact_utc_boundaries() {
             records.push(snapshot(&at.to_rfc3339(), 1, 2, 3));
         }
         let history = History::new(records).unwrap();
-        assert_eq!(range.bounds(&history, now), (start, now));
+        assert_eq!(range.bounds(&history, now, TimeZone::UTC), (start, now));
         let plot = plot(
             &history,
             &Metric::Daily,
@@ -334,6 +356,7 @@ fn ranges_end_at_now_and_include_their_exact_utc_boundaries() {
             range,
             now,
             &Comparison::None,
+            TimeZone::UTC,
         )
         .unwrap();
         assert_eq!(
@@ -347,7 +370,7 @@ fn ranges_end_at_now_and_include_their_exact_utc_boundaries() {
     }
     let history = History::new(vec![snapshot("2020-01-01T00:00:00Z", 1, 2, 3)]).unwrap();
     assert_eq!(
-        TimeRange::All.bounds(&history, now),
+        TimeRange::All.bounds(&history, now, TimeZone::UTC),
         (time("2020-01-01T00:00:00Z"), now)
     );
 }
@@ -357,21 +380,22 @@ fn calendar_alignment_preserves_leap_days_unequal_months_and_half_open_bounds() 
     let february = Period::month("2024-02").unwrap();
     let march = Period::month("2024-03").unwrap();
     assert_eq!(
-        february.x(time("2024-02-29T12:30:00Z")),
+        february.x(time("2024-02-29T12:30:00Z"), TimeZone::UTC),
         28.0 * 86400.0 + 45000.0
     );
     assert_eq!(
-        march.x(time("2024-03-29T12:30:00Z")),
-        february.x(time("2024-02-29T12:30:00Z"))
+        march.x(time("2024-03-29T12:30:00Z"), TimeZone::UTC),
+        february.x(time("2024-02-29T12:30:00Z"), TimeZone::UTC)
     );
     let leap = Period::year("2024").unwrap();
     let ordinary = Period::year("2023").unwrap();
     assert_eq!(
-        leap.x(time("2024-03-01T00:00:00Z")),
-        ordinary.x(time("2023-03-01T00:00:00Z"))
+        leap.x(time("2024-03-01T00:00:00Z"), TimeZone::UTC),
+        ordinary.x(time("2023-03-01T00:00:00Z"), TimeZone::UTC)
     );
     assert_eq!(
-        ordinary.x(time("2023-03-01T00:00:00Z")) - ordinary.x(time("2023-02-28T23:00:00Z")),
+        ordinary.x(time("2023-03-01T00:00:00Z"), TimeZone::UTC)
+            - ordinary.x(time("2023-02-28T23:00:00Z"), TimeZone::UTC),
         25.0 * 3600.0
     );
     let history = History::new(vec![
@@ -389,6 +413,7 @@ fn calendar_alignment_preserves_leap_days_unequal_months_and_half_open_bounds() 
         TimeRange::Days7,
         time("2026-01-01T00:00:00Z"),
         &Comparison::periods(vec![february, march, Period::month("2024-04").unwrap()]),
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(plot.series.len(), 3);
@@ -428,6 +453,7 @@ fn entity_and_interval_comparisons_allow_many_series_and_different_lengths() {
         TimeRange::All,
         now,
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(values.series.len(), 4);
@@ -452,7 +478,8 @@ fn entity_and_interval_comparisons_allow_many_series_and_different_lengths() {
             &entities,
             TimeRange::All,
             now,
-            &Comparison::None
+            &Comparison::None,
+            TimeZone::UTC
         )
         .unwrap()
         .series
@@ -469,6 +496,7 @@ fn entity_and_interval_comparisons_allow_many_series_and_different_lengths() {
         TimeRange::All,
         now,
         &Comparison::periods(periods),
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(values.series.len(), 4);
@@ -485,7 +513,8 @@ fn entity_and_interval_comparisons_allow_many_series_and_different_lengths() {
             &[Scope::All],
             TimeRange::All,
             now,
-            &Comparison::periods(unequal)
+            &Comparison::periods(unequal),
+            TimeZone::UTC
         )
         .is_ok()
     );
@@ -507,7 +536,7 @@ fn lines_break_on_missing_values_long_intervals_and_absent_calendar_dates() {
         let at = time(s);
         Point {
             at,
-            x: Period::Year(2023).x(at),
+            x: Period::Year(2023).x(at, TimeZone::UTC),
             value,
         }
     })
@@ -534,6 +563,7 @@ fn plotly_keeps_zero_and_singleton_observations() {
         TimeRange::All,
         time("2024-01-02T00:00:00Z"),
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     let figure: serde_json::Value =
@@ -551,6 +581,7 @@ fn plotly_keeps_zero_and_singleton_observations() {
 fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
     let start = time("2024-02-01T12:34:56.123Z");
     let plot = Plot {
+        zone: TimeZone::UTC,
         series: vec![Series {
             identity: "test".into(),
             style: 0,
@@ -621,6 +652,7 @@ fn plotly_styles_interval_boundaries_without_extra_hover_observations() {
         .collect();
     let x: Vec<_> = points.iter().map(|p| p.x).collect();
     let plot = Plot {
+        zone: TimeZone::UTC,
         series: vec![Series {
             identity: "intervals".into(),
             style: 0,
@@ -687,6 +719,7 @@ fn plotly_styles_interval_boundaries_without_extra_hover_observations() {
 fn dense_plots_keep_every_observation_for_hover() {
     let start = time("2024-01-01T00:00:00Z");
     let plot = Plot {
+        zone: TimeZone::UTC,
         series: vec![Series {
             identity: "test".into(),
             style: 0,
@@ -729,6 +762,7 @@ fn dense_plots_keep_every_observation_for_hover() {
 fn dense_history_keeps_isolated_observations_visible() {
     let start = time("2024-01-01T00:00:00Z");
     let plot = Plot {
+        zone: TimeZone::UTC,
         series: vec![Series {
             identity: "test".into(),
             style: 0,
@@ -774,7 +808,7 @@ fn headlines_use_one_in_range_snapshot_without_filling_absent_servers() {
     let future = snapshot("2026-06-02T00:00:00Z", 999, 999, 999);
     let history = History::new(vec![earlier, latest.clone(), future]).unwrap();
     let now = time("2026-06-01T12:00:00Z");
-    let selected = latest_in_range(&history, TimeRange::All, now).unwrap();
+    let selected = latest_in_range(&history, TimeRange::All, now, TimeZone::UTC).unwrap();
     assert_eq!(selected, &latest);
     for metric in [Metric::Online, Metric::Daily, Metric::Monthly] {
         assert_eq!(metric.value(selected, &Scope::Server("a".into())), None);
@@ -783,7 +817,15 @@ fn headlines_use_one_in_range_snapshot_without_filling_absent_servers() {
         Metric::Subscriptions.value(selected, &Scope::Server("a".into())),
         Some(MetricValue::Count(0))
     );
-    assert!(latest_in_range(&history, TimeRange::Days7, time("2026-07-01T00:00:00Z")).is_none());
+    assert!(
+        latest_in_range(
+            &history,
+            TimeRange::Days7,
+            time("2026-07-01T00:00:00Z"),
+            TimeZone::UTC
+        )
+        .is_none()
+    );
     assert_eq!(
         grouped_count(u128::MAX),
         "340,282,366,920,938,463,463,374,607,431,768,211,455"
@@ -807,6 +849,7 @@ fn comparison_encodings_survive_other_selections_and_metric_changes() {
         TimeRange::All,
         now,
         &Comparison::periods(periods.clone()),
+        TimeZone::UTC,
     )
     .unwrap();
     styles.assign(&mut original);
@@ -817,6 +860,7 @@ fn comparison_encodings_survive_other_selections_and_metric_changes() {
         TimeRange::All,
         now,
         &Comparison::periods(periods[2..].to_vec()),
+        TimeZone::UTC,
     )
     .unwrap();
     styles.assign(&mut subset);
@@ -865,6 +909,7 @@ fn server_selection_applies_to_every_period_without_duplicating_global_counts() 
         TimeRange::All,
         now,
         &comparison,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(daily.series.len(), 9);
@@ -890,6 +935,7 @@ fn server_selection_applies_to_every_period_without_duplicating_global_counts() 
         TimeRange::All,
         now,
         &comparison,
+        TimeZone::UTC,
     )
     .unwrap();
     styles.assign(&mut subset);
@@ -912,6 +958,7 @@ fn server_selection_applies_to_every_period_without_duplicating_global_counts() 
             TimeRange::All,
             now,
             &comparison,
+            TimeZone::UTC,
         )
         .unwrap();
         assert_eq!(
@@ -924,7 +971,16 @@ fn server_selection_applies_to_every_period_without_duplicating_global_counts() 
                 .all(|p| p.value == Some(MetricValue::Count(10)))
         }));
         for metric in [Metric::Daily, Metric::Subscriptions] {
-            let empty = plot(&history, &metric, &[], TimeRange::All, now, &comparison).unwrap();
+            let empty = plot(
+                &history,
+                &metric,
+                &[],
+                TimeRange::All,
+                now,
+                &comparison,
+                TimeZone::UTC,
+            )
+            .unwrap();
             assert!(empty.series.is_empty());
             assert!(empty.note.contains("Select servers"));
         }
@@ -945,6 +1001,7 @@ fn compared(
         mode,
         matching,
         custom,
+        TimeZone::UTC,
     )
     .unwrap()
     {
@@ -969,6 +1026,7 @@ fn custom_ranges_include_whole_utc_dates_and_validate_before_selection() {
         range,
         time("2026-01-01T00:00:00Z"),
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(plot.series[0].points.len(), 2);
@@ -994,15 +1052,15 @@ fn previous_period_tracks_primary_range_and_weekdays_without_overlap() {
         &[],
     );
     assert_eq!(
-        exact[1].period.bounds().unwrap(),
+        exact[1].period.bounds(TimeZone::UTC).unwrap(),
         (time("2026-04-01T00:00:00Z"), time("2026-05-01T00:00:00Z"))
     );
     let weekdays = compared(range, ComparisonMode::Previous, DateMatching::Weekday, &[]);
-    let (start, end) = weekdays[1].period.bounds().unwrap();
+    let (start, end) = weekdays[1].period.bounds(TimeZone::UTC).unwrap();
     assert_eq!(start, time("2026-03-27T00:00:00Z"));
     assert_eq!(start.weekday(), time("2026-05-01T00:00:00Z").weekday());
     assert_eq!(end - start, Duration::days(30));
-    assert!(end <= weekdays[0].period.bounds().unwrap().0);
+    assert!(end <= weekdays[0].period.bounds(TimeZone::UTC).unwrap().0);
     let rolling = compared(
         TimeRange::Days7,
         ComparisonMode::Previous,
@@ -1010,7 +1068,7 @@ fn previous_period_tracks_primary_range_and_weekdays_without_overlap() {
         &[],
     );
     assert_eq!(
-        rolling[1].period.bounds().unwrap(),
+        rolling[1].period.bounds(TimeZone::UTC).unwrap(),
         (time("2026-05-18T12:00:00Z"), time("2026-05-25T12:00:00Z"))
     );
     let changed = compared(
@@ -1020,7 +1078,7 @@ fn previous_period_tracks_primary_range_and_weekdays_without_overlap() {
         &[],
     );
     assert_eq!(
-        changed[1].period.bounds().unwrap(),
+        changed[1].period.bounds(TimeZone::UTC).unwrap(),
         (time("2026-04-02T12:00:00Z"), time("2026-05-02T12:00:00Z"))
     );
 }
@@ -1035,16 +1093,24 @@ fn year_over_year_preserves_calendar_alignment_and_handles_leap_day_boundaries()
         &[],
     );
     assert_eq!(
-        periods[1].period.bounds().unwrap(),
+        periods[1].period.bounds(TimeZone::UTC).unwrap(),
         (time("2023-02-28T00:00:00Z"), time("2023-03-02T00:00:00Z"))
     );
     assert_eq!(
-        periods[0].period.x(time("2024-03-01T12:00:00Z")),
-        periods[1].period.x(time("2023-03-01T12:00:00Z"))
+        periods[0]
+            .period
+            .x(time("2024-03-01T12:00:00Z"), TimeZone::UTC),
+        periods[1]
+            .period
+            .x(time("2023-03-01T12:00:00Z"), TimeZone::UTC)
     );
     assert_eq!(
-        periods[1].period.x(time("2023-03-01T00:00:00Z"))
-            - periods[1].period.x(time("2023-02-28T00:00:00Z")),
+        periods[1]
+            .period
+            .x(time("2023-03-01T00:00:00Z"), TimeZone::UTC)
+            - periods[1]
+                .period
+                .x(time("2023-02-28T00:00:00Z"), TimeZone::UTC),
         2.0 * 86400.0
     );
     for day in ["2024-02-28", "2024-02-29"] {
@@ -1055,7 +1121,7 @@ fn year_over_year_preserves_calendar_alignment_and_handles_leap_day_boundaries()
             &[],
         );
         assert_eq!(
-            single[1].period.bounds().unwrap(),
+            single[1].period.bounds(TimeZone::UTC).unwrap(),
             (time("2023-02-28T00:00:00Z"), time("2023-03-01T00:00:00Z"))
         );
     }
@@ -1066,7 +1132,7 @@ fn year_over_year_preserves_calendar_alignment_and_handles_leap_day_boundaries()
         &[],
     );
     assert_eq!(
-        weekdays[1].period.bounds().unwrap(),
+        weekdays[1].period.bounds(TimeZone::UTC).unwrap(),
         (time("2022-01-02T00:00:00Z"), time("2022-01-09T00:00:00Z"))
     );
     assert_eq!(weekdays[0].period.alignment(), Alignment::Elapsed);
@@ -1098,6 +1164,7 @@ fn custom_comparisons_allow_different_lengths_and_keep_every_original_timestamp(
         range,
         time("2026-01-01T00:00:00Z"),
         &comparison,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(charts.alignment, Alignment::Month);
@@ -1120,6 +1187,7 @@ fn custom_comparisons_allow_different_lengths_and_keep_every_original_timestamp(
         range,
         time("2026-01-01T00:00:00Z"),
         &comparison,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(charts.alignment, Alignment::Elapsed);
@@ -1140,7 +1208,8 @@ fn comparison_disable_empty_custom_and_clock_updates_preserve_primary_selection_
                 now,
                 mode,
                 DateMatching::ExactDate,
-                &[]
+                &[],
+                TimeZone::UTC
             )
             .unwrap(),
             Comparison::None
@@ -1156,6 +1225,7 @@ fn comparison_disable_empty_custom_and_clock_updates_preserve_primary_selection_
             ComparisonMode::Previous,
             DateMatching::ExactDate,
             &[],
+            TimeZone::UTC,
         )
         .unwrap();
         let mut chart = plot(
@@ -1165,6 +1235,7 @@ fn comparison_disable_empty_custom_and_clock_updates_preserve_primary_selection_
             TimeRange::Days30,
             at,
             &comparison,
+            TimeZone::UTC,
         )
         .unwrap();
         styles.assign(&mut chart);
@@ -1192,11 +1263,19 @@ fn cross_year_alignment_custom_weekdays_and_duplicate_ranges_remain_consistent()
         &[],
     );
     assert_eq!(
-        yearly[0].period.x(time("2025-01-01T10:00:00Z")),
-        yearly[1].period.x(time("2024-01-01T10:00:00Z"))
+        yearly[0]
+            .period
+            .x(time("2025-01-01T10:00:00Z"), TimeZone::UTC),
+        yearly[1]
+            .period
+            .x(time("2024-01-01T10:00:00Z"), TimeZone::UTC)
     );
     assert_eq!(
-        Alignment::Year.tick(yearly[0].period.x(time("2025-01-01T00:00:00Z"))),
+        Alignment::Year.tick(
+            yearly[0]
+                .period
+                .x(time("2025-01-01T00:00:00Z"), TimeZone::UTC)
+        ),
         "01 Jan"
     );
     let original = Period::custom("2024-11-01", "2024-11-10").unwrap();
@@ -1222,11 +1301,16 @@ fn cross_year_alignment_custom_weekdays_and_duplicate_ranges_remain_consistent()
         DateMatching::Weekday,
         std::slice::from_ref(&original),
     );
-    let adjusted = weekdays[1].period.bounds().unwrap();
+    let adjusted = weekdays[1].period.bounds(TimeZone::UTC).unwrap();
     assert_eq!(adjusted.0, time("2024-11-02T00:00:00Z"));
     assert_eq!(
         adjusted.0.weekday(),
-        weekdays[0].period.bounds().unwrap().0.weekday()
+        weekdays[0]
+            .period
+            .bounds(TimeZone::UTC)
+            .unwrap()
+            .0
+            .weekday()
     );
     assert_eq!(adjusted.1 - adjusted.0, Duration::days(10));
     assert_eq!(
@@ -1268,9 +1352,12 @@ fn day_presets_use_utc_midnights_including_leap_days_and_year_rollover() {
                 .collect(),
         )
         .unwrap();
-        assert_eq!(TimeRange::Today.bounds(&history, now), (midnight, now));
         assert_eq!(
-            TimeRange::Yesterday.bounds(&history, now),
+            TimeRange::Today.bounds(&history, now, TimeZone::UTC),
+            (midnight, now)
+        );
+        assert_eq!(
+            TimeRange::Yesterday.bounds(&history, now, TimeZone::UTC),
             (yesterday, last_yesterday)
         );
         for (range, expected) in [
@@ -1284,6 +1371,7 @@ fn day_presets_use_utc_midnights_including_leap_days_and_year_rollover() {
                 range,
                 now,
                 &Comparison::None,
+                TimeZone::UTC,
             )
             .unwrap();
             let expected: std::collections::BTreeSet<_> = expected.into_iter().collect();
@@ -1296,17 +1384,19 @@ fn day_presets_use_utc_midnights_including_leap_days_and_year_rollover() {
                 expected
             );
             assert_eq!(
-                latest_in_range(&history, range, now).unwrap().observed_at,
+                latest_in_range(&history, range, now, TimeZone::UTC)
+                    .unwrap()
+                    .observed_at,
                 *expected.last().unwrap()
             );
         }
         let next_midnight = midnight + Duration::days(1);
         assert_eq!(
-            TimeRange::Today.bounds(&history, next_midnight),
+            TimeRange::Today.bounds(&history, next_midnight, TimeZone::UTC),
             (next_midnight, next_midnight)
         );
         assert_eq!(
-            TimeRange::Yesterday.bounds(&history, next_midnight),
+            TimeRange::Yesterday.bounds(&history, next_midnight, TimeZone::UTC),
             (midnight, next_midnight - Duration::nanoseconds(1))
         );
     }
@@ -1342,7 +1432,7 @@ fn day_presets_compare_equivalent_parts_of_prior_days_and_years() {
     ] {
         let periods = compared(range, ComparisonMode::Previous, matching, &[]);
         assert_eq!(
-            periods[1].period.bounds().unwrap(),
+            periods[1].period.bounds(TimeZone::UTC).unwrap(),
             (time(start), time(last) + Duration::nanoseconds(1))
         );
     }
@@ -1353,7 +1443,7 @@ fn day_presets_compare_equivalent_parts_of_prior_days_and_years() {
         &[],
     );
     assert_eq!(
-        yearly[1].period.bounds().unwrap(),
+        yearly[1].period.bounds(TimeZone::UTC).unwrap(),
         (
             time("2025-06-01T00:00:00Z"),
             time("2025-06-01T12:00:00Z") + Duration::nanoseconds(1)
@@ -1380,6 +1470,7 @@ fn population_share_uses_all_observed_servers_and_preserves_unavailability() {
         TimeRange::All,
         now,
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(
@@ -1404,6 +1495,7 @@ fn population_share_uses_all_observed_servers_and_preserves_unavailability() {
         TimeRange::All,
         now,
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(expanded.series.len(), 2);
@@ -1429,6 +1521,7 @@ fn population_share_uses_all_observed_servers_and_preserves_unavailability() {
         TimeRange::All,
         now,
         &comparison,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(compared.series.len(), 6);
@@ -1439,7 +1532,8 @@ fn population_share_uses_all_observed_servers_and_preserves_unavailability() {
             &[],
             TimeRange::All,
             now,
-            &comparison
+            &comparison,
+            TimeZone::UTC
         )
         .unwrap()
         .series
@@ -1483,7 +1577,15 @@ fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
             .map(|m| Period::month(m).unwrap())
             .to_vec(),
     );
-    let maps = activity_heatmaps(&h, &scopes, TimeRange::Days7, now, &comparison).unwrap();
+    let maps = activity_heatmaps(
+        &h,
+        &scopes,
+        TimeRange::Days7,
+        now,
+        &comparison,
+        TimeZone::UTC,
+    )
+    .unwrap();
     assert_eq!(maps.len(), 9);
     let feb_a = &maps[1];
     assert_eq!(
@@ -1542,6 +1644,7 @@ fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
         TimeRange::custom("2024-02-05", "2024-02-05").unwrap(),
         now,
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(
@@ -1553,7 +1656,7 @@ fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
     );
     assert_eq!(filtered[0].cells[6][23].mean(), None);
     assert!(
-        activity_heatmaps(&h, &[], TimeRange::All, now, &comparison)
+        activity_heatmaps(&h, &[], TimeRange::All, now, &comparison, TimeZone::UTC)
             .unwrap()
             .is_empty()
     );
@@ -1601,7 +1704,8 @@ fn heatmap_scales_separate_totals_and_include_unchecked_servers_in_selected_peri
         vec![a.clone()],
         vec![Scope::All],
     ] {
-        let maps = activity_heatmaps(&history, &scopes, range, now, &comparison).unwrap();
+        let maps =
+            activity_heatmaps(&history, &scopes, range, now, &comparison, TimeZone::UTC).unwrap();
         assert_eq!(
             maps.len(),
             scopes.len() * 3,
@@ -1622,6 +1726,7 @@ fn heatmap_scales_separate_totals_and_include_unchecked_servers_in_selected_peri
         range,
         now,
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     assert_eq!(
@@ -1636,6 +1741,7 @@ fn heatmap_scales_separate_totals_and_include_unchecked_servers_in_selected_peri
         TimeRange::custom("2024-04-01", "2024-04-30").unwrap(),
         now,
         &Comparison::None,
+        TimeZone::UTC,
     )
     .unwrap();
     assert!(empty.iter().all(|map| map.color_bounds.is_none()));
@@ -1644,6 +1750,7 @@ fn heatmap_scales_separate_totals_and_include_unchecked_servers_in_selected_peri
 #[test]
 fn heatmap_bounds_follow_available_means_across_selected_panels() {
     let empty = ActivityHeatmap {
+        zone: TimeZone::UTC,
         color_bounds: None,
         label: "No data".into(),
         cells: [[ActivityCell::default(); 24]; 7],
@@ -1682,6 +1789,7 @@ fn heatmap_bounds_follow_available_means_across_selected_panels() {
 fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
     use mnm_stats_dashboard::charts::render_heatmap;
     let mut map = ActivityHeatmap {
+        zone: TimeZone::UTC,
         color_bounds: None,
         label: "<West> & friends — Eastern North American realm".into(),
         cells: [[ActivityCell::default(); 24]; 7],
@@ -1714,6 +1822,7 @@ fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
 #[test]
 fn heatmap_scales_label_common_endpoints_with_fixed_point_numbers() {
     let map = ActivityHeatmap {
+        zone: TimeZone::UTC,
         color_bounds: None,
         label: "Small server with a larger comparison partner".into(),
         cells: [[ActivityCell {
@@ -1765,7 +1874,16 @@ fn online_ratios_use_each_snapshots_counts_and_preserve_gaps() {
     let range = TimeRange::custom("2024-02-29", "2024-03-03").unwrap();
     let now = time("2024-03-04T00:00:00Z");
     let result = |metric: Metric, scope: Scope, range| {
-        plot(&history, &metric, &[scope], range, now, &Comparison::None).unwrap()
+        plot(
+            &history,
+            &metric,
+            &[scope],
+            range,
+            now,
+            &Comparison::None,
+            TimeZone::UTC,
+        )
+        .unwrap()
     };
     for (metric, expected) in [
         (
@@ -1799,14 +1917,19 @@ fn online_ratios_use_each_snapshots_counts_and_preserve_gaps() {
             denominator: 40
         })
     );
-    let partial = result(
-        Metric::OnlineDaily,
-        scope,
-        TimeRange::Custom {
+    let partial = plot(
+        &history,
+        &Metric::OnlineDaily,
+        &[scope],
+        TimeRange::All,
+        time("2024-03-01T00:00:00Z"),
+        &Comparison::periods(vec![Period::Window {
             start: time("2024-02-29T12:00:00Z"),
             end: time("2024-02-29T21:00:00Z"),
-        },
-    );
+        }]),
+        TimeZone::UTC,
+    )
+    .unwrap();
     assert_eq!(partial.series[0].points.len(), 1);
     assert_eq!(partial.series[0].points[0].value.unwrap().number(), 31.0);
     let all = result(Metric::OnlineDaily, Scope::All, range);
@@ -1862,7 +1985,16 @@ fn engagement_metrics_combine_scopes_and_periods_preserving_each_snapshot() {
         Metric::OnlineSubscriptions,
     ];
     let now = time("2024-04-01T00:00:00Z");
-    let all = engagement_plot(&history, &metrics, &scopes, TimeRange::All, now, &periods).unwrap();
+    let all = engagement_plot(
+        &history,
+        &metrics,
+        &scopes,
+        TimeRange::All,
+        now,
+        &periods,
+        TimeZone::UTC,
+    )
+    .unwrap();
     assert_eq!(all.series.len(), 27);
     let mut identities = std::collections::BTreeSet::new();
     for series in &all.series {
@@ -1884,6 +2016,7 @@ fn engagement_metrics_combine_scopes_and_periods_preserving_each_snapshot() {
         TimeRange::All,
         now,
         &periods,
+        TimeZone::UTC,
     )
     .unwrap();
     styles.assign(&mut subset);
@@ -1898,8 +2031,16 @@ fn engagement_metrics_combine_scopes_and_periods_preserving_each_snapshot() {
         assert_eq!(series.points[1].value.unwrap().number(), 15.0);
     }
     for (metrics, scopes) in [(&[][..], &scopes[..]), (&metrics[..], &[][..])] {
-        let empty =
-            engagement_plot(&history, metrics, scopes, TimeRange::All, now, &periods).unwrap();
+        let empty = engagement_plot(
+            &history,
+            metrics,
+            scopes,
+            TimeRange::All,
+            now,
+            &periods,
+            TimeZone::UTC,
+        )
+        .unwrap();
         assert!(empty.series.is_empty());
     }
 }

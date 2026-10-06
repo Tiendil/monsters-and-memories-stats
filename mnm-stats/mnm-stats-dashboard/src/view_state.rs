@@ -1,5 +1,6 @@
 //! Shareable applied dashboard settings; transient menu and hover state stays in the UI.
 use crate::analysis::{ComparisonMode, DateMatching, Metric, Period, Scope, TimeRange, ZoneScope};
+use crate::time::{TimeMode, TimeZone};
 use chrono::Duration;
 
 pub const ONLINE_METRICS: [Metric; 2] = [Metric::OnlineDaily, Metric::OnlineMonthly];
@@ -66,6 +67,7 @@ pub struct ViewState {
     pub target: String,
     pub scopes: Vec<Scope>,
     pub range: TimeRange,
+    pub time_mode: TimeMode,
     pub comparison: ComparisonMode,
     pub matching: DateMatching,
     pub periods: Vec<Period>,
@@ -80,6 +82,7 @@ impl Default for ViewState {
             target: "overview".into(),
             scopes: vec![Scope::All],
             range: TimeRange::default(),
+            time_mode: TimeMode::default(),
             comparison: ComparisonMode::default(),
             matching: DateMatching::default(),
             periods: Vec::new(),
@@ -142,6 +145,11 @@ impl ViewState {
                 .filter(|(k, _)| k == key)
                 .map(|(_, v)| v.as_str())
                 .collect()
+        };
+        state.time_mode = if one("tz") == Some("utc") {
+            TimeMode::Utc
+        } else {
+            TimeMode::Local
         };
         state.range = match one("range") {
             Some("custom") => one("from")
@@ -212,6 +220,9 @@ impl ViewState {
     /// Native links retain the view settings while changing only the destination.
     pub fn link(&self, target: &str) -> String {
         let mut query = form_urlencoded::Serializer::new(String::new());
+        if self.time_mode == TimeMode::Utc {
+            query.append_pair("tz", "utc");
+        }
         if self.range != TimeRange::default() {
             query.append_pair("range", self.range.key());
             if let TimeRange::Custom { start, end } = self.range {
@@ -240,7 +251,7 @@ impl ViewState {
             query.append_pair("match", "weekday");
         }
         for period in &self.periods {
-            if let Some((start, end)) = period.bounds() {
+            if let Some((start, end)) = period.bounds(TimeZone::UTC) {
                 query.append_pair(
                     "period",
                     &format!(

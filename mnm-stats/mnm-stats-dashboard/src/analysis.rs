@@ -1,4 +1,5 @@
 //! Dashboard calculations over collected observations, with no resampling or backfill.
+use crate::time::TimeZone;
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Timelike, Utc};
 use mnm_stats_model::{History, Snapshot};
 use std::collections::BTreeMap;
@@ -263,8 +264,8 @@ pub enum TimeRange {
     Year,
     All,
     Custom {
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: NaiveDate,
+        end: NaiveDate,
     },
 }
 
@@ -308,20 +309,23 @@ impl TimeRange {
     }
     pub fn custom(start: &str, end: &str) -> Result<Self, String> {
         let (start, end) = date_bounds(start, end)?;
-        Ok(Self::Custom {
-            start,
-            end: end - Duration::nanoseconds(1),
-        })
+        Ok(Self::Custom { start, end })
     }
-    pub fn bounds(self, history: &History, now: DateTime<Utc>) -> (DateTime<Utc>, DateTime<Utc>) {
+    pub fn bounds(
+        self,
+        history: &History,
+        now: DateTime<Utc>,
+        zone: TimeZone,
+    ) -> (DateTime<Utc>, DateTime<Utc>) {
         let days = match self {
             Self::Today | Self::Yesterday => {
-                let midnight = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
+                let today = zone.at(now).date_naive();
+                let midnight = zone.midnight(today);
                 return if self == Self::Today {
                     (midnight, now)
                 } else {
                     (
-                        midnight - Duration::days(1),
+                        zone.midnight(today.pred_opt().unwrap()),
                         midnight - Duration::nanoseconds(1),
                     )
                 };
@@ -337,13 +341,18 @@ impl TimeRange {
                     now,
                 );
             }
-            Self::Custom { start, end } => return (start, end),
+            Self::Custom { start, end } => {
+                return (
+                    zone.midnight(start),
+                    zone.midnight(end.succ_opt().unwrap()) - Duration::nanoseconds(1),
+                );
+            }
         };
         (now - Duration::days(days), now)
     }
 }
 
-fn date_bounds(start: &str, end: &str) -> Result<(DateTime<Utc>, DateTime<Utc>), String> {
+fn date_bounds(start: &str, end: &str) -> Result<(NaiveDate, NaiveDate), String> {
     let parse = |value: &str| {
         NaiveDate::parse_from_str(value, "%Y-%m-%d")
             .ok()
@@ -355,22 +364,19 @@ fn date_bounds(start: &str, end: &str) -> Result<(DateTime<Utc>, DateTime<Utc>),
     if start > end {
         return Err("The end date must be on or after the start date.".into());
     }
-    Ok((
-        start.and_hms_opt(0, 0, 0).unwrap().and_utc(),
-        end.succ_opt()
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
-            .and_utc(),
-    ))
+    Ok((start, end))
 }
 
-fn date_label(start: DateTime<Utc>, end: DateTime<Utc>) -> String {
+fn date_label(start: NaiveDate, end: NaiveDate) -> String {
     format!("{} – {}", start.format("%d %b %Y"), end.format("%d %b %Y"))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Period {
+    Dates {
+        start: NaiveDate,
+        end: NaiveDate,
+    },
     Month(NaiveDate),
     Year(i32),
     Interval {
@@ -390,16 +396,33 @@ pub enum Period {
 impl Period {
     pub fn custom(start: &str, end: &str) -> Result<Self, String> {
         let (start, end) = date_bounds(start, end)?;
-        Ok(Self::window(start, end))
-    }
-    pub fn window(start: DateTime<Utc>, end: DateTime<Utc>) -> Self {
-        if start.time() == chrono::NaiveTime::MIN && start.day() == 1 {
-            if start.month() == 1 && start.checked_add_months(chrono::Months::new(12)) == Some(end)
+        let exclusive = end.succ_opt().unwrap();
+        Ok(
+            if start.day() == 1
+                && start.month() == 1
+                && start.checked_add_months(chrono::Months::new(12)) == Some(exclusive)
             {
-                return Self::Year(start.year());
+                Self::Year(start.year())
+            } else if start.day() == 1
+                && start.checked_add_months(chrono::Months::new(1)) == Some(exclusive)
+            {
+                Self::Month(start)
+            } else {
+                Self::Dates { start, end }
+            },
+        )
+    }
+    pub fn window(start: DateTime<Utc>, end: DateTime<Utc>, zone: TimeZone) -> Self {
+        let local_start = zone.at(start).naive_local();
+        let local_end = zone.at(end).naive_local();
+        if local_start.time() == chrono::NaiveTime::MIN && local_start.day() == 1 {
+            if local_start.month() == 1
+                && local_start.checked_add_months(chrono::Months::new(12)) == Some(local_end)
+            {
+                return Self::Year(local_start.year());
             }
-            if start.checked_add_months(chrono::Months::new(1)) == Some(end) {
-                return Self::Month(start.date_naive());
+            if local_start.checked_add_months(chrono::Months::new(1)) == Some(local_end) {
+                return Self::Month(local_start.date());
             }
         }
         Self::Window { start, end }
@@ -409,7 +432,7 @@ impl Period {
             .map_err(|_| "Choose a valid month (YYYY-MM).")?;
         let result = Self::Month(date);
         result
-            .bounds()
+            .bounds(TimeZone::UTC)
             .ok_or("Month is outside the supported calendar.")?;
         Ok(result)
     }
@@ -426,13 +449,14 @@ impl Period {
             .and_utc();
         let result = Self::Interval { start, hours };
         result
-            .bounds()
+            .bounds(TimeZone::UTC)
             .ok_or("Duration must be positive and fit the supported calendar.")?;
         Ok(result)
     }
-    pub fn bounds(&self) -> Option<(DateTime<Utc>, DateTime<Utc>)> {
-        let midnight = |date: NaiveDate| date.and_hms_opt(0, 0, 0).map(|d| d.and_utc());
+    pub fn bounds(&self, zone: TimeZone) -> Option<(DateTime<Utc>, DateTime<Utc>)> {
+        let midnight = |date: NaiveDate| zone.resolve(date.and_hms_opt(0, 0, 0)?);
         match self {
+            Self::Dates { start, end } => Some((midnight(*start)?, midnight(end.succ_opt()?)?)),
             Self::Month(date) => {
                 if date.day() != 1 {
                     return None;
@@ -454,19 +478,23 @@ impl Period {
             _ => None,
         }
     }
-    pub fn label(&self) -> String {
+    pub fn label(&self, zone: TimeZone) -> String {
+        let name = zone.name();
         match self {
-            Self::Month(date) => date.format("%B %Y (UTC)").to_string(),
-            Self::Year(year) => format!("Calendar {year} (UTC)"),
-            Self::Interval { start, hours } => {
-                format!("{} UTC · {hours} hours", start.format("%Y-%m-%d %H:%M"))
-            }
-            Self::Window { start, end } | Self::CalendarRange { start, end } => {
-                format!(
-                    "{} (UTC)",
-                    date_label(*start, *end - Duration::nanoseconds(1))
+            Self::Dates { start, end } => format!("{} ({name})", date_label(*start, *end)),
+            Self::Month(date) => format!("{} ({name})", date.format("%B %Y")),
+            Self::Year(year) => format!("Calendar {year} ({name})"),
+            Self::Interval { start, hours } => format!(
+                "{} {name} · {hours} hours",
+                zone.format(*start, "%Y-%m-%d %H:%M")
+            ),
+            Self::Window { start, end } | Self::CalendarRange { start, end } => format!(
+                "{} ({name})",
+                date_label(
+                    zone.at(*start).date_naive(),
+                    zone.at(*end - Duration::nanoseconds(1)).date_naive()
                 )
-            }
+            ),
         }
     }
     pub fn alignment(&self) -> Alignment {
@@ -474,10 +502,11 @@ impl Period {
             Self::Month(_) => Alignment::Month,
             Self::Year(_) => Alignment::Year,
             Self::CalendarRange { .. } => Alignment::Year,
-            Self::Interval { .. } | Self::Window { .. } => Alignment::Elapsed,
+            Self::Dates { .. } | Self::Interval { .. } | Self::Window { .. } => Alignment::Elapsed,
         }
     }
-    pub fn x(&self, time: DateTime<Utc>) -> f64 {
+    pub fn x(&self, time: DateTime<Utc>, zone: TimeZone) -> f64 {
+        let time = zone.at(time);
         let fraction = f64::from(time.nanosecond()) / 1_000_000_000.0;
         match self {
             Self::Month(_) => {
@@ -489,15 +518,18 @@ impl Period {
                     .unwrap()
                     .ordinal0();
                 let years = match self {
-                    Self::CalendarRange { start, .. } => time.year() - start.year(),
+                    Self::CalendarRange { start, .. } => time.year() - zone.at(*start).year(),
                     _ => 0,
                 };
                 f64::from(years) * 366.0 * 86400.0
                     + f64::from(day * 86400 + time.num_seconds_from_midnight())
                     + fraction
             }
+            Self::Dates { start, .. } => {
+                seconds(time.with_timezone(&Utc)) - seconds(zone.midnight(*start))
+            }
             Self::Interval { start, .. } | Self::Window { start, .. } => {
-                seconds(time) - seconds(*start)
+                seconds(time.with_timezone(&Utc)) - seconds(*start)
             }
         }
     }
@@ -509,24 +541,24 @@ pub fn seconds(time: DateTime<Utc>) -> f64 {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Alignment {
-    Utc,
+    Chronological,
     Month,
     Year,
     Elapsed,
 }
 
 impl Alignment {
-    pub fn description(self) -> &'static str {
+    pub fn description(self, zone: TimeZone) -> String {
         match self {
-            Self::Utc => "Observation time (UTC)",
-            Self::Month => "Day of month and time (UTC)",
-            Self::Year => "Month and day (UTC; leap-day space retained)",
-            Self::Elapsed => "Elapsed hours from each UTC start",
+            Self::Chronological => format!("Observation time ({})", zone.name()),
+            Self::Month => format!("Day of month and time ({})", zone.name()),
+            Self::Year => format!("Month and day ({}; leap-day space retained)", zone.name()),
+            Self::Elapsed => "Elapsed hours from each period start".into(),
         }
     }
     pub fn tick(self, x: f64) -> String {
         match self {
-            Self::Utc => DateTime::from_timestamp(x as i64, 0)
+            Self::Chronological => DateTime::from_timestamp(x as i64, 0)
                 .map_or_else(String::new, |t| t.format("%d %b %H:%M").to_string()),
             Self::Month => format!(
                 "{} {:02}:{:02}",
@@ -564,7 +596,7 @@ impl Comparison {
             periods
                 .into_iter()
                 .map(|period| ComparedPeriod {
-                    identity: period.label(),
+                    identity: period.label(TimeZone::UTC),
                     period,
                 })
                 .collect(),
@@ -613,7 +645,7 @@ pub enum DateMatching {
     Weekday,
 }
 
-/// Resolve the primary range and its comparisons without changing original timestamps.
+/// Resolve selected calendar periods into UTC instants without changing observations.
 pub fn comparison_for(
     history: &History,
     range: TimeRange,
@@ -621,54 +653,73 @@ pub fn comparison_for(
     mode: ComparisonMode,
     matching: DateMatching,
     custom: &[Period],
+    zone: TimeZone,
 ) -> Result<Comparison, String> {
     if mode == ComparisonMode::Disabled || (mode == ComparisonMode::Custom && custom.is_empty()) {
         return Ok(Comparison::None);
     }
-    let (start, last) = range.bounds(history, now);
+    let (start, last) = range.bounds(history, now, zone);
     let end = last
         .checked_add_signed(Duration::nanoseconds(1))
         .ok_or("Range exceeds the supported calendar.")?;
     if end <= start {
         return Err("Choose a range ending after its start.".into());
     }
-    let duration = if matches!(
+    let calendar = matches!(
         range,
         TimeRange::Today | TimeRange::Yesterday | TimeRange::Custom { .. }
-    ) {
+    );
+    let duration = if calendar {
         end - start
     } else {
         (last - start).max(Duration::nanoseconds(1))
     };
-    let mut primary = Period::window(start, end);
+    let mut primary = Period::window(start, end, zone);
     let mut secondary = match mode {
         ComparisonMode::Previous => {
-            let mut previous = start
-                .checked_sub_signed(if range == TimeRange::Today {
-                    Duration::days(1)
-                } else {
-                    duration
-                })
-                .ok_or("Previous period exceeds the supported calendar.")?;
-            if matching == DateMatching::Weekday {
-                let days = (previous.weekday().num_days_from_monday() as i64
-                    - start.weekday().num_days_from_monday() as i64)
-                    .rem_euclid(7);
-                previous = previous
-                    .checked_sub_signed(Duration::days(days))
+            let calendar_days = match range {
+                TimeRange::Today | TimeRange::Yesterday => Some(1),
+                TimeRange::Custom { start, end } => Some((end - start).num_days() + 1),
+                _ => None,
+            };
+            let (mut previous, mut previous_end) = if let Some(days) = calendar_days {
+                (
+                    zone.shift_days(start, -days)
+                        .ok_or("Previous period exceeds the supported calendar.")?,
+                    zone.shift_days(end, -days)
+                        .ok_or("Previous period exceeds the supported calendar.")?,
+                )
+            } else {
+                let previous = start
+                    .checked_sub_signed(duration)
                     .ok_or("Previous period exceeds the supported calendar.")?;
+                (previous, previous + duration)
+            };
+            if matching == DateMatching::Weekday {
+                let days = (zone.at(previous).weekday().num_days_from_monday() as i64
+                    - zone.at(start).weekday().num_days_from_monday() as i64)
+                    .rem_euclid(7);
+                previous = zone
+                    .shift_days(previous, -days)
+                    .ok_or("Previous period exceeds the supported calendar.")?;
+                previous_end = if calendar {
+                    zone.shift_days(previous_end, -days)
+                        .ok_or("Previous period exceeds the supported calendar.")?
+                } else {
+                    previous + duration
+                };
             }
             vec![ComparedPeriod {
                 identity: "previous".into(),
-                period: Period::window(previous, previous + duration),
+                period: Period::window(previous, previous_end, zone),
             }]
         }
         ComparisonMode::YearOverYear => {
-            let previous = start
-                .checked_sub_months(chrono::Months::new(12))
+            let previous = zone
+                .previous_year(start)
                 .ok_or("Previous year exceeds the supported calendar.")?;
-            let previous_end = last
-                .checked_sub_months(chrono::Months::new(12))
+            let previous_end = zone
+                .previous_year(last)
                 .and_then(|t| t.checked_add_signed(Duration::nanoseconds(1)))
                 .ok_or("Previous year exceeds the supported calendar.")?;
             primary = Period::CalendarRange { start, end };
@@ -684,7 +735,8 @@ pub fn comparison_for(
             .iter()
             .cloned()
             .map(|period| ComparedPeriod {
-                identity: period.label(),
+                // Keep colors attached to the entered dates when the display zone changes.
+                identity: period.label(TimeZone::UTC),
                 period,
             })
             .collect(),
@@ -695,26 +747,35 @@ pub fn comparison_for(
         for selected in &mut secondary {
             let (other, other_end) = selected
                 .period
-                .bounds()
+                .bounds(zone)
                 .ok_or("Invalid comparison period.")?;
-            let days = (start.weekday().num_days_from_monday() as i64
-                - other.weekday().num_days_from_monday() as i64
+            let days = (zone.at(start).weekday().num_days_from_monday() as i64
+                - zone.at(other).weekday().num_days_from_monday() as i64
                 + 3)
             .rem_euclid(7)
                 - 3;
-            let adjusted = other
-                .checked_add_signed(Duration::days(days))
+            let adjusted = zone
+                .shift_days(other, days)
                 .ok_or("Comparison exceeds the supported calendar.")?;
-            let length = if mode == ComparisonMode::YearOverYear {
-                end - start
+            let (reference_start, reference_end) = if mode == ComparisonMode::YearOverYear {
+                (start, end)
             } else {
-                other_end - other
+                (other, other_end)
             };
+            let adjusted_end = if calendar || mode == ComparisonMode::Custom {
+                let wall_length =
+                    zone.at(reference_end).naive_local() - zone.at(reference_start).naive_local();
+                zone.at(adjusted)
+                    .naive_local()
+                    .checked_add_signed(wall_length)
+                    .and_then(|local| zone.resolve(local))
+            } else {
+                adjusted.checked_add_signed(reference_end - reference_start)
+            }
+            .ok_or("Comparison exceeds the supported calendar.")?;
             selected.period = Period::Window {
                 start: adjusted,
-                end: adjusted
-                    .checked_add_signed(length)
-                    .ok_or("Comparison exceeds the supported calendar.")?,
+                end: adjusted_end,
             };
         }
     }
@@ -725,7 +786,7 @@ pub fn comparison_for(
     for selected in secondary {
         if !periods
             .iter()
-            .any(|p| p.period.bounds() == selected.period.bounds())
+            .any(|p| p.period.bounds(zone) == selected.period.bounds(zone))
         {
             periods.push(selected);
         }
@@ -754,6 +815,7 @@ impl Point {
         if self.value.is_none()
             || previous.value.is_none()
             || elapsed >= Duration::hours(24)
+            || self.x <= previous.x
             || self.x - previous.x >= 86400.0
         {
             None
@@ -797,6 +859,7 @@ impl Series {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Plot {
+    pub zone: TimeZone,
     pub series: Vec<Series>,
     pub alignment: Alignment,
     pub x_bounds: (f64, f64),
@@ -810,6 +873,7 @@ pub fn plot(
     range: TimeRange,
     now: DateTime<Utc>,
     comparison: &Comparison,
+    zone: TimeZone,
 ) -> Result<Plot, String> {
     let names = servers(history);
     let scope_label = |scope: &Scope| {
@@ -819,10 +883,11 @@ pub fn plot(
             scope.label(&names)
         }
     };
-    let (start, end) = range.bounds(history, now);
+    let (start, end) = range.bounds(history, now, zone);
     let mut result = Plot {
+        zone,
         series: Vec::new(),
-        alignment: Alignment::Utc,
+        alignment: Alignment::Chronological,
         x_bounds: (seconds(start), seconds(end)),
         note: String::new(),
     };
@@ -865,13 +930,13 @@ pub fn plot(
             );
             for selected in periods {
                 let period = &selected.period;
-                let (start, end) = period.bounds().ok_or("Invalid comparison period.")?;
+                let (start, end) = period.bounds(zone).ok_or("Invalid comparison period.")?;
                 if result.alignment == Alignment::Year {
-                    result.x_bounds.0 = result.x_bounds.0.min(period.x(start));
+                    result.x_bounds.0 = result.x_bounds.0.min(period.x(start, zone));
                     result.x_bounds.1 = result
                         .x_bounds
                         .1
-                        .max(period.x(end - Duration::nanoseconds(1)));
+                        .max(period.x(end - Duration::nanoseconds(1), zone));
                 } else if result.alignment == Alignment::Elapsed {
                     result.x_bounds.1 = result.x_bounds.1.max(seconds(end) - seconds(start));
                 }
@@ -879,7 +944,7 @@ pub fn plot(
                     result.series.push(Series {
                         identity: format!("period:{}:{scope:?}", selected.identity),
                         style: result.series.len(),
-                        label: format!("{} · {}", scope_label(scope), period.label()),
+                        label: format!("{} · {}", scope_label(scope), period.label(zone)),
                         points: history
                             .snapshots()
                             .iter()
@@ -889,7 +954,7 @@ pub fn plot(
                                 x: if result.alignment == Alignment::Elapsed {
                                     seconds(s.observed_at) - seconds(start)
                                 } else {
-                                    period.x(s.observed_at)
+                                    period.x(s.observed_at, zone)
                                 },
                                 value: metric.value(s, scope),
                             })
@@ -937,10 +1002,19 @@ pub fn engagement_plot(
     range: TimeRange,
     now: DateTime<Utc>,
     comparison: &Comparison,
+    zone: TimeZone,
 ) -> Result<Plot, String> {
-    let mut result = plot(history, &Metric::DailyMonthly, &[], range, now, comparison)?;
+    let mut result = plot(
+        history,
+        &Metric::DailyMonthly,
+        &[],
+        range,
+        now,
+        comparison,
+        zone,
+    )?;
     for metric in metrics {
-        let mut part = plot(history, metric, scopes, range, now, comparison)?;
+        let mut part = plot(history, metric, scopes, range, now, comparison, zone)?;
         for series in &mut part.series {
             series.identity = format!("metric:{}:{}", metric.key(), series.identity);
             series.label = format!("{} · {}", metric.title(), series.label);
@@ -967,19 +1041,20 @@ pub fn population_plot(
     range: TimeRange,
     now: DateTime<Utc>,
     comparison: &Comparison,
+    zone: TimeZone,
 ) -> Result<Plot, String> {
     let names = zones(history);
     let mut combined: Option<Plot> = None;
-    for zone in selected_zones {
-        let label = zone.label(&names);
-        let metric = match zone {
+    for selected_zone in selected_zones {
+        let label = selected_zone.label(&names);
+        let metric = match selected_zone {
             ZoneScope::All => Metric::StartingZones,
             ZoneScope::Zone(id) => Metric::Zone(id.clone(), label.clone()),
         };
-        let mut part = plot(history, &metric, scopes, range, now, comparison)?;
+        let mut part = plot(history, &metric, scopes, range, now, comparison, zone)?;
         for series in &mut part.series {
             series.label = format!("{label} · {}", series.label);
-            if let ZoneScope::Zone(id) = zone {
+            if let ZoneScope::Zone(id) = selected_zone {
                 series.identity = format!("zone:{id:?}:{}", series.identity);
             }
         }
@@ -995,7 +1070,15 @@ pub fn population_plot(
         }
         Ok(result)
     } else {
-        let mut result = plot(history, &Metric::StartingZones, &[], range, now, comparison)?;
+        let mut result = plot(
+            history,
+            &Metric::StartingZones,
+            &[],
+            range,
+            now,
+            comparison,
+            zone,
+        )?;
         result.note = "Select starting zones to show their data.".into();
         Ok(result)
     }
@@ -1006,8 +1089,9 @@ pub fn latest_in_range(
     history: &History,
     range: TimeRange,
     now: DateTime<Utc>,
+    zone: TimeZone,
 ) -> Option<&Snapshot> {
-    let (start, end) = range.bounds(history, now);
+    let (start, end) = range.bounds(history, now, zone);
     history
         .snapshots()
         .iter()
@@ -1044,10 +1128,11 @@ impl ActivityCell {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ActivityHeatmap {
+    pub zone: TimeZone,
     pub label: String,
     /// Shared across periods, separately for totals and all individual servers.
     pub color_bounds: Option<(f64, f64)>,
-    /// Monday first, then UTC hour 00 through 23.
+    /// Monday first, then hour 00 through 23 in the selected time zone.
     pub cells: [[ActivityCell; 24]; 7],
 }
 
@@ -1057,6 +1142,7 @@ pub fn activity_heatmaps(
     range: TimeRange,
     now: DateTime<Utc>,
     comparison: &Comparison,
+    zone: TimeZone,
 ) -> Result<Vec<ActivityHeatmap>, String> {
     if scopes.is_empty() {
         return Ok(Vec::new());
@@ -1077,6 +1163,7 @@ pub fn activity_heatmaps(
         range,
         now,
         comparison,
+        zone,
     )?
     .series
     .into_iter()
@@ -1086,9 +1173,10 @@ pub fn activity_heatmaps(
         let mut cells = [[ActivityCell::default(); 24]; 7];
         for point in series.points {
             if let Some(MetricValue::Count(value)) = point.value {
-                // Comparison x coordinates may be shifted. Bucket by original UTC time.
-                let cell = &mut cells[point.at.weekday().num_days_from_monday() as usize]
-                    [point.at.hour() as usize];
+                // Bucket the original instant in the selected zone, not the aligned x coordinate.
+                let local = zone.at(point.at);
+                let cell = &mut cells[local.weekday().num_days_from_monday() as usize]
+                    [local.hour() as usize];
                 cell.total = cell
                     .total
                     .checked_add(value)
@@ -1099,6 +1187,7 @@ pub fn activity_heatmaps(
         Ok((
             scope,
             ActivityHeatmap {
+                zone,
                 label: series.label,
                 color_bounds: None,
                 cells,

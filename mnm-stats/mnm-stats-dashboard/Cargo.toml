@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 mnm-stats-model.workspace = true
 chrono.workspace = true
+chrono-tz.workspace = true
 plotly.workspace = true
 form_urlencoded.workspace = true
 

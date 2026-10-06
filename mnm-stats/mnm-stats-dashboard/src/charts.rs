@@ -1,6 +1,7 @@
 //! Plotly figure construction from Rust-owned observations and presentation tokens.
 use crate::{
     analysis::{ActivityHeatmap, Alignment, Connection, Metric, Plot},
+    time::TimeZone,
     tokens,
 };
 use plotly::{
@@ -58,7 +59,7 @@ fn time_ticks(plot: &Plot) -> Vec<f64> {
         _ => {
             let (start, end) = plot.x_bounds;
             let target = (end - start) / 3.0;
-            // Round ticks to seconds, minutes, hours or whole UTC days. Unix
+            // Round chronological ticks to elapsed seconds, minutes, hours or days. Unix
             // numeric ticks alone can label arbitrary times such as 16:53.
             let step = [
                 1, 5, 15, 30, 60, 300, 900, 1800, 3600, 10800, 21600, 43200, 86400, 172800, 604800,
@@ -87,13 +88,13 @@ fn height(plot: &Plot) -> usize {
     )
 }
 
-fn hover_text(point: &crate::analysis::Point, label: &str) -> String {
+fn hover_text(point: &crate::analysis::Point, label: &str, zone: TimeZone) -> String {
     point.value.map_or_else(String::new, |value| {
         format!(
             "<b>{} {}</b><br>{}",
             value.display(),
             escape(label),
-            point.at.format("%d %b %Y, %H:%M UTC"),
+            zone.timestamp(point.at),
         )
     })
 }
@@ -140,7 +141,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             }
             x.push(Some(point.x));
             y.push(point.value.map(|v| v.number()));
-            text.push(hover_text(point, &series.label));
+            text.push(hover_text(point, &series.label, plot.zone));
             // Dense lines omit markers except where an observation has no connected neighbor.
             let connected_before = previous.is_some_and(|p| point.connection_from(p).is_some());
             let connected_after = series
@@ -228,7 +229,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
     let labels = ticks
         .iter()
         .map(|x| {
-            if plot.alignment == Alignment::Utc {
+            if plot.alignment == Alignment::Chronological {
                 let span = plot.x_bounds.1 - plot.x_bounds.0;
                 let format = if span > 180.0 * 86400.0 {
                     "%b %Y"
@@ -238,7 +239,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
                     "%d %b<br>%H:%M"
                 };
                 chrono::DateTime::from_timestamp(*x as i64, 0)
-                    .map_or_else(String::new, |t| t.format(format).to_string())
+                    .map_or_else(String::new, |t| plot.zone.format(t, format))
             } else {
                 plot.alignment.tick(*x)
             }
@@ -256,8 +257,9 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
         .tick_values(ticks)
         .tick_text(labels)
         .show_spikes(false);
-    if plot.alignment != Alignment::Utc {
-        x_axis = x_axis.title(Title::with_text(plot.alignment.description()).font(font.clone()));
+    if plot.alignment != Alignment::Chronological {
+        x_axis = x_axis
+            .title(Title::with_text(plot.alignment.description(plot.zone)).font(font.clone()));
     }
     figure.set_layout(
         Layout::new()
@@ -351,8 +353,8 @@ pub fn render_heatmap(map: &ActivityHeatmap, bounds: (f64, f64)) -> Figure {
                 .map(|(hour, cell)| {
                     cell.mean().map_or_else(String::new, |mean| {
                         format!(
-                            "<b>{mean:.2} mean online</b><br>{}<br>{} {hour:02}:00–{:02}:00 UTC<br>{} {} · sum {}",
-                            escape(&map.label), weekdays[day], hour + 1, cell.samples,
+                            "<b>{mean:.2} mean online</b><br>{}<br>{} {hour:02}:00–{:02}:00 {}<br>{} {} · sum {}",
+                            escape(&map.label), weekdays[day], hour + 1, escape(map.zone.name()), cell.samples,
                             if cell.samples == 1 { "record" } else { "records" }, cell.total
                         )
                     })
@@ -442,7 +444,10 @@ pub fn render_heatmap(map: &ActivityHeatmap, bounds: (f64, f64)) -> Figure {
                             .map(str::to_owned)
                             .to_vec(),
                     )
-                    .title(Title::with_text("Time of day (UTC)").font(font.clone())),
+                    .title(
+                        Title::with_text(format!("Time of day ({})", map.zone.short_label()))
+                            .font(font.clone()),
+                    ),
             )
             .y_axis(
                 axis()
@@ -486,10 +491,11 @@ pub mod browser {
     #[component]
     pub fn InteractivePlot(plot: Arc<Plot>, metric: Metric) -> impl IntoView {
         let label = format!(
-            "{}; {}. {} Hover a point for its exact value and UTC timestamp, or use Download JSONL for all recorded observations.",
+            "{}; {}. {} Hover a point for its exact value and timestamp in {}, or use Download JSONL for all recorded observations.",
             metric.title(),
             metric.unit(),
-            metric.description()
+            metric.description(),
+            plot.zone.name()
         );
         view! { <PlotSurface figure=render(&plot, &metric) height=height(&plot) label/> }
     }
@@ -497,8 +503,9 @@ pub mod browser {
     #[component]
     pub fn InteractiveHeatmap(map: ActivityHeatmap, bounds: (f64, f64)) -> impl IntoView {
         let label = format!(
-            "Activity heatmap; {}. Average online population by day of the week and hour (UTC). Hover for the average, total and number of records used. Blank cells mean no data. Download JSONL contains the original records.",
-            map.label
+            "Activity heatmap; {}. Average online population by day of the week and hour ({}). Hover for the average, total and number of records used. Blank cells mean no data. Download JSONL contains the original records.",
+            map.label,
+            map.zone.name()
         );
         view! { <PlotSurface figure=render_heatmap(&map, bounds) height=tokens::T_CHART_HEATMAP_HEIGHT.pixels() as usize label/> }
     }

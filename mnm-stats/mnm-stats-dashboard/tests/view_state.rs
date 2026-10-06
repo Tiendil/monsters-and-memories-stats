@@ -1,7 +1,9 @@
+use mnm_stats_dashboard::time::TimeMode;
 use mnm_stats_dashboard::{analysis::*, view_state::*};
 
 #[test]
 fn simple_links_keep_defaults_and_chart_ownership() {
+    assert_eq!(ViewState::default().time_mode, TimeMode::Local);
     for (target, section) in [
         ("overview", Section::Overview),
         ("chart-online", Section::Overview),
@@ -38,6 +40,7 @@ fn complete_view_round_trips_without_losing_ids_or_inactive_settings() {
     let id = "unavailable & + # ? : / = , % 雪";
     let state = ViewState {
         target: "chart-online-presence".into(),
+        time_mode: TimeMode::Utc,
         scopes: vec![
             Scope::Server(id.into()),
             Scope::All,
@@ -56,6 +59,7 @@ fn complete_view_round_trips_without_losing_ids_or_inactive_settings() {
         subscriber_metrics: vec![Metric::OnlineSubscriptions, Metric::DailySubscriptions],
     };
     let fragment = state.fragment();
+    assert!(fragment.contains("tz=utc"));
     assert!(fragment.contains("range=custom&from=2024-02-29&to=2024-03-02"));
     assert!(!fragment[1..].contains('#'));
     assert_eq!(ViewState::from_fragment(&fragment), state);

@@ -253,7 +253,7 @@ The last valid dashboard data MUST remain usable after collection failure.
 This section records the presentation contract for the collected current-state snapshots.
 The dashboard's information hierarchy, layout, and visual interaction MUST follow [dashboard-design.md](dashboard-design.md).
 Tabs, plots, and their applied selections MUST be directly addressable through URL fragments, with navigation and plot-link controls as defined in [dashboard-design.md](dashboard-design.md#direct-links).
-Shared links, refresh, and browser Back/Forward MUST restore server selections, time ranges, comparison settings and custom dates, starting-zone selections, and both Engagement metric selections.
+Shared links, refresh, and browser Back/Forward MUST restore the time-zone choice, server selections, time ranges, comparison settings and custom dates, starting-zone selections, and both Engagement metric selections.
 
 The dashboard footer MUST credit Plotly with a link to its JavaScript charting library.
 The dashboard MUST provide a visible link labeled “Star on GitHub” to the [project repository](https://github.com/Tiendil/monsters-and-memories-stats), inviting visitors to star it on GitHub.
@@ -284,20 +284,22 @@ The available ranges MUST be:
 - last 180 days.
 - last year.
 - all time.
-- a custom inclusive range of UTC dates.
+- a custom inclusive range of dates in the selected time zone.
 
 Custom dates MUST be valid, with the end on or after the start. Both boundary dates MUST be included in full.
 Invalid inputs MUST leave the applied range unchanged and show a local validation message.
 
 The default range MUST be the last 7 days.
-Today MUST run from the current UTC midnight through the current time. Yesterday MUST include the complete preceding UTC calendar day and exclude the current midnight.
-These day presets MUST follow the current UTC date when the clock crosses midnight.
-The rolling ranges and All time MUST end at the current UTC time; “last year” MUST mean the previous 365 days, and “all time” MUST include all collected history.
+Today MUST run from midnight in the selected time zone through the current time.
+Yesterday MUST include the complete preceding calendar day in that zone and exclude the current midnight.
+These day presets MUST follow the current date in the selected time zone when its clock crosses midnight.
+Rolling ranges MUST use elapsed days of 24 hours each.
+The rolling ranges and All time MUST end at the current instant; “last year” MUST mean the previous 365 days, and “all time” MUST include all collected history.
 The UI MUST state the selected interval and show when it contains no observations.
 
 The UI MUST show the latest collection time and the available history interval.
 The displayed latest collection time MUST indicate data age without a separate freshness warning or status label.
-Times MUST be labeled UTC.
+Displayed times MUST identify the selected time zone as defined below.
 Missing samples MUST NOT be plotted as zeros or added as synthetic observations.
 Connections between consecutive available observations MUST use their actual collection interval:
 
@@ -314,8 +316,9 @@ Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
 Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSONL.
 Hovering a plotted observation with the mouse MUST show its exact value followed by its series name on the first line and its collection date and time on the second line.
-The displayed time MUST use the original observation's UTC date, hour, and minute, omitting seconds and fractional seconds.
-It MUST use a readable date and end with `UTC`, without an ISO `T` separator or `Z` suffix.
+The displayed time MUST convert the original observation instant to the selected time zone, omitting seconds and fractional seconds.
+It MUST use a readable date without an ISO `T` separator or `Z` suffix.
+Tooltip timestamps MUST end with the selected zone’s name, using `UTC` or the browser’s IANA name such as `Europe/Berlin`, without a numeric UTC-offset suffix.
 The download MUST preserve each original timestamp at its full stored precision.
 This MUST work for every observation time-series chart and comparison mode, including dense series and overlapping comparison points.
 Aggregate heatmap details MUST follow Population insights below.
@@ -328,6 +331,27 @@ The following states MUST be understandable:
 - empty data.
 - invalid data.
 
+### Time zones
+
+The dashboard MUST offer UTC and Local time for all visible dates and times, with Local time selected by default.
+An explicit UTC or local setting in the URL MUST override the default.
+Local time MUST use the browser's IANA time zone and show its name followed by “(local)” on the local-time button in both modes.
+The choice MUST update the history summary, date controls, comparison labels, chart axes, tooltips, and heatmap aggregation together.
+Offsets MUST follow the time-zone rules at each observation instant, including daylight-saving changes and fractional-hour offsets.
+If the browser zone is unavailable or unsupported, the dashboard MUST use UTC and disable the Local time action.
+A shared URL requesting unavailable local time MUST explain the UTC fallback.
+
+Today, Yesterday, custom dates, calendar comparisons, and weekday matching MUST use the selected zone's calendar.
+Switching zones MUST retain entered calendar dates while recalculating their instant boundaries.
+Calendar-day ranges MAY span 23 or 25 elapsed hours across daylight-saving changes.
+An ambiguous calendar boundary MUST use its first occurrence; a skipped boundary MUST advance to the first valid instant after the gap.
+Chronological charts MUST retain original instants and actual collection intervals.
+Calendar-aligned comparison lines MUST break when repeated local clock times make their aligned coordinates stop increasing.
+
+The time-zone choice MUST be encoded in shared links and restored on reload and browser Back/Forward.
+Local links MUST use each recipient's browser zone rather than the sender's zone.
+Stored observations and downloaded timestamps MUST remain unchanged in UTC.
+
 ### Population insights
 
 The Player activity section MUST include server population share over time and an activity heatmap derived from collected online counts.
@@ -337,14 +361,15 @@ For this chart, “All Servers” MUST expand to all discovered individual serve
 An absent server or zero all-server total MUST yield an unavailable share; a published zero with a positive total MUST remain zero.
 Share lines MUST retain ordinary observation gaps, percentage hover values, and server/period identities.
 
-The activity heatmap MUST group available online observations by their original UTC weekday and hour, with Monday through Sunday and hours 00 through 23.
+The activity heatmap MUST group available online observations by their original instant’s weekday and hour in the selected time zone, with Monday through Sunday and hours 00 through 23.
+Repeated local hours MUST contribute all their observations to the same weekday/hour cell; hours with no observations MUST remain blank.
 Each cell MUST show the arithmetic mean of the available observations for that bucket within the selected range or comparison period.
 Every available observation MUST have equal weight; gaps MUST NOT be interpolated or treated as zero, and an absent server MUST NOT contribute a sample.
 An empty bucket MUST remain blank and distinct from a measured zero.
 Details MUST identify:
 
 - The server scope and period when applicable.
-- The weekday and UTC hour interval.
+- The weekday, hour interval, and selected time zone.
 - The rounded mean.
 - The exact sum and observation count.
 
@@ -363,8 +388,8 @@ The total MUST NOT influence the individual-server scale, and individual-server 
 Server selection MUST control panel visibility without changing either scale for the same selected periods.
 Missing cells MUST NOT affect these bounds; a measured zero MUST be included.
 If every available cell in a scale group has the same mean, that scale MUST use a nonnegative, nonzero span containing and labeling that value so constant selections remain readable.
-Each displayed scale range MUST be labeled and recomputed when the selected time range or comparison periods change.
-Period comparison MUST group by each observation's actual UTC weekday and hour rather than shift observations onto the primary period's calendar.
+Each displayed scale range MUST be labeled and recomputed when the selected time zone, time range, or comparison periods change.
+Period comparison MUST group by each observation's actual weekday and hour in the selected time zone rather than shift observations onto the primary period's calendar.
 Starting-zone selections MUST affect only the starting-zone chart.
 
 **Example:** One server has 20 of 80 online players, giving a 25-percent share even when it is the only selected server.
@@ -410,9 +435,11 @@ The selected primary range MUST remain visible and included in every time-frame 
 Comparison MUST be disabled initially, and users MUST be able to enable or disable it without changing the primary range or selected servers.
 The comparison choices MUST be:
 
-- **Previous period:** the same duration immediately preceding the primary range when matching exact dates. For Today, compare the same elapsed part of the preceding UTC day, beginning at midnight.
+- **Previous period:** the same duration immediately preceding a rolling primary range when matching exact dates.
+  For calendar-date ranges, use the same number of preceding calendar dates.
+  For Today, compare midnight through the same local clock time on the preceding day.
 - **Year over year:** the primary range's dates shifted back one calendar year when matching exact dates; a February 29 boundary MUST clamp to February 28 where necessary.
-- **Custom period:** an inclusive range of UTC dates. Users MUST be able to add and remove any number of custom periods, including periods longer or shorter than the primary range.
+- **Custom period:** an inclusive range of dates in the selected time zone. Users MUST be able to add and remove any number of custom periods, including periods longer or shorter than the primary range.
 
 Changing the primary range MUST recalculate automatic comparisons and retain the selected custom periods.
 The dashboard MUST retain the primary chart while a custom comparison has no periods yet.
@@ -429,6 +456,7 @@ Weekday matching MUST align each secondary start to the primary start's weekday:
 - For Year over year, choose the nearest matching weekday to the prior-year start, within three days, and use the primary duration.
 - For Custom period, choose the nearest matching weekday to the selected start, within three days, and retain the selected duration.
 
+Calendar-date comparisons MUST preserve civil date and clock spans when matching weekdays; rolling ranges MUST preserve elapsed duration.
 The menu and chart legends MUST identify the resolved dates, including any weekday adjustment.
 Switching back to exact dates MUST restore the original custom dates.
 
@@ -438,7 +466,7 @@ With exact-date matching, comparisons containing only complete calendar months M
 Year-over-year comparisons with exact-date matching MUST align by month, day, and time of day, including when the primary range covers only part of a year or crosses a year boundary.
 Other ranges and weekday-matched periods MUST align by elapsed time from their respective starts.
 Different durations MUST retain their actual lengths; the common axis MUST accommodate the longest period without stretching observations.
-Calendar boundaries MUST use UTC, and exact-value inspection MUST display each observation's original UTC date and time to the minute rather than the aligned comparison coordinate.
+Calendar boundaries MUST use the selected time zone, and exact-value inspection MUST display each original observation instant in that zone to the minute rather than the aligned comparison coordinate.
 Calendar-year comparison MUST be distinguished from the standard rolling “last year” range of 365 days.
 Dates absent from a compared period, such as a leap day in a non-leap year, MUST remain absent.
 Connections across missing collection intervals MUST follow the same interval rules as ordinary charts.
@@ -522,7 +550,7 @@ Live source and deployment evidence MUST be gathered through separate operationa
 
 ### Time ranges (R9)
 
-Browser verification of all presets and custom UTC dates on every chart family, including boundary timestamps, validation, and an empty interval.
+Browser verification of all presets and custom dates in UTC and local time on every chart family, including boundary timestamps, validation, and an empty interval.
 
 ### Failure handling (R10)
 

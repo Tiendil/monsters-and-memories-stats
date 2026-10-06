@@ -103,6 +103,14 @@ impl Browser {
             _driver: driver,
             pending_downloads: Cell::new(0),
         };
+        // Baseline date fixtures use UTC; the time-zone scenario overrides it explicitly.
+        browser.request(
+            Method::POST,
+            "/goog/cdp/execute",
+            json!({
+                "cmd":"Emulation.setTimezoneOverride", "params":{"timezoneId":"UTC"}
+            }),
+        );
         // Fix the browser clock; fixtures and assertions stay in Rust.
         // Pausing all Chrome timers stalls navigation.
         let now: chrono::DateTime<chrono::Utc> = "2026-06-01T12:00:00Z".parse().unwrap();
@@ -527,7 +535,7 @@ impl Browser {
             self.expect_text("#first-collection", &first.format("%d %b %Y").to_string());
             self.expect_text(
                 "#latest-collection",
-                &latest.format("%d %b %Y, %H:%M UTC").to_string(),
+                &latest.format("%d %b %Y, %H:%M").to_string(),
             );
         }
         self.request(
@@ -1299,6 +1307,99 @@ impl Browser {
         );
         self.expect_destination("", "overview");
         self.verify_requests(url, true);
+        self.request(Method::POST, "/url", json!({"url":url}));
+    }
+
+    fn verify_time_zone(&self, url: &str) {
+        self.request(
+            Method::POST,
+            "/goog/cdp/execute",
+            json!({
+                "cmd":"Emulation.setTimezoneOverride", "params":{"timezoneId":"Asia/Kathmandu"}
+            }),
+        );
+        self.request(Method::POST, "/url", json!({"url":"about:blank"}));
+        self.request(Method::POST, "/url", json!({"url":url}));
+        self.expect_count("#time-zone-local[aria-pressed='true']", 1);
+        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 17:45");
+        self.click("#time-zone-utc");
+        self.expect_count("#time-zone-utc[aria-pressed='true']", 1);
+        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 12:00");
+        let utc_url = self.request(Method::GET, "/url", Value::Null);
+        assert!(utc_url.as_str().unwrap().ends_with("#overview?tz=utc"));
+        self.activate("#time-zone-local");
+        self.expect_count("#time-zone-local[aria-pressed='true']", 1);
+        // Chrome versions may expose the older IANA alias for the same zone.
+        let local_label = self.text("#time-zone-local");
+        let zone_name = local_label.strip_suffix(" (local)").unwrap();
+        assert!(matches!(zone_name, "Asia/Kathmandu" | "Asia/Katmandu"));
+        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 17:45");
+        let local_url = self.request(Method::GET, "/url", Value::Null);
+        assert!(local_url.as_str().unwrap().ends_with("#overview"));
+        self.ready("online");
+        wait_until(
+            || {
+                self.request(Method::POST, "/execute/sync", json!({
+            "script":"const p=document.querySelector('[data-metric=online] .plot-surface');return p.data.some(t=>(t.text||[]).some(s=>s.includes(arguments[0])));", "args":[format!("01 Jun 2026, 17:45 {zone_name}")]
+        })) == true
+            },
+            "local chart tooltip text",
+        );
+        self.click("#time-range");
+        self.click("#custom-range");
+        assert!(self.text(".date-fields").contains("From (local)"));
+        assert!(self.text(".date-fields").contains("To (local)"));
+        self.click("#time-range");
+        self.request(Method::POST, "/refresh", json!({}));
+        self.expect_count("#time-zone-local[aria-pressed='true']", 1);
+        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 17:45");
+        self.click("#time-zone-utc");
+        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 12:00");
+        self.request(Method::POST, "/back", json!({}));
+        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 17:45");
+        self.request(Method::POST, "/forward", json!({}));
+        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 12:00");
+
+        // The two near-midnight UTC records fall in the same Monday 05:00 local cell.
+        self.request(Method::POST, "/url", json!({"url":format!("{url}#chart-activity-heatmap?tz=local&range=custom&from=2026-06-01&to=2026-06-01")}));
+        self.expect_destination("#chart-activity-heatmap", "population");
+        self.ready("activity-heatmap");
+        assert!(
+            self.text(".heatmap-panel .xtitle")
+                .contains("Time of day (local)")
+        );
+        let bucket = self.request(Method::POST, "/execute/sync", json!({
+            "script":"return document.querySelector('.heatmap-panel .plot-surface').data[0].text[0][5];", "args":[]
+        }));
+        assert!(
+            bucket
+                .as_str()
+                .unwrap()
+                .contains(&format!("Mon 05:00–06:00 {zone_name}"))
+        );
+        assert!(bucket.as_str().unwrap().contains("2 records"));
+        self.click("#time-zone-utc");
+        wait_until(
+            || {
+                self.text(".heatmap-panel .xtitle")
+                    .contains("Time of day (UTC)")
+            },
+            "UTC heatmap labels",
+        );
+        let bucket = self.request(Method::POST, "/execute/sync", json!({
+            "script":"return document.querySelector('.heatmap-panel .plot-surface').data[0].text[0][0];", "args":[]
+        }));
+        assert!(bucket.as_str().unwrap().contains("Mon 00:00–01:00 UTC"));
+        assert!(bucket.as_str().unwrap().contains("1 record"));
+        self.verify_requests(url, true);
+        self.request(
+            Method::POST,
+            "/goog/cdp/execute",
+            json!({
+                "cmd":"Emulation.setTimezoneOverride", "params":{"timezoneId":"UTC"}
+            }),
+        );
+        self.request(Method::POST, "/url", json!({"url":"about:blank"}));
         self.request(Method::POST, "/url", json!({"url":url}));
     }
 
@@ -2451,6 +2552,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     browser.verify_metadata(&url);
     browser.verify_token_styles(false);
     browser.verify_extended_palette();
+    browser.verify_time_zone(&url);
 
     let tokens = scratch.join("tokens.json");
     let changed = changed_tokens(&root);
