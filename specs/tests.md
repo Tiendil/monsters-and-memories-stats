@@ -123,6 +123,8 @@ They MUST use the same chart-engine URL and asset-loading behavior as ordinary b
 
 Browser coverage MUST include:
 
+- Search and Open Graph metadata in the initial HTML, with matching titles and descriptions, a fragment-free production canonical URL, and consistent sharing URLs.
+- Direct HTTP access to the static sharing image at root and repository-subpath deployments, with its actual format and dimensions matching the image metadata.
 - Rendering and exact-value inspection for the supported metric families.
 - Mouse hover details with exact counts or percentages rounded to two decimal places followed by the complete unwrapped series name on the first line and the original UTC date and time to the minute on the second, including comparison plots, overlapping points, and resized or horizontally scrolled charts.
 - Native chart hover on dense series without visible point markers.

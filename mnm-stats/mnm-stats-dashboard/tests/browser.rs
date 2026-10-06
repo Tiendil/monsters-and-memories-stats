@@ -2102,6 +2102,65 @@ impl Browser {
         self.select("#comparison-mode", "disabled");
     }
 
+    fn verify_metadata(&self, url: &str) {
+        // Parse the HTTP response separately: metadata must not depend on WASM.
+        let html = self
+            .client
+            .get(url)
+            .send()
+            .unwrap()
+            .error_for_status()
+            .unwrap()
+            .text()
+            .unwrap();
+        let metadata = self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({"script":r#"
+                const doc = new DOMParser().parseFromString(arguments[0], 'text/html');
+                return {
+                    title: doc.title,
+                    description: doc.querySelector('meta[name="description"]').content,
+                    canonical: doc.querySelector('link[rel="canonical"]').href,
+                    og: Object.fromEntries(Array.from(doc.querySelectorAll('meta[property^="og:"]'), el => [el.getAttribute('property'), el.content]))
+                };
+            "#,"args":[html]}),
+        );
+        assert_eq!(
+            metadata["title"],
+            "Monsters & Memories Statistics — Population & Activity"
+        );
+        assert!(metadata["description"].as_str().unwrap().len() > 50);
+        let canonical = "https://tiendil.github.io/monsters-and-memories-stats/";
+        assert_eq!(metadata["canonical"], canonical);
+        let og = &metadata["og"];
+        assert_eq!(og["og:title"], metadata["title"]);
+        assert_eq!(og["og:description"], metadata["description"]);
+        assert_eq!(og["og:type"], "website");
+        assert_eq!(og["og:url"], canonical);
+        assert_eq!(og["og:image"], format!("{canonical}social-preview.png"));
+        assert!(!og["og:image:alt"].as_str().unwrap().is_empty());
+
+        // Fetch from the local deployment, never from the production metadata URL.
+        let response = self
+            .client
+            .get(format!("{url}social-preview.png"))
+            .send()
+            .unwrap()
+            .error_for_status()
+            .unwrap();
+        assert_eq!(response.headers()["content-type"], "image/png");
+        assert_eq!(og["og:image:type"], "image/png");
+        let png = response.bytes().unwrap();
+        assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
+        assert_eq!(&png[12..16], b"IHDR");
+        let width = u32::from_be_bytes(png[16..20].try_into().unwrap());
+        let height = u32::from_be_bytes(png[20..24].try_into().unwrap());
+        assert_eq!((width, height), (1200, 630));
+        assert_eq!(og["og:image:width"], width.to_string());
+        assert_eq!(og["og:image:height"], height.to_string());
+    }
+
     fn verify_requests(&self, url: &str, require_wasm: bool) {
         let plotly_url = include_str!("../index.html")
             .split("src=\"")
@@ -2320,6 +2379,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
             .starts_with("plotly-")
     }));
     browser.verify(&origin, &json!({"snapshots":[]}), &scratch);
+    browser.verify_metadata(&origin);
     println!("Empty history renders and downloads at the site root.");
 
     let first = json!({"schema_version":1,"observed_at":"2026-02-28T23:10:00.123Z","active_subscriptions":40,
@@ -2388,6 +2448,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
     let url = format!("{origin}mnm/");
     browser.verify(&url, &expected, &scratch);
     browser.verify_features(&url, &expected, &scratch);
+    browser.verify_metadata(&url);
     browser.verify_token_styles(false);
     browser.verify_extended_palette();
 

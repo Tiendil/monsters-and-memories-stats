@@ -25,10 +25,23 @@ The [layout illustration](../docs/dashboard-layout.svg) demonstrates the hierarc
 
 ## Page composition
 
+### Search and sharing metadata
+
+The initial HTML MUST contain the title “Monsters & Memories Statistics — Population & Activity” and the description “Monsters & Memories player counts, daily and monthly activity, subscribers, and server comparisons, with historical charts and downloadable data.”
+This metadata MUST be available without running JavaScript or WebAssembly.
+The canonical link MUST use the absolute production dashboard URL without a fragment or filter parameters.
+Tab, plot, and filter selections MUST retain the same metadata and canonical URL.
+
+Open Graph metadata MUST reuse the page title, description, and canonical production URL.
+It MUST declare the type `website` and the absolute URL of a static preview image published alongside the dashboard.
+The image metadata MUST specify its MIME type, dimensions, and descriptive alternative text.
+The preview MUST be a 1200 by 630 pixel PNG using the dashboard's typography and colors, with “Monsters & Memories Statistics,” “Population · Activity · Engagement,” and “by Tiendil.”
+It MUST NOT contain changing metric values.
+Production metadata URLs MUST be updated together when the public site address changes.
+
 ### Masthead and collection status
 
 The masthead MUST use the heading “Statistics for Monsters & Memories” and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
-The browser page title MUST use the same wording as the heading.
 The name “Tiendil” MUST link to `https://tiendil.org`, open in a new tab, and be visibly identifiable as a link.
 Its action group MUST provide “Download JSONL,” “Star on GitHub,” and “Request a feature.”
 It MUST remain compact rather than use a promotional hero layout.
