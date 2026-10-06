@@ -1,4 +1,5 @@
 use mnm_stats_dashboard::time::TimeMode;
+use mnm_stats_dashboard::trends::BusyGrouping;
 use mnm_stats_dashboard::{analysis::*, view_state::*};
 
 #[test]
@@ -18,6 +19,10 @@ fn simple_links_keep_defaults_and_chart_ownership() {
         ("chart-daily-monthly", Section::Relationships),
         ("chart-online-presence", Section::Relationships),
         ("chart-subscriber-activity", Section::Relationships),
+        ("trends", Section::Trends),
+        ("table-server-growth", Section::Trends),
+        ("table-busiest-hours", Section::Trends),
+        ("table-starting-areas", Section::Trends),
     ] {
         let state = ViewState::from_fragment(&format!("#{target}"));
         assert_eq!(state.section(), section);
@@ -41,6 +46,7 @@ fn complete_view_round_trips_without_losing_ids_or_inactive_settings() {
     let state = ViewState {
         target: "chart-online-presence".into(),
         time_mode: TimeMode::Utc,
+        busy_grouping: BusyGrouping::Weekday,
         scopes: vec![
             Scope::Server(id.into()),
             Scope::All,
@@ -71,6 +77,30 @@ fn complete_view_round_trips_without_losing_ids_or_inactive_settings() {
             ..state
         }
     );
+}
+
+#[test]
+fn trends_settings_survive_navigation_and_recover_independently() {
+    for period in ["week", "month", "year", "bad"] {
+        let state = ViewState::from_fragment(&format!(
+            "#table-busiest-hours?trend-period={}&busy-hours=weekday&range=90&compare=previous",
+            period
+        ));
+        assert_eq!(state.section(), Section::Trends);
+        assert!(!state.fragment().contains("trend-period"));
+        assert_eq!(state.busy_grouping, BusyGrouping::Weekday);
+        assert_eq!(ViewState::from_fragment(&state.fragment()), state);
+        let switched = ViewState::from_fragment(&state.link("overview"));
+
+        assert_eq!(switched.busy_grouping, BusyGrouping::Weekday);
+        assert_eq!(switched.range, state.range);
+        assert_eq!(switched.comparison, ComparisonMode::Previous);
+    }
+    let state =
+        ViewState::from_fragment("#trends?trend-period=bad&busy-hours=bad&scope=server%3Asample");
+    assert_eq!(state.busy_grouping, BusyGrouping::AllDays);
+    assert_eq!(state.scopes, [Scope::Server("sample".into())]);
+    assert_eq!(ViewState::from_fragment("#trends").fragment(), "#trends");
 }
 
 #[test]

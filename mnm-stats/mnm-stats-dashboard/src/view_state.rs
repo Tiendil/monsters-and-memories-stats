@@ -1,6 +1,7 @@
 //! Shareable applied dashboard settings; transient menu and hover state stays in the UI.
 use crate::analysis::{ComparisonMode, DateMatching, Metric, Period, Scope, TimeRange, ZoneScope};
 use crate::time::{TimeMode, TimeZone};
+use crate::trends::BusyGrouping;
 use chrono::Duration;
 
 pub const ONLINE_METRICS: [Metric; 2] = [Metric::OnlineDaily, Metric::OnlineMonthly];
@@ -15,14 +16,21 @@ pub enum Section {
     Overview,
     Population,
     Relationships,
+    Trends,
 }
 impl Section {
-    pub const ALL: [Self; 3] = [Self::Overview, Self::Population, Self::Relationships];
+    pub const ALL: [Self; 4] = [
+        Self::Overview,
+        Self::Population,
+        Self::Relationships,
+        Self::Trends,
+    ];
     pub fn label(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
             Self::Population => "Player activity",
             Self::Relationships => "Engagement",
+            Self::Trends => "Trends",
         }
     }
     pub fn key(self) -> &'static str {
@@ -30,6 +38,7 @@ impl Section {
             Self::Overview => "overview",
             Self::Population => "population",
             Self::Relationships => "relationships",
+            Self::Trends => "trends",
         }
     }
 
@@ -38,6 +47,7 @@ impl Section {
             Self::Overview => "#overview",
             Self::Population => "#player-activity",
             Self::Relationships => "#engagement",
+            Self::Trends => "#trends",
         }
     }
 
@@ -57,6 +67,10 @@ impl Section {
             | "#chart-daily-monthly"
             | "#chart-online-presence"
             | "#chart-subscriber-activity" => Some(Self::Relationships),
+            "#trends"
+            | "#table-server-growth"
+            | "#table-busiest-hours"
+            | "#table-starting-areas" => Some(Self::Trends),
             _ => None,
         }
     }
@@ -68,6 +82,7 @@ pub struct ViewState {
     pub scopes: Vec<Scope>,
     pub range: TimeRange,
     pub time_mode: TimeMode,
+    pub busy_grouping: BusyGrouping,
     pub comparison: ComparisonMode,
     pub matching: DateMatching,
     pub periods: Vec<Period>,
@@ -83,6 +98,7 @@ impl Default for ViewState {
             scopes: vec![Scope::All],
             range: TimeRange::default(),
             time_mode: TimeMode::default(),
+            busy_grouping: BusyGrouping::default(),
             comparison: ComparisonMode::default(),
             matching: DateMatching::default(),
             periods: Vec::new(),
@@ -150,6 +166,11 @@ impl ViewState {
             TimeMode::Utc
         } else {
             TimeMode::Local
+        };
+        state.busy_grouping = if one("busy-hours") == Some("weekday") {
+            BusyGrouping::Weekday
+        } else {
+            BusyGrouping::AllDays
         };
         state.range = match one("range") {
             Some("custom") => one("from")
@@ -222,6 +243,9 @@ impl ViewState {
         let mut query = form_urlencoded::Serializer::new(String::new());
         if self.time_mode == TimeMode::Utc {
             query.append_pair("tz", "utc");
+        }
+        if self.busy_grouping == BusyGrouping::Weekday {
+            query.append_pair("busy-hours", "weekday");
         }
         if self.range != TimeRange::default() {
             query.append_pair("range", self.range.key());

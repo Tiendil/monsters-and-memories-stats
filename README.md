@@ -41,6 +41,16 @@ Use Servers to toggle individual servers and All Servers independently. Use the 
 
 Presentation follows [the dashboard design](specs/dashboard-design.md) and [design tokens](specs/design-tokens.md). IM Fell English is distributed locally with its [SIL Open Font License](mnm-stats/mnm-stats-dashboard/fonts/OFL.txt) and [source attribution](mnm-stats/mnm-stats-dashboard/fonts/README.txt).
 
+## Player trends
+
+Trends ranks server growth, recurring busy hours, and starting-area activity. It shares Servers and the UTC/local-time choice with the charts. “All Servers” includes each individual server once. Its Week, Month, and Year columns compare the last 7, 30, and 365 complete calendar dates with the preceding equal-length period, side by side. Hover a column header for the exact date ranges. Chart time ranges, comparisons, and local metric selectors are preserved when switching tabs but do not filter Trends. Trend settings and table destinations are included in shared URLs.
+
+“Typical online” is the median of daily medians. Each day needs observations for at least half its elapsed hours, rounded up (12 on a 23- or 24-hour day; 13 on a 25-hour day). At least half of a period's dates must qualify, rounded up. Each qualifying date has equal weight, so a day with more samples does not dominate the result. These thresholds provide a minimum amount of data, not statistical confidence; sampling can still be uneven. Missing servers and hours never become zero or carried-forward values. A present server with an empty starting-area list contributes its validated zero total.
+
+Server growth sorts by the weekly difference in typical online. Each period cell shows the absolute difference with the percentage difference in parentheses. For example, 120 versus 100 gives +20 and +20%. A zero previous value leaves the percentage unavailable. Starting-area activity combines each server’s starting areas into one row, ordered by the latest week’s typical combined population, and shows the change for all three periods. Area counts are summed within each observation before calculating daily and period medians. Change needs sufficient coverage in both periods. These figures do not measure server transfers, new players, retention, or available groups.
+
+Busiest hours shows independent top-three lists in each period column for every server, using non-overlapping three-hour windows from 00:00–03:00 through 21:00–24:00. All days combines each window across dates; By weekday compares separate weekday/window combinations. A date/window needs samples in at least two distinct local hours. The typical population is the median of those daily window medians, requiring at least half the applicable dates and at least two dates. Repeated daylight-saving hours retain their observations but do not count as two distinct clock hours. Weekday rankings therefore usually appear in Month or Year; one busy evening cannot establish a recurring weekday pattern. Changes compare the same window in the previous period. Table details include the underlying typical values and qualifying-day coverage.
+
 ## Local use
 
 For a populated preview, from bash or fish:

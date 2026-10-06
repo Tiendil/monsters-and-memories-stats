@@ -82,7 +82,8 @@ Unavailable local time MUST follow the UTC fallback defined in [requirements.md]
 ### Exploration controls
 
 A shared control area MUST follow “Now” and precede the active content.
-It MUST expose a multi-select labeled “Servers,” the time range, and period comparison.
+It MUST expose a multi-select labeled “Servers,” the time range, and period comparison for chart sections.
+In Trends, the chart date controls MUST be hidden while retaining their applied settings for return navigation.
 The Servers control MUST provide independently toggleable checkboxes for “All Servers” and every server discovered in the complete history.
 Server and zone names throughout the dashboard MUST use their display name when available, falling back to the ID for a missing or blank name without appending an ID to a display name.
 Only “All Servers” MUST be selected initially; selecting it MUST NOT select the individual-server checkboxes.
@@ -130,11 +131,12 @@ Opening one menu MUST close any other open selection menu.
 
 ### Content navigation
 
-The dashboard MUST provide three clearly named content sections:
+The dashboard MUST provide four clearly named content sections:
 
 - Overview — trends for online population, daily activity, monthly activity, and global subscriptions.
 - Player activity — starting-zone populations, server population shares, and activity by weekday and hour.
 - Engagement — daily participation, online presence, and activity relative to subscribers.
+- Trends — player-facing rankings of server growth, busiest hours, and starting-area activity.
 
 Overview MUST be the initial section when the URL has no recognized tab or plot fragment.
 One section MUST be presented at a time so visitors do not need to scan every metric to find a relevant chart.
@@ -149,6 +151,10 @@ The section links MUST use these URL fragments:
 - Overview: `#overview`.
 - Player activity: `#player-activity`.
 - Engagement: `#engagement`.
+- Trends: `#trends`.
+
+Trends tables MUST use `#table-server-growth`, `#table-busiest-hours`, and `#table-starting-areas`.
+Table headings MUST offer the same native permalink, selection preservation, owning-section navigation, focus, and scrolling behavior as plot headings.
 
 Each plot MUST have a stable `#chart-…` fragment, retaining existing plot identifiers independently of display-title changes.
 Opening a plot fragment MUST select its owning section before scrolling to and focusing the plot.
@@ -170,6 +176,7 @@ The fragment MUST use `#destination?key=value&key=value` with URL-encoded keys a
 Parameters MUST encode applied view settings with these names:
 
 - `tz`: `utc` or `local`, with the default `local` omitted.
+- `busy-hours`: `all` or `weekday`, with the default `all` omitted.
 - `range`: `today`, `yesterday`, `7`, `30`, `90`, `180`, `365`, `all`, or `custom`.
 - `from` and `to`: inclusive dates in the selected time zone in `YYYY-MM-DD` form for a custom primary range.
 - Repeated `scope`: `all` or `server:<source ID>`.
@@ -296,6 +303,32 @@ Every selected metric MUST combine with every selected server scope and period, 
 The two metric selectors MUST affect only their own charts.
 Ratio axes MUST remain percentages without a 100-percent ceiling.
 The tab MUST NOT have a redundant “Ratios of reported counts” heading or additional summary cards.
+
+### Trends
+
+Trends MUST show three full-width table cards in this order:
+
+1. Server growth — server, Week, Month, and Year.
+2. Busiest hours — server, Week, Month, and Year.
+3. Starting-area activity — server, Week, Month, and Year; one row combines all starting areas within that server.
+
+The shared controls MUST show Servers without a Trends period selector.
+Each table MUST show all three period columns together; the section MUST NOT repeat a selected date range above the tables.
+Column-header tooltips and accessible labels MUST identify the latest complete 7-, 30-, or 365-day interval and the preceding equal-length interval, with the selected time-zone name.
+Server and starting-area cells MUST show absolute change with percentage change in parentheses when available.
+Busiest-hours cells MUST contain their own ordered lists of up to three windows, each with typical online and absolute change.
+Busiest hours MUST contain a control labeled “Group hours,” offering All days and By weekday.
+Each card MUST have a concise factual explanation of its ranking rather than a second raw-metric summary.
+Typical population and change cells MUST provide current/prior values and qualifying-day coverage through accessible descriptions and native tooltips.
+Counts MUST use grouped digits and retain up to one decimal place for derived medians.
+Changes MUST use explicit signs without implying that increases or decreases are success or failure.
+Positive deltas MUST use restrained green text and negative deltas restrained red text; zero and unavailable changes MUST use neutral muted text.
+The absolute and percentage changes MUST share their direction color, while Busiest hours MUST color only the delta and retain neutral population values and time labels.
+Direction colors MUST use dedicated semantic text tokens, meet normal-text contrast requirements, and preserve the explicit signs so color is supplementary.
+Unavailable cells MUST say “Not available”; empty tables and insufficient comparisons MUST have concise explanations.
+Tables MUST use semantic headers and row labels, aligned numeric columns, and readable server names.
+Horizontal overflow on small screens MUST stay inside a labeled keyboard-accessible table region, without page overflow.
+Shared server selections MUST affect all tables, while unrelated chart-local selectors MUST remain preserved and inactive.
 
 ### Data explanations
 

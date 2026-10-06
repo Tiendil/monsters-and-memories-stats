@@ -131,6 +131,16 @@
       "unavailable": {
         "$value": "{color.text.muted}",
         "$description": "Unavailable-data notices, using low-emphasis supporting text."
+      },
+      "change": {
+        "increase": {
+          "$value": "{tailwind.color.green.700}",
+          "$description": "Positive deltas in trend tables, indicating an increase alongside an explicit plus sign."
+        },
+        "decrease": {
+          "$value": "{tailwind.color.red.700}",
+          "$description": "Negative deltas in trend tables, indicating a decrease alongside an explicit minus sign."
+        }
       }
     },
     "control": {
@@ -364,6 +374,13 @@
       "preferred-width": {
         "$value": "{tailwind.spacing.48}",
         "$description": "Preferred width of a comparison-period input before wrapping; it may shrink on narrow screens."
+      }
+    },
+    "ranking-label": {
+      "$type": "dimension",
+      "min-width": {
+        "$value": "{tailwind.spacing.48}",
+        "$description": "Minimum server-label width in ranking tables, keeping names readable while the table scrolls on narrow screens."
       }
     },
     "chart-control": {

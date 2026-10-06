@@ -3,6 +3,7 @@ use crate::{
     charts,
     charts::browser::{InteractiveHeatmap, InteractivePlot},
     time::{TimeMode, TimeZone, browser_time_zone},
+    trends::{self, BusyGrouping, PopulationSummary, TrendPeriod},
     view_state::*,
 };
 use chrono::{DateTime, Utc};
@@ -68,6 +69,7 @@ struct ViewSignals {
     scopes: RwSignal<Vec<Scope>>,
     range: RwSignal<TimeRange>,
     time_mode: RwSignal<TimeMode>,
+    busy_grouping: RwSignal<BusyGrouping>,
     comparison: RwSignal<ComparisonMode>,
     matching: RwSignal<DateMatching>,
     periods: RwSignal<Vec<Period>>,
@@ -84,6 +86,7 @@ impl ViewSignals {
             scopes: RwSignal::new(state.scopes.clone()),
             range: RwSignal::new(state.range),
             time_mode: RwSignal::new(state.time_mode),
+            busy_grouping: RwSignal::new(state.busy_grouping),
             comparison: RwSignal::new(state.comparison),
             matching: RwSignal::new(state.matching),
             periods: RwSignal::new(state.periods.clone()),
@@ -100,6 +103,7 @@ impl ViewSignals {
             scopes: self.scopes.get(),
             range: self.range.get(),
             time_mode: self.time_mode.get(),
+            busy_grouping: self.busy_grouping.get(),
             comparison: self.comparison.get(),
             matching: self.matching.get(),
             periods: self.periods.get(),
@@ -132,6 +136,7 @@ impl ViewSignals {
         restore!(scopes, scopes);
         restore!(range, range);
         restore!(time_mode, time_mode);
+        restore!(busy_grouping, busy_grouping);
         restore!(comparison, comparison);
         restore!(matching, matching);
         restore!(periods, periods);
@@ -158,7 +163,7 @@ impl ViewSignals {
     }
 
     fn scroll_to_plot(self, target: String) {
-        if !target.starts_with("chart-") {
+        if !target.starts_with("chart-") && !target.starts_with("table-") {
             return;
         }
         request_animation_frame(move || {
@@ -548,6 +553,254 @@ fn ActivityCard(
     }
 }
 
+#[derive(Clone)]
+struct TrendCell {
+    text: String,
+    detail: String,
+    delta: Option<f64>,
+    windows: Vec<trends::BusyHours>,
+}
+
+fn trend_label(text: impl Into<String>) -> TrendCell {
+    TrendCell {
+        text: text.into(),
+        detail: String::new(),
+        delta: None,
+        windows: Vec::new(),
+    }
+}
+
+fn trend_number(value: f64, signed: bool) -> String {
+    let rounded = (value.abs() * 10.0).round() / 10.0;
+    let mut number = grouped_count(rounded.floor() as u128);
+    let decimal = ((rounded - rounded.floor()) * 10.0).round() as u8;
+    if decimal != 0 {
+        number.push_str(&format!(".{decimal}"));
+    }
+    if signed && rounded != 0.0 {
+        number.insert_str(0, if value < 0.0 { "−" } else { "+" });
+    }
+    number
+}
+
+fn trend_detail(current: &PopulationSummary, previous: &PopulationSummary) -> String {
+    let describe = |value: &PopulationSummary| match value.value {
+        Some(typical) => format!(
+            "{} typical online, {} qualifying days, {} observations",
+            trend_number(typical, false),
+            value.days,
+            value.observations
+        ),
+        None => format!("not enough history ({} qualifying days)", value.days),
+    };
+    format!(
+        "Current: {}. Previous: {}.",
+        describe(current),
+        describe(previous)
+    )
+}
+
+fn trend_change(current: &PopulationSummary, previous: &PopulationSummary) -> TrendCell {
+    let change = trends::change(current, previous);
+    let text = change.map_or_else(
+        || "Not available".into(),
+        |change| {
+            let count = trend_number(change.count, true);
+            change.percent.map_or_else(
+                || count.clone(),
+                |percent| format!("{count} ({}%)", trend_number(percent, true)),
+            )
+        },
+    );
+    let mut detail = trend_detail(current, previous);
+    if previous.value == Some(0.0) {
+        detail.push_str(
+            " Percentage change is unavailable because the previous population was zero.",
+        );
+    }
+    TrendCell {
+        text,
+        detail,
+        delta: change.map(|value| value.count),
+        windows: Vec::new(),
+    }
+}
+
+fn trend_delta_class(delta: Option<f64>) -> &'static str {
+    match delta {
+        Some(value) if value > 0.0 => "trend-increase",
+        Some(value) if value < 0.0 => "trend-decrease",
+        _ => "muted",
+    }
+}
+
+fn trend_headers(
+    labels: &[&str],
+    periods: &[trends::Trends; 3],
+    zone: TimeZone,
+) -> Vec<(String, String)> {
+    labels
+        .iter()
+        .map(|label| ((*label).into(), String::new()))
+        .chain(TrendPeriod::ALL.iter().zip(periods).map(|(period, data)| {
+            (
+                period.label().into(),
+                format!(
+                    "Last {} complete days: {}. Compared with {}. {}.",
+                    period.days(),
+                    data.current.label(zone),
+                    data.previous.label(zone),
+                    zone.name()
+                ),
+            )
+        }))
+        .collect()
+}
+
+fn busy_window_label(window: &trends::BusyHours) -> String {
+    let weekdays = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ];
+    let day = window
+        .weekday
+        .map_or(String::new(), |day| format!("{}, ", weekdays[day as usize]));
+    format!(
+        "{day}{:02}:00–{:02}:00",
+        window.start_hour,
+        window.start_hour + 3
+    )
+}
+
+#[component]
+fn RankingTable(
+    title: &'static str,
+    headers: Vec<(String, String)>,
+    rows: Vec<Vec<TrendCell>>,
+    empty: &'static str,
+    #[prop(default = true)] numeric: bool,
+) -> impl IntoView {
+    if rows.is_empty() {
+        return view! { <p class="empty-chart" role="status">{empty}</p> }.into_any();
+    }
+    view! {
+        <div class="ranking-scroll" role="region" aria-label=title tabindex="0">
+            <table class="ranking-table" class:ranking-numeric=numeric>
+                <caption class="visually-hidden">{title}</caption>
+                <thead><tr>{headers.into_iter().map(|(header, detail)| {
+                    let accessible = if detail.is_empty() { header.clone() } else { format!("{header}. {detail}") };
+                    view! { <th scope="col" title=detail aria-label=accessible>{header}</th> }
+                }).collect_view()}</tr></thead>
+                <tbody>{rows.into_iter().map(|row| view! {
+                    <tr>{row.into_iter().enumerate().map(|(index, cell)| {
+                        let accessible = if cell.detail.is_empty() { cell.text.clone() } else { format!("{}. {}", cell.text, cell.detail) };
+                        if index == 0 { view! { <th scope="row">{cell.text}</th> }.into_any() }
+                        else if !cell.windows.is_empty() { view! { <td><ol class="ranking-windows">{cell.windows.into_iter().map(|window| {
+                            let label = busy_window_label(&window);
+                            let value = trend_number(window.current.value.unwrap(), false);
+                            let delta = trends::change(&window.current, &window.previous).map(|change| change.count);
+                            let change = delta.map_or_else(|| "change unavailable".into(), |count| trend_number(count, true));
+                            let summary = format!("{value} online · {change}");
+                            let detail = trend_detail(&window.current, &window.previous);
+                            let accessible = format!("{label}. {summary}. {detail}");
+                            view! { <li title=detail aria-label=accessible><span>{label}</span><span class="muted">{value}" online · "<span class=trend_delta_class(delta)>{change}</span></span></li> }
+                        }).collect_view()}</ol></td> }.into_any() }
+                        else { view! { <td class=trend_delta_class(cell.delta) title=cell.detail aria-label=accessible>{cell.text}</td> }.into_any() }
+                    }).collect_view()}</tr>
+                }).collect_view()}</tbody>
+            </table>
+        </div>
+    }.into_any()
+}
+
+#[component]
+fn TrendsSection(history: Arc<History>, now: RwSignal<DateTime<Utc>>) -> impl IntoView {
+    let navigation = expect_context::<ViewSignals>();
+    let zone = expect_context::<Memo<TimeZone>>();
+    let grouping = navigation.busy_grouping;
+    let ranked = Memo::new(move |_| {
+        TrendPeriod::ALL.map(|period| {
+            trends::rankings(
+                &history,
+                &navigation.scopes.get(),
+                period,
+                grouping.get(),
+                now.get(),
+                zone.get(),
+            )
+        })
+    });
+    view! {
+        <h2 class="section-title">"Trends"</h2>
+        <div class="chart-grid trends-grid">
+            <article class="chart-card" id="table-server-growth" tabindex="-1">
+                <ChartHeading target="table-server-growth".into() title="Server growth".into()/>
+                <p class="chart-note chart-explanation">"Change in typical online population compared with the preceding period, ordered by weekly growth."</p>
+                {move || {
+                    let data = ranked.get();
+                    let rows = data[0].servers.iter().map(|server| {
+                        let mut cells = vec![trend_label(&server.name)];
+                        cells.extend(data.iter().map(|period| {
+                            let row = period.servers.iter().find(|row| row.id == server.id).expect("each period includes the same servers");
+                            trend_change(&row.current, &row.previous)
+                        }));
+                        cells
+                    }).collect();
+                    view! { <RankingTable title="Server growth" headers=trend_headers(&["Server"], &data, zone.get()) rows empty="No servers available for this selection."/> }
+                }}
+            </article>
+            <article class="chart-card" id="table-busiest-hours" tabindex="-1">
+                <ChartHeading target="table-busiest-hours".into() title="Busiest hours".into()/>
+                <p class="chart-note chart-explanation">"The three busiest recurring three-hour windows for each server and period, with typical online population and change from the preceding period."</p>
+                <div class="chart-control"><label class="trend-grouping-control">"Group hours"
+                    <select id="busy-hours-grouping" prop:value=move || if grouping.get() == BusyGrouping::AllDays { "all" } else { "weekday" } on:change=move |event| grouping.set(if event_target_value(&event) == "weekday" { BusyGrouping::Weekday } else { BusyGrouping::AllDays })>
+                        <option value="all">"All days"</option><option value="weekday">"By weekday"</option>
+                    </select>
+                </label></div>
+                {move || {
+                    let data = ranked.get();
+                    let rows = data[0].servers.iter().map(|server| {
+                        let mut cells = vec![trend_label(&server.name)];
+                        cells.extend(data.iter().map(|period| TrendCell {
+                            text: "Not available".into(),
+                            delta: None,
+                            detail: if grouping.get() == BusyGrouping::Weekday {
+                                "Not enough repeated weekdays. See Month or Year, or switch to All days."
+                            } else {
+                                "More observations across several days are needed to rank recurring hours."
+                            }.into(),
+                            windows: period.hours.iter().filter(|row| row.server_id == server.id).cloned().collect(),
+                        }));
+                        cells
+                    }).collect();
+                    view! { <RankingTable title="Busiest hours" headers=trend_headers(&["Server"], &data, zone.get()) rows numeric=false empty="No servers available for this selection."/> }
+                }}
+            </article>
+            <article class="chart-card" id="table-starting-areas" tabindex="-1">
+                <ChartHeading target="table-starting-areas".into() title="Starting-area activity".into()/>
+                <p class="chart-note chart-explanation">"Change in typical online population across each server’s starting areas."</p>
+                {move || {
+                    let data = ranked.get();
+                    let rows = data[0].areas.iter().map(|server| {
+                        let mut cells = vec![trend_label(&server.name)];
+                        cells.extend(data.iter().map(|period| {
+                            period.areas.iter().find(|row| row.id == server.id)
+                                .map_or_else(|| trend_change(&PopulationSummary::default(), &PopulationSummary::default()), |row| trend_change(&row.current, &row.previous))
+                        }));
+                        cells
+                    }).collect();
+                    view! { <RankingTable title="Starting-area activity" headers=trend_headers(&["Server"], &data, zone.get()) rows empty="No servers available for this selection."/> }
+                }}
+            </article>
+        </div>
+    }
+}
+
 #[component]
 fn CheckboxPicker(
     id: &'static str,
@@ -801,6 +1054,7 @@ pub fn App() -> impl IntoView {
     });
     let comparing =
         Memo::new(move |_| mode.get() != ComparisonMode::Disabled || scopes.get().len() > 1);
+    let controls_history = history.clone();
     view! {
         <style>{include_str!(concat!(env!("OUT_DIR"), "/style.css"))}</style>
         <a class="skip-link" href="#content" on:click=move |event| { event.prevent_default(); focus_target("content"); }>"Skip to dashboard content"</a>
@@ -838,7 +1092,9 @@ pub fn App() -> impl IntoView {
                 <h2 id="controls-heading" class="visually-hidden">"Explore the archive"</h2>
                 <div class="control-grid">
                     <ServerPicker names scopes/>
-                    <DateControls history=history.clone() range now mode matching custom comparison/>
+                    <Show when=move || section.get() != Section::Trends>
+                        <DateControls history=controls_history.clone() range now mode matching custom comparison/>
+                    </Show>
                 </div>
             </section>
             <nav class="section-nav" aria-label="Dashboard sections">{Section::ALL.into_iter().map(|item| view! {
@@ -848,20 +1104,24 @@ pub fn App() -> impl IntoView {
                 <Show when=move || scopes.get().is_empty()>
                     <div class="empty-servers" role="status"><p>"Select at least one server to show statistics."</p><button class="secondary" on:click=move |_| scopes.set(vec![Scope::All])>"Show All Servers"</button></div>
                 </Show>
-                <Show when=move || mode.get() == ComparisonMode::Disabled && !scopes.get().is_empty() && empty_range.get()>
+                <Show when=move || section.get() != Section::Trends && mode.get() == ComparisonMode::Disabled && !scopes.get().is_empty() && empty_range.get()>
                     <div class="empty-selection" role="status"><p>{if count == 0 { "No history yet. The first successful collection will appear in a future dashboard build." } else { "No observations in this interval. Choose All time to explore the available archive." }}</p>
                     {(count > 0).then(|| view! { <button class="secondary" on:click=move |_| range.set(TimeRange::All)>"Show All time"</button> })}</div>
                 </Show>
                 {move || {
                     let selected = section.get();
+                    if selected == Section::Trends {
+                        return view! { <TrendsSection history=history.clone() now/> }.into_any();
+                    }
                     let metrics = match selected {
                         Section::Overview => vec![Metric::Online, Metric::Daily, Metric::Monthly, Metric::Subscriptions],
                         Section::Population => vec![Metric::StartingZones, Metric::OnlineShare],
                         Section::Relationships => vec![Metric::DailyMonthly, Metric::OnlineDaily, Metric::DailySubscriptions],
+                        Section::Trends => unreachable!(),
                     };
                     let chart_history = history.clone();
                     view! {
-                        <h2 class="section-title" class:visually-hidden=selected == Section::Relationships>{match selected { Section::Overview => "Trends over time", Section::Population => "Player activity", Section::Relationships => "Engagement" }}</h2>
+                        <h2 class="section-title" class:visually-hidden=selected == Section::Relationships>{match selected { Section::Overview => "Trends over time", Section::Population => "Player activity", Section::Relationships => "Engagement", Section::Trends => unreachable!() }}</h2>
                         <div class="chart-grid" class:overview-chart=selected == Section::Overview class:population-chart=selected == Section::Population>{metrics.into_iter().map(|metric| {
                             let selected_zones = (metric == Metric::StartingZones).then_some(zone_scopes);
                             let metric_choices = match metric {
@@ -873,7 +1133,7 @@ pub fn App() -> impl IntoView {
                         }).collect_view()}
                         {(selected == Section::Population).then(|| view! { <ActivityCard history=history.clone() scopes range now comparison/> })}
                         </div>
-                    }
+                    }.into_any()
                 }}
             </section>
             <footer>

@@ -1217,15 +1217,15 @@ impl Browser {
             },
             &format!("fragment {fragment} selects {section}"),
         );
-        if let Some(target) = fragment.strip_prefix("#chart-") {
+        if fragment.starts_with("#chart-") || fragment.starts_with("#table-") {
             wait_until(
                 || {
                     self.request(Method::POST, "/execute/sync", json!({
                     "script":"const e=document.getElementById(arguments[0]); if (!e) return false; const r=e.getBoundingClientRect(); return document.activeElement === e && r.top >= -1 && r.top < innerHeight;",
-                    "args":[format!("chart-{target}")]
+                    "args":[fragment.trim_start_matches('#')]
                 })) == true
                 },
-                "plot fragment focuses and scrolls to its chart",
+                "content fragment focuses and scrolls to its destination",
             );
         }
     }
@@ -1235,6 +1235,10 @@ impl Browser {
             ("#overview", "overview"),
             ("#player-activity", "population"),
             ("#engagement", "relationships"),
+            ("#trends", "trends"),
+            ("#table-server-growth", "trends"),
+            ("#table-busiest-hours", "trends"),
+            ("#table-starting-areas", "trends"),
             ("#chart-online", "overview"),
             ("#chart-daily", "overview"),
             ("#chart-monthly", "overview"),
@@ -1306,6 +1310,118 @@ impl Browser {
             json!({"script":"location.hash = '';", "args":[]}),
         );
         self.expect_destination("", "overview");
+        self.verify_requests(url, true);
+        self.request(Method::POST, "/url", json!({"url":url}));
+    }
+
+    fn verify_trends(&self, url: &str) {
+        self.request(
+            Method::POST,
+            "/url",
+            json!({"url":format!("{url}#trends?tz=utc&range=30&compare=previous")}),
+        );
+        self.expect_destination("#trends", "trends");
+        self.expect_count(".trends-grid .chart-card", 3);
+        self.expect_count("#time-range", 0);
+        self.expect_count("#comparison-mode", 0);
+        self.expect_count("#trend-period", 0);
+        self.expect_count(".trend-period-note", 0);
+        let area_table = self.request(Method::POST, "/execute/sync", json!({
+            "script":"const card=document.querySelector('#table-starting-areas'); return {headers:Array.from(card.querySelectorAll('thead th'),h=>h.textContent), servers:Array.from(card.querySelectorAll('tbody th'),h=>h.textContent), expected:Array.from(document.querySelectorAll('#table-server-growth tbody th'),h=>h.textContent)};",
+            "args":[]
+        }));
+        assert_eq!(
+            area_table["headers"],
+            json!(["Server", "Week", "Month", "Year"])
+        );
+        let mut area_servers = area_table["servers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|name| name.as_str().unwrap())
+            .collect::<Vec<_>>();
+        let mut expected_servers = area_table["expected"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|name| name.as_str().unwrap())
+            .collect::<Vec<_>>();
+        area_servers.sort_unstable();
+        expected_servers.sort_unstable();
+        assert_eq!(area_servers, expected_servers);
+        area_servers.dedup();
+        assert_eq!(area_servers.len(), expected_servers.len());
+        for table in ["server-growth", "busiest-hours", "starting-areas"] {
+            let columns = self.request(Method::POST, "/execute/sync", json!({
+                "script":"return Array.from(document.querySelectorAll(arguments[0] + ' thead th')).slice(-3).map(h=>[h.textContent,h.title]);",
+                "args":[format!("#table-{table}")]
+            }));
+            if columns.as_array().unwrap().is_empty() {
+                continue;
+            }
+            for (index, (label, days)) in [("Week", 7), ("Month", 30), ("Year", 365)]
+                .iter()
+                .enumerate()
+            {
+                assert_eq!(columns[index][0], *label);
+                assert!(
+                    columns[index][1]
+                        .as_str()
+                        .unwrap()
+                        .contains(&format!("Last {days} complete days:"))
+                );
+                assert!(
+                    columns[index][1]
+                        .as_str()
+                        .unwrap()
+                        .contains("Compared with")
+                );
+            }
+        }
+        self.select("#busy-hours-grouping", "weekday");
+        self.activate("#table-busiest-hours .chart-permalink");
+        self.expect_destination("#table-busiest-hours", "trends");
+        let hash = self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({"script":"return location.hash;","args":[]}),
+        );
+        assert!(hash.as_str().unwrap().contains("busy-hours=weekday"));
+        assert!(!hash.as_str().unwrap().contains("trend-period"));
+        self.request(Method::POST, "/refresh", json!({}));
+        self.expect_destination("#table-busiest-hours", "trends");
+        let grouping = || {
+            self.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('#busy-hours-grouping').value;","args":[]}))
+        };
+        assert_eq!(grouping(), "weekday");
+        self.select("#busy-hours-grouping", "all");
+        self.request(Method::POST, "/back", json!({}));
+        wait_until(|| grouping() == "weekday", "Back restores hour grouping");
+        self.request(Method::POST, "/forward", json!({}));
+        wait_until(|| grouping() == "all", "Forward restores hour grouping");
+        let id = self.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('#servers-options input[value^=\"server:\"]')?.value.slice(7);","args":[]}));
+        if let Some(id) = id.as_str() {
+            self.servers(&[id]);
+            self.expect_count("#table-server-growth tbody tr", 1);
+            self.expect_count("#table-starting-areas tbody tr", 1);
+        }
+        self.servers(&[]);
+        self.expect_count(".empty-servers", 1);
+        self.expect_count(".ranking-table", 0);
+        self.click(".empty-servers button");
+        self.expect_count(".empty-servers", 0);
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":390,"height":844}),
+        );
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.documentElement.scrollWidth <= innerWidth;","args":[]})), true, "Trends does not overflow the mobile page");
+        self.click("#nav-overview");
+        self.expect_text("#time-range-selection", "Last 30 days");
+        self.expect_text("#comparison-mode-selection", "Previous period");
+        self.click("#nav-trends");
+        assert_eq!(grouping(), "all");
+        self.expect_count("#trend-period", 0);
         self.verify_requests(url, true);
         self.request(Method::POST, "/url", json!({"url":url}));
     }
@@ -1984,6 +2100,7 @@ impl Browser {
         .unwrap();
         self.verify_fragment_navigation(url);
         self.verify_url_settings(url);
+        self.verify_trends(url);
         println!(
             "All metric families, all range presets, exact values, historical entities, three-period/entity comparisons, missing data, and filter-independent downloads verified."
         );
@@ -2427,6 +2544,38 @@ fn comparison_history() -> Vec<Value> {
         let subscriptions = if at.to_rfc3339() == "2026-05-30T13:00:00+00:00" { 0 } else { 10 + i };
         json!({"observed_at":at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),"active_subscriptions":subscriptions,"servers":servers})
     }).collect()
+}
+
+#[test]
+#[ignore = "requires MNM_STATS_TRENDS_PREVIEW_URL pointing to an existing local preview"]
+fn trends_existing_preview() {
+    let url = env::var("MNM_STATS_TRENDS_PREVIEW_URL").expect("local preview URL");
+    assert!(
+        [
+            "http://127.0.0.1:",
+            "http://localhost:",
+            "http://dashboard:"
+        ]
+        .iter()
+        .any(|prefix| url.starts_with(prefix)),
+        "only local previews are permitted"
+    );
+    let scratch = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../.session/tests")
+        .join(format!(
+            "trends-browser-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+    fs::create_dir_all(scratch.join("downloads")).unwrap();
+    let scratch = scratch.canonicalize().unwrap();
+    let browser = Browser::new(&scratch);
+    browser.request(Method::POST, "/url", json!({"url":"about:blank"}));
+    browser.request(Method::POST, "/log", json!({"type":"performance"}));
+    browser.verify_trends(&url);
 }
 
 #[test]

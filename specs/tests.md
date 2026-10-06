@@ -110,6 +110,11 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Stable automatic series identities across clock updates, deduplication of resolved periods, and disabled or empty custom comparisons.
 - Comparisons with more than two periods or entities and with missing observations.
 - Combined server-and-period selections, distinct identities for each pair, global subscriptions without duplicate series, and empty server selections.
+- Trends period boundaries for 7, 30, and 365 complete local dates and their previous periods, including leap dates, fractional offsets, and daylight-saving changes.
+- Trends medians with equal weighting of qualifying dates, minimum day/period coverage, sparse data, measured zeros, zero change denominators, and missing servers or observations.
+- Server growth and combined starting-area ordering, All Servers expansion without duplicates, individual/empty server selections, and unavailable ranking values.
+- Starting-area totals summed per observation before medians, with one row per server, wide counts, validated empty-area totals as zero, and absent servers unavailable.
+- Busiest-hour ranking in All days and By weekday modes, repeated-date requirements, stable tie order, local clock windows, and resistance to isolated evening spikes.
 
 ### Dashboard time zones
 
@@ -167,6 +172,9 @@ Automated tests MUST cover:
 - The summary-row time-zone switch, its selected state and persistent “zone name (local)” button label, local summary and tooltip times, heatmap rebucketing, date-control labels, and restoration through refresh and Back/Forward.
 - A visible coverage summary with the complete history's first date, latest date and time in the selected zone, and record count, independently of filters and comparisons, including empty history and a single record.
 - Navigation between Overview, Player activity, and Engagement while retaining the selected scope, range, and comparisons.
+- Trends navigation and table permalinks, preserved chart settings, simultaneous Week/Month/Year columns with date tooltips, hour grouping, URL restoration, server filtering, unavailable states, and table reflow at narrow widths.
+- Trends cells matched by server identity across independently ranked periods; Starting-area activity MUST have one combined row per server and Server, Week, Month, Year columns, retaining servers without qualifying weekly values.
+- Obsolete Trends period parameters ignored without affecting the other shared URL settings.
 - Direct visits to every tab and plot fragment, plot focus and scrolling after section mounting, refresh, and browser Back/Forward.
 - Complete applied settings restored from copied URLs, including the UTC/local choice, custom calendar dates, multiple comparisons, inactive chart selectors, explicit empty selections, and removable unavailable entity IDs.
 - Back/Forward restoring filters without extra history entries or scrolling again to an unchanged plot target.

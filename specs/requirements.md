@@ -254,6 +254,7 @@ This section records the presentation contract for the collected current-state s
 The dashboard's information hierarchy, layout, and visual interaction MUST follow [dashboard-design.md](dashboard-design.md).
 Tabs, plots, and their applied selections MUST be directly addressable through URL fragments, with navigation and plot-link controls as defined in [dashboard-design.md](dashboard-design.md#direct-links).
 Shared links, refresh, and browser Back/Forward MUST restore the time-zone choice, server selections, time ranges, comparison settings and custom dates, starting-zone selections, and both Engagement metric selections.
+They MUST also restore the Trends busiest-hours grouping.
 
 The dashboard footer MUST credit Plotly with a link to its JavaScript charting library.
 The dashboard MUST provide a visible link labeled “Star on GitHub” to the [project repository](https://github.com/Tiendil/monsters-and-memories-stats), inviting visitors to star it on GitHub.
@@ -398,6 +399,50 @@ Two Monday 10:00–11:00 UTC observations of 20 and 40 give a heatmap mean of 30
 **Example:** Total cell means range from 420 to 528, while individual-server cell means range from 100 to 216.
 Total panels use 420–528 and individual-server panels use 100–216.
 Unchecking the server with the largest mean hides its panel but leaves the individual-server scale at 100–216.
+
+### Player trends
+
+Trends MUST provide server growth, busiest recurring hours, and starting-area activity rankings from the existing observations.
+It MUST use the shared server and time-zone selections and show Week, Month, and Year columns together.
+These columns MUST compare the last 7, 30, and 365 complete calendar dates in the selected zone with the preceding equal number of dates, respectively.
+The current calendar date MUST be excluded; both resolved date ranges MUST be available from each column header.
+Chart range, comparison, zone, and engagement selections MUST remain preserved but MUST NOT affect these rankings.
+“All Servers” MUST expand into individual servers without duplicate rows or an aggregate competing with its components.
+Missing servers MUST remain unavailable rather than zero, including servers absent for an entire period.
+
+Typical online MUST be the median of qualifying daily median online counts, giving each qualifying date equal weight.
+A daily summary MUST require at least half of that date's elapsed hours to have observations, rounded upward, including 23- and 25-hour dates.
+A period summary MUST require qualifying daily summaries on at least half of its calendar dates, rounded upward.
+These minimum-coverage rules MUST apply independently to each server’s online population and combined starting-area population.
+They establish minimum data coverage rather than a statistical confidence interval.
+Missing observations MUST NOT be interpolated, carried forward, or treated as zero.
+
+Server growth MUST order rows by descending weekly absolute change in typical online.
+Each period column MUST show both absolute and relative change for that server, matching identities independently of the period’s rank order.
+Changes MUST require qualifying summaries for both periods; percentage change MUST be unavailable when the prior value is zero.
+Starting-area activity MUST contain one row per selected server and order rows by the latest week’s typical combined starting-area population.
+Starting-area counts MUST be summed within each server observation before calculating daily and period medians, using a wide checked sum.
+A present server with an empty starting-area list MUST contribute zero, consistent with the collector’s validated total; an absent server MUST contribute no sample.
+Each period column MUST show absolute and relative change for the same server, regardless of its rank in that period.
+Servers without qualifying weekly values MUST remain included so their longer-period values can still be shown.
+Available ranking values MUST precede unavailable values, and equal values MUST use stable identity ordering.
+These rankings MUST NOT imply measured migration, new-player acquisition, group availability, or onboarding success.
+
+Busiest hours MUST show the three highest qualifying, non-overlapping three-hour clock windows per selected server.
+Windows MUST begin at multiples of three hours, from 00:00–03:00 through 21:00–24:00 in the selected time zone.
+An independent All days or By weekday control MUST default to All days.
+All days MUST combine each window across calendar dates; By weekday MUST retain separate weekday/window combinations.
+Each date/window summary MUST require observations in at least two distinct local clock hours and use their median online count.
+The typical window population MUST be the median of those date/window summaries, with at least half of the applicable dates represented, rounded upward, and at least two distinct dates.
+By weekday MUST use the number of occurrences of that weekday in the period when determining coverage.
+Repeated local hours MUST retain their observations without counting as two distinct clock hours; skipped hours MUST NOT create samples.
+Each server row MUST show its top three qualifying windows independently in each period column.
+Each window MUST show its clock interval and weekday when applicable, typical online population, and absolute change for the same window in the previous period when available.
+Windows MUST rank independently within each server, breaking ties by weekday and starting hour.
+Unavailable window cells MUST explain insufficient history and identify All days or the longer-period columns as recovery options when repeated weekdays are insufficient.
+
+**Example:** Daily medians of 10, 20, 30, and 40 give typical online 25 when those four dates meet a seven-day period's coverage requirement.
+Additional observations on one qualifying date do not give that date more weight.
 
 ### Ratios
 
