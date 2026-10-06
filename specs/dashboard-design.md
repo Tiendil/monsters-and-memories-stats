@@ -43,12 +43,12 @@ Production metadata URLs MUST be updated together when the public site address c
 
 The masthead MUST use the heading “Statistics for Monsters & Memories” and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
 The name “Tiendil” MUST link to `https://tiendil.org`, open in a new tab, and be visibly identifiable as a link.
-Its action group MUST provide “Download JSONL,” “Star on GitHub,” and “Request a feature.”
-“Star on GitHub” and “Request a feature” MUST open in a new tab or window; the latter MUST link directly to the feature-request form.
+Its action group MUST provide “Download JSONL,” “Star on GitHub,” and “Feedback.”
+“Star on GitHub” and “Feedback” MUST open in a new tab or window; the latter MUST link directly to the shared issue form with its Type dropdown.
 It MUST remain compact rather than use a promotional hero layout.
 On wide screens, the action group MUST sit beside the title; on narrow screens, the title MUST precede a compact action row.
 On wide screens, the actions MUST share a control height, neutral surfaces, and subtle borders.
-On narrow screens, “Request a feature” MUST use a compact text link below “Star on GitHub” to preserve space for the metrics.
+On narrow screens, “Feedback” MUST use a compact text link below “Star on GitHub” to preserve space for the metrics.
 The actions MUST wrap when needed for narrow widths or enlarged text.
 The repository action required by [requirements.md](requirements.md#dashboard-behavior) MUST retain link navigation and pair its text with a decorative scalable star icon.
 The download action MUST retain native link behavior so users can copy and share the static archive address.
