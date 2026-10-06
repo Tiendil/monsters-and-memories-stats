@@ -1069,7 +1069,7 @@ pub fn App() -> impl IntoView {
                 <p id="demo-notice" role="status">"Demo · synthetic data and server names."</p>
             })}
             <header class="page-header">
-                <div><p class="eyebrow">"Made with love and curiosity by "<a href="https://tiendil.org" target="_blank" rel="noopener">"Tiendil"</a></p><h1>"Statistics for Monsters & Memories"</h1></div>
+                <div class="header-title"><p class="eyebrow">"Made with love and curiosity by "<a href="https://tiendil.org" target="_blank" rel="noopener">"Tiendil"</a></p><h1><span>"Statistics"</span>" "<span class="title-connector">"for"</span>" "<span>"Monsters & Memories"</span></h1></div>
                 <div class="header-actions">
                     <a class="button-link secondary" id="download-history" href="history.jsonl" download="history.jsonl">"Download JSONL"</a>
                     <div class="community-actions">
@@ -1077,16 +1077,17 @@ pub fn App() -> impl IntoView {
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 3 14.8 8.7 21 9.6 16.5 14 17.6 20.2 12 17.3 6.4 20.2 7.5 14 3 9.6 9.2 8.7"/></svg>
                             "Star on GitHub"
                         </a>
-                        <a class="button-link secondary feedback-link" href=format!("{REPOSITORY_URL}/issues/new/choose") target="_blank" rel="noopener">"Feedback"</a>
+                        <a class="button-link secondary" href=format!("{REPOSITORY_URL}/issues/new/choose") target="_blank" rel="noopener">"Feedback"</a>
                     </div>
                 </div>
             </header>
             <section class="history-summary" aria-label="Statistics coverage">
                 <p id="history-status">
-                    {first.map_or_else(|| "No statistics collected yet".into_any(), |first| view! {
+                    <span class="history-start">{first.map_or_else(|| "No statistics collected yet".into_any(), |first| view! {
                         "Data since "<time id="first-collection" datetime=utc(first)>{move || time_zone.get().format(first, "%d %b %Y")}</time>
-                    }.into_any())}
-                    " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly from "<a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a>
+                    }.into_any())}</span>
+                    <span class="history-frequency"><span class="history-separator">" · "</span><span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly"</span>
+                    <span class="history-source"><span class="history-source-connector">" from "</span><span class="history-source-label">"Source: "</span><a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a></span>
                 </p>
                 <div class="time-zone-switch" role="group" aria-label="Time zone">
                     <button id="time-zone-utc" aria-pressed=move || (time_mode.get() == TimeMode::Utc).to_string() on:click=move |_| time_mode.set(TimeMode::Utc)>"UTC"</button>

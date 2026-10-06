@@ -277,6 +277,11 @@
     },
     "size": {
       "title": {
+        "connector": {
+          "$type": "dimension",
+          "$value": "{scale.font-size.5}",
+          "$description": "Size of the secondary connector line in the stacked mobile page title."
+        },
         "minimum": {
           "$type": "dimension",
           "$value": {
@@ -887,11 +892,11 @@
       },
       "compact": {
         "block": {
-          "$value": "{scale.spacing.3}",
+          "$value": "{scale.spacing.2}",
           "$description": "Page padding above and below content on narrow screens."
         },
         "inline": {
-          "$value": "{scale.spacing.3}",
+          "$value": "{scale.spacing.2}",
           "$description": "Page padding at inline edges on narrow screens."
         }
       }

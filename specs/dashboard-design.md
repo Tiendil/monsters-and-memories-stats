@@ -42,13 +42,16 @@ Production metadata URLs MUST be updated together when the public site address c
 ### Masthead and collection status
 
 The masthead MUST use the heading “Statistics for Monsters & Memories” and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
+On narrow screens, the heading MUST use three centered lines: “Statistics”, “for”, and “Monsters & Memories”.
+The middle line MUST use smaller text in the same color as the other title lines with tight vertical spacing, and the author credit and action row MUST also be centered.
+On wide screens, the heading MUST retain its inline wording and existing alignment.
 The name “Tiendil” MUST link to `https://tiendil.org`, open in a new tab, and be visibly identifiable as a link.
 Its action group MUST provide “Download JSONL,” “Star on GitHub,” and “Feedback.”
 “Star on GitHub” and “Feedback” MUST open in a new tab or window; the latter MUST link to GitHub's chooser for the Feature suggestion, Bug report, and Other forms.
 It MUST remain compact rather than use a promotional hero layout.
 On wide screens, the action group MUST sit beside the title; on narrow screens, the title MUST precede a compact action row.
-On wide screens, the actions MUST share a control height, neutral surfaces, and subtle borders.
-On narrow screens, “Feedback” MUST use a compact text link below “Star on GitHub” to preserve space for the metrics.
+At all widths, the actions MUST share a control height, neutral surfaces, and subtle borders.
+On narrow screens, all three actions MUST share one row when they fit; “Feedback” MUST retain the same outlined button styling as the other actions.
 The actions MUST wrap when needed for narrow widths or enlarged text.
 The repository action required by [requirements.md](requirements.md#dashboard-behavior) MUST retain link navigation and pair its text with a decorative scalable star icon.
 The download action MUST retain native link behavior so users can copy and share the static archive address.
@@ -62,7 +65,8 @@ The collection phrase MUST link “M&M’s public statistics” to `https://acco
 This link MUST open in a new tab or window.
 The date and record count MUST represent the complete loaded history, independently of selected filters or comparisons; one record means one collected observation.
 The date and record count MUST use a medium font weight in the normal dark text color; the surrounding text and collection frequency MUST retain normal weight and muted color.
-The summary MUST wrap naturally on narrow screens without requiring an archive-details disclosure.
+On narrow screens, the summary MUST separate the starting date, record count and collection frequency, and source link into three lines, with the source line prefixed by “Source:”.
+The time-zone switch MUST appear below those lines, and each line MUST wrap naturally when needed without requiring an archive-details disclosure.
 Empty history MUST show a clear no-statistics message and zero records without inventing dates.
 
 **Example:** “Data since 2 Oct 2026 · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
@@ -492,9 +496,11 @@ The page MUST use one centered content region with aligned controls, summary val
 Wide-screen summaries MUST form one row of four values; narrow-screen summaries MUST use a two-by-two layout when labels fit and a single column when needed.
 All charts in Overview, Player activity, and Engagement MUST use the full content width, including comparison plots.
 Spacing MUST distinguish content sections more strongly than elements inside one chart or control group.
+On narrow screens, the collection summary, latest snapshot, view controls, navigation, and chart content MUST have clear vertical separation while labels remain close to their controls.
+On narrow screens, horizontal section dividers MUST have equal clear space on both sides, using the large shared gap between each divider and its adjacent content.
 
 At a 1440 by 900 CSS-pixel viewport, the default populated view MUST show the collection status, shared controls, four summary values, and plotted data without scrolling.
-At a 375 by 812 CSS-pixel viewport, the initial screen MUST show the summary values and the start of the primary chart, with additional content available through vertical scrolling.
+At a 375 by 812 CSS-pixel viewport, the initial screen MUST show the summary values; controls and charts MAY continue below the fold to preserve readable separation between sections.
 These checks MUST include a synthetic-data notice and representative long source names, rather than rely on unusually short labels.
 
 ### Tokens and assets
