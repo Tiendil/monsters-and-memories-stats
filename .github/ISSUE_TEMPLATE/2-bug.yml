@@ -1,0 +1,13 @@
+name: Bug report
+description: Report something that is not working correctly.
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe what happened, what you expected, and how to reproduce the problem if possible. A dashboard link, screenshot, and browser name can help.
+      placeholder: |
+        Example: In Firefox, I select a server and copy the Online chart link. Opening it in a new tab shows All Servers instead of the server I selected.
+    validations:
+      required: true

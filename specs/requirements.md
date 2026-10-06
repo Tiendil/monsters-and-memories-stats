@@ -261,11 +261,14 @@ They MUST also restore the Trends busiest-hours grouping.
 
 The dashboard footer MUST credit Plotly with a link to its JavaScript charting library.
 The dashboard MUST provide a visible link labeled “Star on GitHub” to the [project repository](https://github.com/Tiendil/monsters-and-memories-stats), inviting visitors to star it on GitHub.
-The dashboard MUST provide a visible link labeled “Feedback” that opens one repository issue form directly, without an intermediate template chooser.
-The form MUST contain the standard issue title, a required Type dropdown, and one required Description field.
-The Type options MUST be ordered “Feature suggestion,” “Bug report,” and “Other”; this selector MUST appear on GitHub's issue page rather than in the dashboard.
-The description guidance MUST ask for a proposed change and its purpose for suggestions, and actual behavior, expected behavior, and reproduction steps when possible for bugs.
-Links and screenshots MUST be optional additions within that description, without separate fields or checklists.
+The dashboard MUST provide a visible link labeled “Feedback” that opens GitHub's issue-template chooser.
+The templates MUST be ordered “Feature suggestion,” “Bug report,” and “Other”; the choice MUST appear on GitHub rather than in the dashboard.
+Each form MUST contain the standard issue title and one required Description field, without a redundant Type dropdown.
+Each form MUST provide its own guidance and a non-submitted example.
+Feature suggestions MUST ask for a proposed change and its purpose, bug reports MUST ask for actual behavior, expected behavior, and reproduction steps when possible, and Other MUST invite questions or general feedback.
+The feature template MUST assign the `enhancement` label and the bug template MUST assign `bug`; those labels MUST exist in the repository for GitHub to apply them.
+Other MUST NOT assign a category label automatically.
+Links and screenshots MUST remain optional additions within the description, without separate fields or checklists.
 “Feedback” and “Star on GitHub” MUST open in a new tab or window without giving the destination access to the dashboard's opener.
 
 The dashboard MUST have an all-servers view and derive its server selector from collected history, including entities present only in historical data.

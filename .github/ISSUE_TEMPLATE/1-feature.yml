@@ -1,0 +1,13 @@
+name: Feature suggestion
+description: Suggest an improvement to the dashboard.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe what you would like to add or change and how it would help. Links and screenshots are welcome.
+      placeholder: |
+        Example: Add a CSV download for the selected chart so I can compare server activity in a spreadsheet.
+    validations:
+      required: true

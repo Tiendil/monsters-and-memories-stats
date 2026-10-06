@@ -1071,7 +1071,7 @@ pub fn App() -> impl IntoView {
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 3 14.8 8.7 21 9.6 16.5 14 17.6 20.2 12 17.3 6.4 20.2 7.5 14 3 9.6 9.2 8.7"/></svg>
                             "Star on GitHub"
                         </a>
-                        <a class="button-link secondary feedback-link" href=format!("{REPOSITORY_URL}/issues/new?template=feedback.yml") target="_blank" rel="noopener">"Feedback"</a>
+                        <a class="button-link secondary feedback-link" href=format!("{REPOSITORY_URL}/issues/new/choose") target="_blank" rel="noopener">"Feedback"</a>
                     </div>
                 </div>
             </header>

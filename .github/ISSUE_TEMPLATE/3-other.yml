@@ -1,0 +1,12 @@
+name: Other
+description: Ask a question or share other feedback about the dashboard.
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe your question or feedback. Include the relevant chart name or dashboard link if helpful.
+      placeholder: |
+        Example: Does All Servers count someone twice if they play on two servers?
+    validations:
+      required: true
