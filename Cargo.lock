@@ -1752,6 +1752,7 @@ dependencies = [
  "chrono",
  "csscolorparser",
  "cssparser",
+ "form_urlencoded",
  "js-sys",
  "leptos",
  "mnm-stats-model",

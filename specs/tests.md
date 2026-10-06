@@ -111,6 +111,11 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Comparisons with more than two periods or entities and with missing observations.
 - Combined server-and-period selections, distinct identities for each pair, global subscriptions without duplicate series, and empty server selections.
 
+### Dashboard URL state
+
+Native tests MUST cover complete view-state encoding and decoding, stable output, default omission, explicit empty selections, all destinations and presets, fixed custom UTC dates, multiple comparison periods, retained inactive selections, and changing only the link destination.
+Coverage MUST include encoded punctuation and Unicode in entity IDs, unknown IDs and parameters, duplicates, invalid or reversed dates, and recovery of individual invalid settings without discarding valid settings.
+
 ### Dashboard integration
 
 Automated browser tests MUST run against a locally built dashboard with embedded test history.
@@ -152,8 +157,11 @@ Automated tests MUST cover:
 - A visible coverage summary with the complete history's first date, latest UTC date and time, and record count, independently of filters and comparisons, including empty history and a single record.
 - Navigation between Overview, Player activity, and Engagement while retaining the selected scope, range, and comparisons.
 - Direct visits to every tab and plot fragment, plot focus and scrolling after section mounting, refresh, and browser Back/Forward.
+- Complete applied settings restored from copied URLs, including custom UTC dates, multiple comparisons, inactive chart selectors, explicit empty selections, and removable unavailable entity IDs.
+- Back/Forward restoring filters without extra history entries or scrolling again to an unchanged plot target.
+- Menu opening, unapplied date drafts, and validation errors leaving the URL and history unchanged.
 - Native plot-header links with correct destinations and accessible names, keyboard activation, repeated activation of the current fragment, and retained filters during in-page navigation.
-- Empty and unknown fragments selecting Overview, and the content skip link preserving the current section.
+- Empty and unknown fragments selecting Overview, and the content skip link preserving the current section and URL.
 - Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
 - A visible “Now” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count.
 - Unchanged “Now” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.

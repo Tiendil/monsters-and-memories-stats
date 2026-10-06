@@ -3,6 +3,7 @@ include!(concat!(env!("OUT_DIR"), "/history.rs"));
 
 pub mod analysis;
 pub mod charts;
+pub mod view_state;
 
 #[allow(dead_code)]
 pub mod tokens {

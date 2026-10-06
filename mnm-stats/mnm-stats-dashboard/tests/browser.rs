@@ -1203,7 +1203,7 @@ impl Browser {
         wait_until(
             || {
                 self.request(Method::POST, "/execute/sync", json!({
-                "script":"return location.hash === arguments[0] && document.querySelector(arguments[1])?.getAttribute('aria-current') === 'page';",
+                "script":"return location.hash.split('?')[0] === arguments[0] && document.querySelector(arguments[1])?.getAttribute('aria-current') === 'page';",
                 "args":[fragment, format!("#nav-{section}")]
             })) == true
             },
@@ -1275,7 +1275,17 @@ impl Browser {
         self.request(Method::POST, "/forward", json!({}));
         self.expect_destination("#player-activity", "population");
         self.activate(".skip-link");
-        self.expect_destination("#content", "population");
+        self.expect_destination("#player-activity", "population");
+        assert_eq!(
+            self.request(
+                Method::POST,
+                "/execute/sync",
+                json!({
+                    "script":"return document.activeElement.id;", "args":[]
+                })
+            ),
+            "content"
+        );
         self.request(
             Method::POST,
             "/execute/sync",
@@ -1289,6 +1299,152 @@ impl Browser {
         );
         self.expect_destination("", "overview");
         self.verify_requests(url, true);
+        self.request(Method::POST, "/url", json!({"url":url}));
+    }
+
+    fn verify_url_settings(&self, url: &str) {
+        self.request(Method::POST, "/url", json!({"url":"about:blank"}));
+        self.request(Method::POST, "/url", json!({"url":url}));
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
+        );
+        self.zones(&["z", "w"]);
+        self.click("#nav-relationships");
+        self.click("#online-metrics-toggle");
+        self.click("#online-metrics-options input[value='online-daily']");
+        self.click("#online-metrics-toggle");
+        self.click("#subscriber-metrics-toggle");
+        self.click("#subscriber-metrics-options input[value='daily-subscriptions']");
+        self.click("#subscriber-metrics-toggle");
+        self.custom_periods(&[
+            ("2026-05-01", "2026-05-31"),
+            ("2026-04-01", "2026-04-30"),
+            ("2025-05-01", "2025-05-31"),
+        ]);
+        self.click("#comparison-mode");
+        self.click("#match-weekday");
+        self.servers(&["a", "b"]);
+        self.click("#chart-online-presence .chart-permalink");
+        self.expect_destination("#chart-online-presence", "relationships");
+        let saved = self.request(Method::GET, "/url", Value::Null);
+        let saved = saved.as_str().unwrap();
+        assert!(saved.contains("range=custom&from=2026-05-01&to=2026-05-31"));
+        assert!(saved.contains("compare=custom&match=weekday"));
+        assert_eq!(saved.matches("period=").count(), 2);
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+            "script":"return [...document.querySelectorAll('.chart-permalink,.section-nav a,.headline a')].every(a=>a.hash.split('?')[1]===location.hash.split('?')[1]);", "args":[]
+        })), true, "all native destination links include the complete view");
+        // Both reload and a new document must restore applied and inactive controls.
+        for fresh in [false, true] {
+            if fresh {
+                self.request(Method::POST, "/url", json!({"url":"about:blank"}));
+                self.request(Method::POST, "/url", json!({"url":saved}));
+            } else {
+                self.request(Method::POST, "/refresh", json!({}));
+            }
+            self.expect_destination("#chart-online-presence", "relationships");
+            self.expect_count("#servers-options input:checked", 2);
+            self.expect_count("#servers-options input[value='server:a']:checked", 1);
+            self.expect_count("#servers-options input[value='server:b']:checked", 1);
+            self.expect_count("#online-metrics-options input:checked", 1);
+            self.expect_count(
+                "#online-metrics-options input[value='online-monthly']:checked",
+                1,
+            );
+            self.expect_count("#subscriber-metrics-options input:checked", 2);
+            self.expect_count(
+                "#subscriber-metrics-options input[value='daily-subscriptions']:checked",
+                0,
+            );
+            self.expect_count(".selected-periods li", 2);
+            self.expect_count("#match-weekday[aria-pressed='true']", 1);
+            self.click("#time-range");
+            self.click("#custom-range");
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+                "script":"return [document.querySelector('#range-start').value,document.querySelector('#range-end').value];", "args":[]
+            })), json!(["2026-05-01", "2026-05-31"]));
+            self.click("#time-range");
+            self.click("#nav-population");
+            self.expect_count("#zones-options input:checked", 2);
+            self.expect_count("#zones-options input[value='zone:z']:checked", 1);
+            self.expect_count("#zones-options input[value='zone:w']:checked", 1);
+            self.click(".headline[data-summary='online'] a");
+            self.expect_destination("#chart-online", "overview");
+        }
+        self.select("#time-range", "30");
+        let thirty = self.request(Method::GET, "/url", Value::Null);
+        self.select("#time-range", "90");
+        let ninety = self.request(Method::GET, "/url", Value::Null);
+        self.request(Method::POST, "/back", json!({}));
+        self.expect_text("#time-range-selection", "Last 30 days");
+        assert_eq!(self.request(Method::GET, "/url", Value::Null), thirty);
+        self.request(Method::POST, "/forward", json!({}));
+        self.expect_text("#time-range-selection", "Last 90 days");
+        assert_eq!(self.request(Method::GET, "/url", Value::Null), ninety);
+        // Drafts and invalid Apply attempts must not create history entries.
+        let before = self.request(
+            Method::POST,
+            "/execute/sync",
+            json!({"script":"return [location.href,history.length];", "args":[]}),
+        );
+        self.click("#time-range");
+        self.click("#custom-range");
+        self.date("#range-start", "2026-06-01");
+        self.date("#range-end", "2026-05-01");
+        self.click("#apply-range");
+        self.expect_count("#range-start[aria-invalid='true']", 1);
+        assert_eq!(
+            self.request(
+                Method::POST,
+                "/execute/sync",
+                json!({"script":"return [location.href,history.length];", "args":[]})
+            ),
+            before
+        );
+        self.click("#time-range");
+        self.request(Method::POST, "/execute/sync", json!({
+            "script":"window.scrollTo(0,0); document.querySelector('[data-range=\"7\"]').click();", "args":[]
+        }));
+        self.expect_text("#time-range-selection", "Last 7 days");
+        assert_eq!(
+            self.request(
+                Method::POST,
+                "/execute/sync",
+                json!({"script":"return scrollY;", "args":[]})
+            ),
+            0,
+            "filter changes do not scroll to the plot target"
+        );
+        // Unknown entities remain visible and removable, rather than silently selecting all.
+        self.request(Method::POST, "/url", json!({"url":format!("{url}#chart-starting-zones?range=all&scope=server%3Aghost%20%26%20%2B%20%E9%9B%AA&zone=zone%3Alost")}));
+        self.expect_destination("#chart-starting-zones", "population");
+        self.click("#servers-toggle");
+        assert!(
+            self.text("#servers-options")
+                .contains("ghost & + 雪 (unavailable)")
+        );
+        self.click("#servers-options input:checked");
+        self.click("#servers-toggle");
+        self.expect_count("#servers-options input:checked", 0);
+        self.click("#zones-toggle");
+        assert!(self.text("#zones-options").contains("lost (unavailable)"));
+        self.click("#zones-options input:checked");
+        self.click("#zones-toggle");
+        self.request(Method::POST, "/refresh", json!({}));
+        self.expect_count("#servers-options input:checked", 0);
+        self.expect_count("#zones-options input:checked", 0);
+        self.request(
+            Method::POST,
+            "/url",
+            json!({"url":format!("{url}#engagement?online-metric=&subscriber-metric=")}),
+        );
+        self.expect_destination("#engagement", "relationships");
+        self.expect_count("#online-metrics-options input:checked", 0);
+        self.expect_count("#subscriber-metrics-options input:checked", 0);
+        self.verify_requests(url, true);
+        self.request(Method::POST, "/url", json!({"url":"about:blank"}));
         self.request(Method::POST, "/url", json!({"url":url}));
     }
 
@@ -1726,6 +1882,7 @@ impl Browser {
         )
         .unwrap();
         self.verify_fragment_navigation(url);
+        self.verify_url_settings(url);
         println!(
             "All metric families, all range presets, exact values, historical entities, three-period/entity comparisons, missing data, and filter-independent downloads verified."
         );

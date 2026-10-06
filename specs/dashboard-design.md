@@ -129,19 +129,50 @@ The section links MUST use these URL fragments:
 Each plot MUST have a stable `#chart-…` fragment, retaining existing plot identifiers independently of display-title changes.
 Opening a plot fragment MUST select its owning section before scrolling to and focusing the plot.
 Opening a section fragment MUST select that section.
-Initial page visits, refreshes, fragment changes, and browser Back/Forward MUST resolve the same destinations.
-An empty or unknown fragment MUST select Overview without an error; the existing `#content` skip link MUST preserve the selected section.
-Navigation within the page MUST preserve all shared and chart-local selections.
-A fresh visit MUST use default selections; fragments identify destinations rather than saved filter configurations.
+Initial page visits, refreshes, fragment changes, and browser Back/Forward MUST restore both the destination and all applied selections.
+An empty or unknown destination MUST select Overview without an error while retaining valid settings from the fragment.
+The content skip link MUST focus dashboard content without changing the current URL or selections; incoming legacy `#content` navigation MUST preserve the current selections.
+Navigation within the page MUST preserve all shared and chart-local selections, including those in inactive sections.
 
 Each plot heading MUST have an adjacent native link displaying `#`, with an accessible name and tooltip identifying the plot, such as “Link to Online.”
 The link MUST remain subtly visible on desktop and mobile, with clear hover and keyboard-focus states and an adequate touch target.
 Activating it MUST set the plot fragment in the address bar and navigate to that plot.
 It MUST support native link actions, including copying the link address and opening it in a new tab, without replacing them with clipboard behavior.
-Section navigation and “Now” links MUST use the same fragment-navigation behavior.
+Section navigation and “Now” links MUST use the same behavior and include the current selections in their addresses.
 
-**Example:** Opening `#chart-online-presence` selects Engagement and positions the Online presence chart in view.
-Switching to Player activity changes the fragment to `#player-activity`; Back returns to Online presence.
+##### Applied view settings
+
+The fragment MUST use `#destination?key=value&key=value` with URL-encoded keys and values.
+Parameters MUST encode applied view settings with these names:
+
+- `range`: `today`, `yesterday`, `7`, `30`, `90`, `180`, `365`, `all`, or `custom`.
+- `from` and `to`: inclusive UTC dates in `YYYY-MM-DD` form for a custom primary range.
+- Repeated `scope`: `all` or `server:<source ID>`.
+- `compare`: `disabled`, `previous`, `year-over-year`, or `custom`.
+- `match`: `date` or `weekday`.
+- Repeated `period`: custom comparison date pairs in `YYYY-MM-DD/YYYY-MM-DD` form, with both dates inclusive.
+- Repeated `zone`: `all` or `zone:<source ID>`.
+- Repeated `online-metric`: `online-daily` or `online-monthly`.
+- Repeated `subscriber-metric`: `daily-subscriptions`, `monthly-subscriptions`, or `online-subscriptions`.
+
+Server and zone IDs MUST be used instead of display names so renaming an entity does not invalidate its links.
+Missing entity IDs MUST remain selected and appear as removable options labeled with their ID and “unavailable.”
+Generated links MUST omit default settings, retain selection order, and use a consistent parameter order.
+An explicit empty value for a selection parameter MUST represent no selections; an omitted parameter MUST use that control's defaults.
+Simple tab and plot fragments without parameters MUST remain supported and use default selections on a fresh visit.
+Relative presets MUST remain relative to the current UTC time; custom ranges and comparison periods MUST retain their fixed dates.
+Saved custom periods and chart-local selections MUST survive temporary mode or section changes.
+Unknown parameters MUST be ignored; malformed values MUST fall back only for the affected setting.
+Valid entries in repeated parameters MUST be preserved and duplicates removed; if no valid selection remains, use its default unless an explicit empty value was supplied.
+Invalid comparison periods MUST be skipped.
+
+Each change to applied selections or destination MUST add one browser history entry.
+Restoring a URL MUST NOT add another history entry or discard Forward history.
+Opening menus, editing unapplied dates, validation errors, hover, and clock updates MUST NOT change the URL or browser history.
+Changing filters MUST NOT scroll to the fragment's plot again; following a plot link MUST scroll to and focus its plot, including repeated activation of the current link.
+
+**Example:** `#chart-online-presence?range=30&scope=server%3Aa&compare=previous` opens Online presence for server `a`, with the last 30 days compared with the previous period.
+Copying the chart link preserves that configuration; selecting another time range and pressing Back restores the previous range.
 
 ### Now
 

@@ -2,6 +2,7 @@ use crate::{
     analysis::*,
     charts,
     charts::browser::{InteractiveHeatmap, InteractivePlot},
+    view_state::*,
 };
 use chrono::{DateTime, Utc};
 use leptos::{ev, prelude::*};
@@ -13,12 +14,6 @@ use std::{
 use wasm_bindgen::JsCast;
 
 const REPOSITORY_URL: &str = "https://github.com/Tiendil/monsters-and-memories-stats";
-const ONLINE_METRICS: [Metric; 2] = [Metric::OnlineDaily, Metric::OnlineMonthly];
-const SUBSCRIBER_METRICS: [Metric; 3] = [
-    Metric::DailySubscriptions,
-    Metric::MonthlySubscriptions,
-    Metric::OnlineSubscriptions,
-];
 
 #[component]
 fn ChartExplanation(metric: Metric) -> impl IntoView {
@@ -66,83 +61,116 @@ fn utc(time: DateTime<Utc>) -> String {
     time.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true)
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Section {
-    Overview,
-    Population,
-    Relationships,
-}
-impl Section {
-    const ALL: [Self; 3] = [Self::Overview, Self::Population, Self::Relationships];
-    fn label(self) -> &'static str {
-        match self {
-            Self::Overview => "Overview",
-            Self::Population => "Player activity",
-            Self::Relationships => "Engagement",
-        }
-    }
-    fn key(self) -> &'static str {
-        match self {
-            Self::Overview => "overview",
-            Self::Population => "population",
-            Self::Relationships => "relationships",
-        }
-    }
-
-    fn fragment(self) -> &'static str {
-        match self {
-            Self::Overview => "#overview",
-            Self::Population => "#player-activity",
-            Self::Relationships => "#engagement",
-        }
-    }
-
-    fn from_fragment(fragment: &str) -> Option<Self> {
-        match fragment {
-            ""
-            | "#overview"
-            | "#chart-online"
-            | "#chart-daily"
-            | "#chart-monthly"
-            | "#chart-subscriptions" => Some(Self::Overview),
-            "#player-activity"
-            | "#chart-starting-zones"
-            | "#chart-online-share"
-            | "#chart-activity-heatmap" => Some(Self::Population),
-            "#engagement"
-            | "#chart-daily-monthly"
-            | "#chart-online-presence"
-            | "#chart-subscriber-activity" => Some(Self::Relationships),
-            _ => None,
-        }
-    }
+#[derive(Clone, Copy)]
+struct ViewSignals {
+    target: RwSignal<String>,
+    scopes: RwSignal<Vec<Scope>>,
+    range: RwSignal<TimeRange>,
+    comparison: RwSignal<ComparisonMode>,
+    matching: RwSignal<DateMatching>,
+    periods: RwSignal<Vec<Period>>,
+    zones: RwSignal<Vec<ZoneScope>>,
+    online_metrics: RwSignal<Vec<Metric>>,
+    subscriber_metrics: RwSignal<Vec<Metric>>,
+    last_url_state: StoredValue<ViewState>,
 }
 
-fn apply_fragment(section: RwSignal<Section>) {
-    let fragment = window().location().hash().unwrap_or_default();
-    // The existing skip link stays within whichever section is selected.
-    if fragment == "#content" {
-        return;
+impl ViewSignals {
+    fn new(state: ViewState) -> Self {
+        Self {
+            target: RwSignal::new(state.target.clone()),
+            scopes: RwSignal::new(state.scopes.clone()),
+            range: RwSignal::new(state.range),
+            comparison: RwSignal::new(state.comparison),
+            matching: RwSignal::new(state.matching),
+            periods: RwSignal::new(state.periods.clone()),
+            zones: RwSignal::new(state.zones.clone()),
+            online_metrics: RwSignal::new(state.online_metrics.clone()),
+            subscriber_metrics: RwSignal::new(state.subscriber_metrics.clone()),
+            last_url_state: StoredValue::new(state),
+        }
     }
-    let destination = Section::from_fragment(&fragment);
-    let selected = destination.unwrap_or(Section::Overview);
-    if section.get_untracked() != selected {
-        section.set(selected);
+
+    fn snapshot(self) -> ViewState {
+        ViewState {
+            target: self.target.get(),
+            scopes: self.scopes.get(),
+            range: self.range.get(),
+            comparison: self.comparison.get(),
+            matching: self.matching.get(),
+            periods: self.periods.get(),
+            zones: self.zones.get(),
+            online_metrics: self.online_metrics.get(),
+            subscriber_metrics: self.subscriber_metrics.get(),
+        }
     }
-    if destination.is_some() && fragment.starts_with("#chart-") {
-        // The selected section must mount before its target can be focused.
+
+    fn restore(self) {
+        let fragment = window().location().hash().unwrap_or_default();
+        if fragment == "#content" {
+            focus_target("content");
+            return;
+        }
+        let state = ViewState::from_fragment(&fragment);
+        let changed_target = self.target.get_untracked() != state.target;
+        // Set the last URL state before notifying signals: restoring history must
+        // never create a new history entry or discard the Forward stack.
+        self.last_url_state.set_value(state.clone());
+        macro_rules! restore {
+            ($signal:ident, $value:ident) => {
+                if self.$signal.get_untracked() != state.$value {
+                    self.$signal.set(state.$value);
+                }
+            };
+        }
+        let target = state.target.clone();
+        restore!(target, target);
+        restore!(scopes, scopes);
+        restore!(range, range);
+        restore!(comparison, comparison);
+        restore!(matching, matching);
+        restore!(periods, periods);
+        restore!(zones, zones);
+        restore!(online_metrics, online_metrics);
+        restore!(subscriber_metrics, subscriber_metrics);
+        if changed_target {
+            self.scroll_to_plot(target);
+        }
+    }
+
+    fn navigate(self, target: &str, event: web_sys::MouseEvent) {
+        if event.button() != 0
+            || event.ctrl_key()
+            || event.meta_key()
+            || event.shift_key()
+            || event.alt_key()
+        {
+            return;
+        }
+        event.prevent_default();
+        self.target.set(target.to_owned());
+        self.scroll_to_plot(target.to_owned());
+    }
+
+    fn scroll_to_plot(self, target: String) {
+        if !target.starts_with("chart-") {
+            return;
+        }
         request_animation_frame(move || {
-            if window().location().hash().ok().as_ref() != Some(&fragment) {
-                return;
-            }
-            if let Some(element) = document()
-                .get_element_by_id(&fragment[1..])
-                .and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok())
-            {
-                let _ = element.focus();
-                element.scroll_into_view();
+            if self.target.get_untracked() == target {
+                focus_target(&target);
             }
         });
+    }
+}
+
+fn focus_target(target: &str) {
+    if let Some(element) = document()
+        .get_element_by_id(target)
+        .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+    {
+        let _ = element.focus();
+        element.scroll_into_view();
     }
 }
 
@@ -152,6 +180,7 @@ fn readable(time: DateTime<Utc>) -> String {
 
 #[component]
 fn Summary(history: Arc<History>) -> impl IntoView {
+    let navigation = expect_context::<ViewSignals>();
     let latest = history.snapshots().last();
     view! {
         <section class="now-summary" aria-labelledby="now-heading">
@@ -162,8 +191,9 @@ fn Summary(history: Arc<History>) -> impl IntoView {
             let link_label = format!("{label}: show chart");
             let value = latest.and_then(|s| metric.value(s, &Scope::All)).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() });
             let target = format!("chart-{key}");
+            let link_target = target.clone();
             view! { <article class="headline" data-summary=key>
-                <h3><a class="text-action" href=format!("#{target}") aria-label=link_label>{label}</a></h3><p class="headline-value">{value}</p>
+                <h3><a class="text-action" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label>{label}</a></h3><p class="headline-value">{value}</p>
             </article> }
         }).collect_view()}</div>
         </section>
@@ -172,11 +202,13 @@ fn Summary(history: Arc<History>) -> impl IntoView {
 
 #[component]
 fn ChartHeading(target: String, title: String) -> impl IntoView {
+    let navigation = expect_context::<ViewSignals>();
+    let link_target = target.clone();
     let link_label = format!("Link to {title}");
     view! {
         <div class="chart-header">
             <h3 class="chart-heading">{title}</h3>
-            <a class="chart-permalink" href=format!("#{target}") aria-label=link_label.clone() title=link_label>"#"</a>
+            <a class="chart-permalink" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label.clone() title=link_label>"#"</a>
         </div>
     }
 }
@@ -505,7 +537,7 @@ fn ActivityCard(
 fn CheckboxPicker(
     id: &'static str,
     label: &'static str,
-    choices: Vec<(String, String)>,
+    choices: Memo<Vec<(String, String)>>,
     selected: Signal<Vec<String>>,
     summary: Signal<String>,
     on_toggle: Callback<String>,
@@ -527,10 +559,10 @@ fn CheckboxPicker(
             } on:focusout=move |event| close_menu_on_focus_out(node, event)>
                 <summary id=format!("{id}-toggle") aria-labelledby=format!("{id}-label {id}-selection")><span class="selection-summary" id=format!("{id}-selection")>{move || summary.get()}</span></summary>
                 <div class="selection-options" id=format!("{id}-options") role="group" aria-labelledby=format!("{id}-label")>
-                    {choices.into_iter().map(|(value, label)| {
+                    <For each=move || choices.get() key=|(value, _)| value.clone() children=move |(value, label)| {
                         let checked = value.clone();
                         view! { <label class="checkbox"><input type="checkbox" value=value.clone() prop:checked=move || selected.get().contains(&checked) on:change=move |_| on_toggle.run(value.clone())/><span>{label}</span></label> }
-                    }).collect_view()}
+                    }/>
                 </div>
             </details>
         </div>
@@ -539,13 +571,22 @@ fn CheckboxPicker(
 
 #[component]
 fn ServerPicker(names: BTreeMap<String, String>, scopes: RwSignal<Vec<Scope>>) -> impl IntoView {
-    let choices = std::iter::once(("all".into(), "All Servers".into()))
-        .chain(
-            names
-                .iter()
-                .map(|(id, name)| (format!("server:{id}"), display_name(id, name))),
-        )
-        .collect();
+    let choice_names = names.clone();
+    let choices = Memo::new(move |_| {
+        std::iter::once(("all".into(), "All Servers".into()))
+            .chain(
+                choice_names
+                    .iter()
+                    .map(|(id, name)| (format!("server:{id}"), display_name(id, name))),
+            )
+            .chain(scopes.get().into_iter().filter_map(|value| match value {
+                Scope::Server(id) if !choice_names.contains_key(&id) => {
+                    Some((format!("server:{id}"), format!("{id} (unavailable)")))
+                }
+                _ => None,
+            }))
+            .collect()
+    });
     let summary = Signal::derive(move || {
         let selected = scopes.get();
         match selected.as_slice() {
@@ -582,13 +623,22 @@ fn ServerPicker(names: BTreeMap<String, String>, scopes: RwSignal<Vec<Scope>>) -
 
 #[component]
 fn ZonePicker(names: BTreeMap<String, String>, zones: RwSignal<Vec<ZoneScope>>) -> impl IntoView {
-    let choices = std::iter::once(("all".into(), "All Zones".into()))
-        .chain(
-            names
-                .iter()
-                .map(|(id, name)| (format!("zone:{id}"), display_name(id, name))),
-        )
-        .collect();
+    let choice_names = names.clone();
+    let choices = Memo::new(move |_| {
+        std::iter::once(("all".into(), "All Zones".into()))
+            .chain(
+                choice_names
+                    .iter()
+                    .map(|(id, name)| (format!("zone:{id}"), display_name(id, name))),
+            )
+            .chain(zones.get().into_iter().filter_map(|value| match value {
+                ZoneScope::Zone(id) if !choice_names.contains_key(&id) => {
+                    Some((format!("zone:{id}"), format!("{id} (unavailable)")))
+                }
+                _ => None,
+            }))
+            .collect()
+    });
     let summary = Signal::derive(move || {
         let selected = zones.get();
         match selected.as_slice() {
@@ -632,7 +682,13 @@ fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView 
     } else {
         SUBSCRIBER_METRICS.to_vec()
     };
-    let choices = options.iter().map(|m| (m.key(), m.title())).collect();
+    let choice_metrics = options.clone();
+    let choices = Memo::new(move |_| {
+        choice_metrics
+            .iter()
+            .map(|m| (m.key(), m.title()))
+            .collect()
+    });
     let summary = Signal::derive(move || match selected.get().as_slice() {
         [] => "Choose metrics".into(),
         [metric] => metric.title(),
@@ -657,18 +713,40 @@ fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView 
 pub fn App() -> impl IntoView {
     let history = Arc::new(crate::embedded_history());
     provide_context(Arc::new(Mutex::new(charts::SeriesStyles::default())));
-    let section = RwSignal::new(Section::Overview);
-    apply_fragment(section);
-    let hash_listener =
-        window_event_listener_untyped("hashchange", move |_| apply_fragment(section));
-    on_cleanup(move || hash_listener.remove());
+    let initial = ViewState::from_fragment(&window().location().hash().unwrap_or_default());
+    let navigation = ViewSignals::new(initial);
+    provide_context(navigation);
+    let section = Memo::new(move |_| {
+        Section::from_fragment(&format!("#{}", navigation.target.get()))
+            .unwrap_or(Section::Overview)
+    });
+    let hash_listener = window_event_listener_untyped("hashchange", move |_| navigation.restore());
+    let history_listener = window_event_listener_untyped("popstate", move |_| navigation.restore());
+    on_cleanup(move || {
+        hash_listener.remove();
+        history_listener.remove();
+    });
+    Effect::new(move |_| {
+        let state = navigation.snapshot();
+        if state != navigation.last_url_state.get_value() {
+            if let Ok(history) = window().history() {
+                let _ = history.push_state_with_url(
+                    &wasm_bindgen::JsValue::NULL,
+                    "",
+                    Some(&state.fragment()),
+                );
+            }
+            navigation.last_url_state.set_value(state);
+        }
+    });
+    navigation.scroll_to_plot(navigation.target.get_untracked());
     let count = history.snapshots().len();
     let latest = history.snapshots().last().map(|s| s.observed_at);
     let first = history.snapshots().first().map(|s| s.observed_at);
     let names = servers(&history);
-    let zone_scopes = RwSignal::new(vec![ZoneScope::All]);
-    let online_metrics = RwSignal::new(ONLINE_METRICS.to_vec());
-    let subscriber_metrics = RwSignal::new(SUBSCRIBER_METRICS.to_vec());
+    let zone_scopes = navigation.zones;
+    let online_metrics = navigation.online_metrics;
+    let subscriber_metrics = navigation.subscriber_metrics;
     let utc_now =
         || DateTime::from_timestamp_millis(js_sys::Date::now() as i64).expect("browser timestamp");
     let now = RwSignal::new(utc_now());
@@ -678,11 +756,11 @@ pub fn App() -> impl IntoView {
     )
     .expect("browser timer");
     on_cleanup(move || timer.clear());
-    let scopes = RwSignal::new(vec![Scope::All]);
-    let range = RwSignal::new(TimeRange::default());
-    let mode = RwSignal::new(ComparisonMode::default());
-    let matching = RwSignal::new(DateMatching::default());
-    let custom = RwSignal::new(Vec::<Period>::new());
+    let scopes = navigation.scopes;
+    let range = navigation.range;
+    let mode = navigation.comparison;
+    let matching = navigation.matching;
+    let custom = navigation.periods;
     let comparison_history = history.clone();
     let comparison = Memo::new(move |_| {
         comparison_for(
@@ -701,7 +779,7 @@ pub fn App() -> impl IntoView {
         Memo::new(move |_| mode.get() != ComparisonMode::Disabled || scopes.get().len() > 1);
     view! {
         <style>{include_str!(concat!(env!("OUT_DIR"), "/style.css"))}</style>
-        <a class="skip-link" href="#content">"Skip to dashboard content"</a>
+        <a class="skip-link" href="#content" on:click=move |event| { event.prevent_default(); focus_target("content"); }>"Skip to dashboard content"</a>
         <main>
             {matches!(env!("MNM_STATS_DEMO"), "1").then(|| view! {
                 <p id="demo-notice" role="status">"Demo · synthetic data and server names."</p>
@@ -736,7 +814,7 @@ pub fn App() -> impl IntoView {
                 </div>
             </section>
             <nav class="section-nav" aria-label="Dashboard sections">{Section::ALL.into_iter().map(|item| view! {
-                <a class="button-link" id=format!("nav-{}", item.key()) href=item.fragment() aria-current=move || (section.get() == item).then_some("page")>{item.label()}</a>
+                <a class="button-link" id=format!("nav-{}", item.key()) href=move || navigation.snapshot().link(&item.fragment()[1..]) on:click=move |event| navigation.navigate(&item.fragment()[1..], event) aria-current=move || (section.get() == item).then_some("page")>{item.label()}</a>
             }).collect_view()}</nav>
             <section id="content" tabindex="-1" class:comparing=move || comparing.get() aria-label=move || section.get().label()>
                 <Show when=move || scopes.get().is_empty()>

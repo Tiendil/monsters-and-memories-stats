@@ -252,7 +252,8 @@ The last valid dashboard data MUST remain usable after collection failure.
 
 This section records the presentation contract for the collected current-state snapshots.
 The dashboard's information hierarchy, layout, and visual interaction MUST follow [dashboard-design.md](dashboard-design.md).
-Tabs and plots MUST be directly addressable through stable URL fragments, with navigation and plot-link controls as defined in [dashboard-design.md](dashboard-design.md#direct-links).
+Tabs, plots, and their applied selections MUST be directly addressable through URL fragments, with navigation and plot-link controls as defined in [dashboard-design.md](dashboard-design.md#direct-links).
+Shared links, refresh, and browser Back/Forward MUST restore server selections, time ranges, comparison settings and custom dates, starting-zone selections, and both Engagement metric selections.
 
 The dashboard footer MUST credit Plotly with a link to its JavaScript charting library.
 The dashboard MUST provide a visible link labeled “Star on GitHub” to the [project repository](https://github.com/Tiendil/monsters-and-memories-stats), inviting visitors to star it on GitHub.
