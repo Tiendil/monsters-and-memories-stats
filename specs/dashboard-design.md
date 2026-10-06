@@ -251,6 +251,8 @@ Server population share MUST use the time-series chart anatomy and a 0–100 per
 A short note MUST explain that “All Servers” shows individual shares of the complete observed total.
 Activity heatmap MUST use separate labeled panels for each selected server scope and period, arranged vertically at full width.
 Each panel MUST show weekday rows ordered Monday through Sunday and hour columns ordered 00 through 23, with the hour axis explicitly labeled UTC.
+Each panel MUST have a visible horizontal axis below its cells, labeled “Time of day (UTC),” with 24-hour `HH:MM` tick labels.
+Time labels MUST remain horizontal and readable without overlap at narrow widths.
 A labeled sequential color scale MUST show mean online counts, with independent bounds for all-servers totals and individual servers as defined in [requirements.md](requirements.md#population-insights).
 The scale MUST use the published Inferno sequential palette, progressing from near-black through purple and orange to bright yellow as activity increases.
 The scale MUST label its lower and upper bounds, with intermediate labels where space permits.

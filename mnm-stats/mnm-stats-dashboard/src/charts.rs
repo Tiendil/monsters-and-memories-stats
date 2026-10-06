@@ -434,9 +434,15 @@ pub fn render_heatmap(map: &ActivityHeatmap, bounds: (f64, f64)) -> Figure {
             .x_axis(
                 axis()
                     .range(vec![-0.5, 23.5])
+                    .show_line(true)
+                    .line_color(tokens::T_CHART_AXIS_LINE_COLOR)
                     .tick_values(vec![0.0, 6.0, 12.0, 18.0, 23.0])
-                    .tick_text(["00", "06", "12", "18", "23"].map(str::to_owned).to_vec())
-                    .title(Title::with_text("Hour (UTC)").font(font.clone())),
+                    .tick_text(
+                        ["00:00", "06:00", "12:00", "18:00", "23:00"]
+                            .map(str::to_owned)
+                            .to_vec(),
+                    )
+                    .title(Title::with_text("Time of day (UTC)").font(font.clone())),
             )
             .y_axis(
                 axis()
