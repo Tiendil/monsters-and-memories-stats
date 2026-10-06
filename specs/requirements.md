@@ -353,13 +353,18 @@ The README MUST explain that these are sampled averages whose coverage can be un
 
 The shared Servers and time controls MUST govern both views, including more than two entities or periods.
 The heatmap MUST show a separate labeled panel per server scope and period, with “All Servers” representing the summed online count in each observation.
-Every displayed panel MUST use the same color scale from zero to the largest displayed cell mean so comparisons remain meaningful.
-An all-zero selection MAY use a positive upper bound to keep measured zero cells visible.
+Every displayed panel MUST use the same linear color scale from the smallest to the largest displayed cell mean so comparisons remain meaningful and differences within the selected data remain visible.
+Missing cells MUST NOT affect these bounds; a measured zero MUST be included.
+If every available cell has the same mean, the scale MUST use a nonnegative, nonzero span containing and labeling that value so constant selections remain readable.
+The displayed range MUST be labeled and recomputed when the selected entities or periods change.
 Period comparison MUST group by each observation's actual UTC weekday and hour rather than shift observations onto the primary period's calendar.
 Starting-zone selections MUST affect only the starting-zone chart.
 
 **Example:** One server has 20 of 80 online players, giving a 25-percent share even when it is the only selected server.
 Two Monday 10:00–11:00 UTC observations of 20 and 40 give a heatmap mean of 30 from two records; an unobserved Monday hour remains blank.
+
+**Example:** Displayed cell means range from 420 to 528, so the color scale spans 420–528.
+Adding a server panel with a mean of 100 changes every displayed panel to the same 100–528 scale.
 
 ### Ratios
 

@@ -475,12 +475,12 @@ fn ActivityCard(
     view! {
         <article class="chart-card" id="chart-activity-heatmap" data-metric="activity-heatmap" tabindex="-1">
             <ChartHeading target="chart-activity-heatmap".into() title="Activity heatmap".into()/>
-            <p class="chart-note chart-explanation">"Average online population by weekday and hour (UTC). Darker cells indicate more players; blank cells have no records."</p>
+            <p class="chart-note chart-explanation">"Average online population by weekday and hour (UTC). Brighter colors indicate more players; blank cells have no records. The scale follows the selected data and is shared across panels."</p>
             {move || match maps.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(maps) if maps.is_empty() => view! { <p class="empty-chart">"Select servers and a period to show activity."</p> }.into_any(),
                 Ok(maps) => {
-                    let maximum = heatmap_maximum(&maps);
+                    let bounds = heatmap_bounds(&maps).unwrap_or_default();
                     maps.into_iter().map(|map| {
                         let label = map.label.clone();
                         let available = map.cells.iter().flatten().any(|cell| cell.samples > 0);
@@ -488,7 +488,7 @@ fn ActivityCard(
                             <section class="heatmap-panel" aria-label=label.clone()>
                                 <h4 class="heatmap-label">{label.clone()}</h4>
                                 {if available {
-                                    view! { <InteractiveHeatmap map maximum/> }.into_any()
+                                    view! { <InteractiveHeatmap map bounds/> }.into_any()
                                 } else {
                                     view! { <p class="empty-chart">"No available observations for this selection."</p> }.into_any()
                                 }}

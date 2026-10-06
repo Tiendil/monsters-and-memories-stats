@@ -7,7 +7,7 @@ use plotly::{
     Configuration, HeatMap, Layout, Plot as Figure, Scatter,
     common::{
         ColorBar, ColorScale, ColorScaleElement, DashType, Font, HoverInfo, Label, Line, Marker,
-        Mode, Orientation, Title,
+        Mode, Orientation, Side, Title,
     },
     configuration::DisplayModeBar,
     layout::{Axis, AxisType, HoverMode, Margin},
@@ -305,9 +305,33 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
 }
 
 /// Render an observed weekday/hour mean without interpolation or hover on empty buckets.
-pub fn render_heatmap(map: &ActivityHeatmap, maximum: f64) -> Figure {
+pub fn render_heatmap(map: &ActivityHeatmap, bounds: (f64, f64)) -> Figure {
     let weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     let mut figure = Figure::new();
+    // Constant selections need a nonzero span; all panels use the same fallback.
+    let (minimum, maximum) = bounds;
+    let (scale_minimum, scale_maximum) = if maximum > minimum {
+        bounds
+    } else if maximum > 0.0 {
+        (maximum * 0.95, maximum * 1.05)
+    } else {
+        (0.0, 1.0)
+    };
+    let step = (scale_maximum - scale_minimum) / 2.0;
+    // Precision follows the span so nearby fractional endpoints stay distinct.
+    let precision = (1.0 - step.log10().floor()).max(2.0) as usize;
+    let colors = [
+        tokens::T_CHART_HEATMAP_COLOR_00,
+        tokens::T_CHART_HEATMAP_COLOR_01,
+        tokens::T_CHART_HEATMAP_COLOR_02,
+        tokens::T_CHART_HEATMAP_COLOR_03,
+        tokens::T_CHART_HEATMAP_COLOR_04,
+        tokens::T_CHART_HEATMAP_COLOR_05,
+        tokens::T_CHART_HEATMAP_COLOR_06,
+        tokens::T_CHART_HEATMAP_COLOR_07,
+        tokens::T_CHART_HEATMAP_COLOR_08,
+        tokens::T_CHART_HEATMAP_COLOR_09,
+    ];
     let font = Font::new()
         .family(tokens::T_CHART_AXIS_LABEL_FONT_FAMILY_CSS)
         .size(tokens::T_CHART_AXIS_LABEL_FONT_SIZE.pixels() as usize)
@@ -347,32 +371,39 @@ pub fn render_heatmap(map: &ActivityHeatmap, maximum: f64) -> Figure {
         .hover_on_gaps(false)
         .connect_gaps(false)
         .zauto(false)
-        .zmin(0.0)
-        // A positive upper bound also keeps an all-zero selection visibly measured.
-        .zmax(if maximum > 0.0 { maximum } else { 1.0 })
-        .color_scale(ColorScale::Vector(vec![
-            ColorScaleElement(0.0, tokens::T_CHART_HEATMAP_COLOR_LOW.into()),
-            ColorScaleElement(1.0 / 3.0, tokens::T_CHART_HEATMAP_COLOR_MID_LOW.into()),
-            ColorScaleElement(2.0 / 3.0, tokens::T_CHART_HEATMAP_COLOR_MID_HIGH.into()),
-            ColorScaleElement(1.0, tokens::T_CHART_HEATMAP_COLOR_HIGH.into()),
-        ]))
+        .zmin(scale_minimum)
+        .zmax(scale_maximum)
+        .color_scale(ColorScale::Vector(
+            colors
+                .iter()
+                .enumerate()
+                .map(|(index, color)| {
+                    ColorScaleElement(index as f64 / (colors.len() - 1) as f64, (*color).into())
+                })
+                .collect(),
+        ))
         .x_gap(tokens::T_CHART_HEATMAP_CELL_GAP.pixels())
         .y_gap(tokens::T_CHART_HEATMAP_CELL_GAP.pixels())
         .color_bar(
             ColorBar::new()
                 .orientation(Orientation::Horizontal)
-                .title(Title::with_text("Mean online").font(font.clone()))
+                .title(
+                    Title::with_text("Mean online")
+                        .font(font.clone())
+                        .side(Side::Top),
+                )
                 .tick_font(font.clone())
-                .tick_format(",.3~g")
-                .n_ticks(3)
+                .tick_format(format!(",.{precision}~f"))
+                .tick_vals(vec![scale_minimum, scale_minimum + step, scale_maximum])
                 .thickness(tokens::T_CHART_HEATMAP_SCALE_THICKNESS.pixels() as usize)
+                .x_pad(tokens::T_CHART_HEATMAP_SCALE_PADDING_INLINE.pixels().into())
                 .outline_width(0)
                 .y(1.05),
         )
         .hover_label(
             Label::new()
                 .background_color(tokens::T_COLOR_SURFACE_CHART)
-                .border_color(tokens::T_CHART_HEATMAP_COLOR_HIGH)
+                .border_color(tokens::T_CHART_HEATMAP_HOVER_BORDER_COLOR)
                 .font(font.clone()),
         ),
     );
@@ -458,12 +489,12 @@ pub mod browser {
     }
 
     #[component]
-    pub fn InteractiveHeatmap(map: ActivityHeatmap, maximum: f64) -> impl IntoView {
+    pub fn InteractiveHeatmap(map: ActivityHeatmap, bounds: (f64, f64)) -> impl IntoView {
         let label = format!(
             "Activity heatmap; {}. Average online population by day of the week and hour (UTC). Hover for the average, total and number of records used. Blank cells mean no data. Download JSONL contains the original records.",
             map.label
         );
-        view! { <PlotSurface figure=render_heatmap(&map, maximum) height=tokens::T_CHART_HEATMAP_HEIGHT.pixels() as usize label/> }
+        view! { <PlotSurface figure=render_heatmap(&map, bounds) height=tokens::T_CHART_HEATMAP_HEIGHT.pixels() as usize label/> }
     }
 
     #[component]

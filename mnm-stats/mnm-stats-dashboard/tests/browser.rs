@@ -883,6 +883,30 @@ impl Browser {
         self.select("#time-range", "30");
     }
 
+    fn verify_heatmap_scale(&self) {
+        let result = self.request(Method::POST, "/execute/sync", json!({"script": r#"
+            const plot = document.querySelector('.heatmap-panel .plot-surface');
+            const labels = Array.from(plot.querySelectorAll('.cbaxis text'));
+            const text = labels.map(label => label.textContent);
+            const values = text.map(label => Number(label.replaceAll(',', '')));
+            const minimum = plot.data[0].zmin, maximum = plot.data[0].zmax;
+            const tolerance = Math.min(0.005, (maximum - minimum) / 100);
+            const bounds = plot.getBoundingClientRect();
+            const boxes = labels.map(label => label.getBoundingClientRect());
+            return {
+                text,
+                endpoints: Math.abs(values[0] - minimum) <= tolerance && Math.abs(values.at(-1) - maximum) <= tolerance,
+                ordinary: text.every(label => /^[\d,]+(?:\.\d+)?$/.test(label)),
+                grouped: maximum < 1000 || text.at(-1).includes(','),
+                readable: boxes.every((box, i) => box.left >= bounds.left && box.right <= bounds.right &&
+                    (i === 0 || box.left > boxes[i - 1].right))
+            };
+        "#, "args":[]}));
+        for check in ["endpoints", "ordinary", "grouped", "readable"] {
+            assert_eq!(result[check], true, "heatmap scale {check}: {result}");
+        }
+    }
+
     fn verify_population_insights(&self, expected: &Value) {
         use chrono::{Datelike, Timelike};
         self.select("#time-range", "7");
@@ -950,6 +974,7 @@ impl Browser {
                 },
                 "heatmap resize",
             );
+            self.verify_heatmap_scale();
             let point = self.request(Method::POST, "/execute/sync", json!({"script":"const p=document.querySelector('[data-metric=\"activity-heatmap\"] .plot-surface'); p.scrollIntoView({block:'center'}); const r=p.getBoundingClientRect(), l=p._fullLayout; return {x:r.x+l.xaxis._offset+l.xaxis.l2p(12), y:r.y+l.yaxis._offset+l.yaxis.l2p(0)};", "args":[]}));
             self.request(Method::POST, "/goog/cdp/execute", json!({"cmd":"Input.dispatchMouseEvent","params":{"type":"mouseMoved","x":point["x"],"y":point["y"]}}));
             self.expect_count("[data-metric='activity-heatmap'] .hovertext", 1);
@@ -980,7 +1005,7 @@ impl Browser {
             || self.count(".heatmap-panel .plot-surface[data-ready='true']") == 6,
             "compared heatmaps",
         );
-        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const data=Array.from(document.querySelectorAll('.heatmap-panel .plot-surface'),p=>p.data[0]); return data.every(d=>d.zmin===0 && d.zmax===data[0].zmax);", "args":[]})), true);
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const data=Array.from(document.querySelectorAll('.heatmap-panel .plot-surface'),p=>p.data[0]); const values=data.flatMap(d=>d.z.flat()).filter(v=>v!==null); const min=Math.min(...values), max=Math.max(...values); return data.every(d=>d.zmin===min && d.zmax===max);", "args":[]})), true);
         self.expect_count("[data-metric='online-share'] .legend li", 8);
         self.click("#comparison-mode");
         self.click("#match-date");
@@ -2140,6 +2165,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
         );
         browser.show_metric("activity-heatmap");
         browser.ready("activity-heatmap");
+        browser.verify_heatmap_scale();
         let cells = browser.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('.heatmap-panel .plot-surface').data[0].z;","args":[]}));
         assert_eq!(cells[5][23], mean);
         assert!(cells[5][22].is_null());

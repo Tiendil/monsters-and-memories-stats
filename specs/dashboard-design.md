@@ -208,10 +208,14 @@ A short note MUST explain that “All Servers” shows individual shares of the 
 Activity heatmap MUST use separate labeled panels for each selected server scope and period, arranged vertically at full width.
 Each panel MUST show weekday rows ordered Monday through Sunday and hour columns ordered 00 through 23, with the hour axis explicitly labeled UTC.
 A labeled sequential color scale MUST show mean online counts and use common bounds across the displayed panels.
-The scale MUST progress from pale peach through orange and burnt orange to dark rust, with higher activity appearing darker.
-Unobserved cells MUST retain the neutral chart surface and remain distinguishable from the pale-peach fill for measured zero.
+The scale MUST use the published Inferno sequential palette, progressing from near-black through purple and orange to bright yellow as activity increases.
+The scale MUST label its lower and upper bounds, with intermediate labels where space permits.
+Labels MUST use ordinary numbers with thousands separators rather than scientific notation, retaining decimals when needed to distinguish small averages.
+Scale labels MUST remain readable without overlap or clipping at narrow widths.
+Unobserved cells MUST retain the neutral chart surface and remain distinguishable from measured zero.
 The heatmap MUST NOT use categorical line swatches to represent its intensity scale.
-A short note MUST explain sampled averages, uneven coverage, and blank cells for missing observations.
+A short note MUST explain weekday/hour averages and increasing brightness for higher values.
+It MUST identify blank cells as missing observations and explain that the scale follows the selected data and is shared across panels.
 Cell hover MUST expose the aggregate details defined in [requirements.md](requirements.md#population-insights).
 An unavailable panel MUST identify its scope and period and show an empty-state message.
 
@@ -318,7 +322,7 @@ Normal time axes MUST run chronologically from left to right; the page's collect
 Period-comparison axes MUST describe their alignment in human terms beside the horizontal axis, retaining original timestamps in details.
 Gridlines MUST be visually subordinate to series and use a small number of labeled, meaningful intervals.
 Charts MUST use a linear value scale and MUST NOT combine unrelated units with dual axes.
-Count and ratio charts SHOULD begin at zero to make magnitude comparisons straightforward.
+Time-series count and ratio charts SHOULD begin at zero to make magnitude comparisons straightforward.
 A nonzero lower bound MAY be used for a line-only chart when needed to reveal variation, provided that the scale is clearly visible and the same scale applies to every compared series.
 Activity ratios MUST remain able to exceed 100 percent; server population shares MUST use their bounded percentage scale.
 

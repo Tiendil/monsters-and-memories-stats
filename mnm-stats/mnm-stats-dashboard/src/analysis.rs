@@ -1081,9 +1081,13 @@ pub fn activity_heatmaps(
         .collect()
 }
 
-pub fn heatmap_maximum(maps: &[ActivityHeatmap]) -> f64 {
-    maps.iter()
+pub fn heatmap_bounds(maps: &[ActivityHeatmap]) -> Option<(f64, f64)> {
+    let mut means = maps
+        .iter()
         .flat_map(|map| map.cells.iter().flatten())
-        .filter_map(|cell| cell.mean())
-        .fold(0.0, f64::max)
+        .filter_map(|cell| cell.mean());
+    let first = means.next()?;
+    Some(means.fold((first, first), |(minimum, maximum), mean| {
+        (minimum.min(mean), maximum.max(mean))
+    }))
 }

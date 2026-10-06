@@ -17,7 +17,8 @@ Shared token terminology is defined in the [project dictionary](dictionary.md#pr
 It MUST use the structure and types of the [Design Tokens Format Module 2025.10](https://www.designtokens.org/tr/2025.10/format/), with the project profile and Tailwind theme import convention defined below.
 The dashboard MUST consume generated representations of that artifact in both CSS and chart configuration.
 Generated representations MUST NOT be edited by hand or committed as another source of token values.
-[Tailwind's published default theme](https://tailwindcss.com/docs/theme) MUST supply the palette and shared style scales; the authored artifact MUST select their use through semantic aliases rather than copy their numeric values.
+[Tailwind's published default theme](https://tailwindcss.com/docs/theme) MUST supply the UI palette and shared style scales; the authored artifact MUST select their use through semantic aliases rather than copy their numeric values.
+The scientific heatmap palette MUST retain its published colors as defined under Chart consumption.
 Tailwind MUST be a pinned build dependency, with its theme and license installed during development-environment setup.
 The build MUST use the installed theme without fetching it during token generation.
 Visual roles and their use in the dashboard MUST follow [dashboard-design.md](dashboard-design.md); the token artifact supplies their reusable values.
@@ -49,7 +50,8 @@ Surrounding cards and descriptive content MUST use the general UI families.
 Axis label properties MUST share `chart.axis.label`; series palette and fallback-color parameters MUST share `chart.series`.
 Chart dimensions and pointer hit distances MUST identify their units in displayed CSS pixels; chart width MUST follow the available container width.
 Chart height MUST combine a minimum viewport height with per-series hover space so larger comparisons retain their labels.
-Numbered palette entries MUST denote series order without implying metric meaning or server identity.
+Numbered categorical palette entries MUST denote series order without implying metric meaning or server identity.
+Numbered sequential palette entries MUST denote intensity order from low to high.
 
 ### Shared values
 
@@ -96,7 +98,7 @@ References MUST use these mappings:
 - `{tailwind.leading.normal}` selects `--leading-normal` as a unitless line height.
 - `{tailwind.radius.md}` selects `--radius-md` as a dimension.
 
-Authored palette entries MUST use Tailwind references, directly or through semantic aliases.
+Authored palette entries MUST use Tailwind references, directly or through semantic aliases, except for the published scientific heatmap colors.
 Shared spacing, font sizes, weights, and radii SHOULD use Tailwind references to keep the design on common scales.
 Custom values MAY express roles not supplied by the theme, including the display font, responsive layout constraints, and chart geometry.
 A custom value MUST NOT duplicate a theme value merely to avoid referencing it.
@@ -170,12 +172,14 @@ It MUST NOT maintain a separate handwritten palette or copies of token values.
 Ordinary chart lines, observation markers, legend swatches, and hover-label borders MUST use the same series-color selection for the same series.
 Connections across sparse collection intervals MUST use `chart.series.gap.color` and `chart.series.gap.opacity`, independently of the series palette.
 Heatmap intensity MUST use the sequential colors under `chart.heatmap.color`, independently of the categorical series palette.
+Those entries MUST preserve the published Inferno stops provided by [Plotly's sequential color scales](https://plotly.com/python/builtin-colorscales/#built-in-sequential-color-scales), with their source identified in the token descriptions.
+These scientific colors MUST use structured sRGB values rather than approximate Tailwind substitutions, so the palette's intended progression is retained.
 Heatmap geometry MUST use tokens under `chart.heatmap`; its displayed color bounds MUST remain derived from data.
 Chart font and dimension conversion MUST preserve the declared units; CSS-relative dimensions MUST NOT silently become fixed pixels.
 Plotly configuration MUST receive resolved colors and pixel dimensions from generated Rust values; it need not read CSS custom properties at runtime.
 The build MUST convert Tailwind's CSS colors, including OKLCH values, into the same bounded sRGB representation for both CSS and Plotly.
 This conversion SHOULD use a maintained color-parsing library so CSS color syntax and conversion behavior do not require a separate project implementation.
-Conversion to sRGB MUST remain a generated representation, not become the authored palette.
+Conversion of Tailwind colors to sRGB MUST remain a generated representation, not become a copied authored palette.
 Dimensions consumed through whole-pixel Plotly.rs APIs MUST reject fractional pixel values rather than truncate them.
 Native chart-library layout details without an authored override MUST NOT have unused tokens.
 

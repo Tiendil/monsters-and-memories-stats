@@ -1512,15 +1512,23 @@ fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
             .flat_map(|m| m.cells.iter().flatten())
             .all(|cell| cell.mean().is_none())
     );
-    assert_eq!(heatmap_maximum(&maps), 32.0);
+    assert_eq!(heatmap_bounds(&maps), Some((0.0, 32.0)));
     let fig: serde_json::Value = serde_json::from_str(
-        &mnm_stats_dashboard::charts::render_heatmap(feb_a, heatmap_maximum(&maps)).to_json(),
+        &mnm_stats_dashboard::charts::render_heatmap(feb_a, heatmap_bounds(&maps).unwrap())
+            .to_json(),
     )
     .unwrap();
     assert_eq!(fig["data"][0]["z"][0][10], 10.0);
     assert_eq!(fig["data"][0]["z"][0][11], 0.0);
     assert!(fig["data"][0]["z"][0][12].is_null());
     assert_eq!(fig["data"][0]["zmax"], 32.0);
+    let colors = fig["data"][0]["colorscale"].as_array().unwrap();
+    assert_eq!(colors.len(), 10);
+    assert_eq!(colors[0], serde_json::json!([0.0, "rgba(0, 0, 4, 1)"]));
+    assert_eq!(
+        colors[9],
+        serde_json::json!([1.0, "rgba(252, 255, 164, 1)"])
+    );
     assert!(
         fig["data"][0]["text"][0][10]
             .as_str()
@@ -1552,6 +1560,42 @@ fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
 }
 
 #[test]
+fn heatmap_bounds_follow_available_means_across_selected_panels() {
+    let empty = ActivityHeatmap {
+        label: "No data".into(),
+        cells: [[ActivityCell::default(); 24]; 7],
+    };
+    assert_eq!(heatmap_bounds(&[]), None);
+    assert_eq!(heatmap_bounds(std::slice::from_ref(&empty)), None);
+    let mut first = empty.clone();
+    first.cells[0][0] = ActivityCell {
+        total: 840,
+        samples: 2,
+    };
+    first.cells[0][1] = ActivityCell {
+        total: 1056,
+        samples: 2,
+    };
+    assert_eq!(
+        heatmap_bounds(std::slice::from_ref(&first)),
+        Some((420.0, 528.0))
+    );
+    let mut second = empty.clone();
+    second.cells[6][23] = ActivityCell {
+        total: 100,
+        samples: 1,
+    };
+    let mut maps = [empty, first, second];
+    assert_eq!(heatmap_bounds(&maps), Some((100.0, 528.0)));
+    maps[2].cells[0][0] = ActivityCell {
+        total: 0,
+        samples: 1,
+    };
+    assert_eq!(heatmap_bounds(&maps), Some((0.0, 528.0)));
+    assert_eq!(heatmap_bounds(&maps[1..2]), Some((420.0, 528.0)));
+}
+
+#[test]
 fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
     use mnm_stats_dashboard::charts::render_heatmap;
     let mut map = ActivityHeatmap {
@@ -1563,7 +1607,7 @@ fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
         samples: 1,
     };
     let zero: serde_json::Value =
-        serde_json::from_str(&render_heatmap(&map, 0.0).to_json()).unwrap();
+        serde_json::from_str(&render_heatmap(&map, (0.0, 0.0)).to_json()).unwrap();
     assert_eq!(zero["data"][0]["z"][0][0], 0.0);
     assert!(zero["data"][0]["z"][0][1].is_null());
     assert!(zero["data"][0]["zmax"].as_f64().unwrap() > 0.0);
@@ -1577,10 +1621,44 @@ fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
         samples: 2,
     };
     let fractional: serde_json::Value = serde_json::from_str(
-        &render_heatmap(&map, heatmap_maximum(std::slice::from_ref(&map))).to_json(),
+        &render_heatmap(&map, heatmap_bounds(std::slice::from_ref(&map)).unwrap()).to_json(),
     )
     .unwrap();
     assert_eq!(fractional["data"][0]["zmax"], 0.5);
+}
+
+#[test]
+fn heatmap_scales_label_common_endpoints_with_fixed_point_numbers() {
+    let map = ActivityHeatmap {
+        label: "Small server with a larger comparison partner".into(),
+        cells: [[ActivityCell {
+            total: 1,
+            samples: 2,
+        }; 24]; 7],
+    };
+    for (bounds, ticks, format) in [
+        ((0.0, 0.0), [0.0, 0.5, 1.0], ",.2~f"),
+        ((0.0, 0.005), [0.0, 0.0025, 0.005], ",.4~f"),
+        ((0.0, 0.5), [0.0, 0.25, 0.5], ",.2~f"),
+        ((420.0, 528.0), [420.0, 474.0, 528.0], ",.2~f"),
+        ((420.0, 420.0), [399.0, 420.0, 441.0], ",.2~f"),
+        ((7_000.5, 7_500.5), [7_000.5, 7_250.5, 7_500.5], ",.2~f"),
+        (
+            (7_500.0, 7_500.001),
+            [7_500.0, 7_500.000_5, 7_500.001],
+            ",.5~f",
+        ),
+    ] {
+        let figure: serde_json::Value = serde_json::from_str(
+            &mnm_stats_dashboard::charts::render_heatmap(&map, bounds).to_json(),
+        )
+        .unwrap();
+        let trace = &figure["data"][0];
+        assert_eq!(trace["zmin"], ticks[0]);
+        assert_eq!(trace["zmax"], ticks[2]);
+        assert_eq!(trace["colorbar"]["tickvals"], serde_json::json!(ticks));
+        assert_eq!(trace["colorbar"]["tickformat"], format);
+    }
 }
 
 #[test]
