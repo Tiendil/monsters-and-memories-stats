@@ -144,21 +144,21 @@ Source investigation evidence is recorded in the [source analysis](../docs/sourc
 The UI MUST distinguish source-reported counts from derived values.
 Every chart MUST have a concise explanation of what it measures and how to interpret it.
 Chart descriptions MUST NOT contain reference links.
-Background definitions MAY be linked in the README.
+Background definitions MAY be linked in specifications.
 Custom ratios and source-specific counts MUST use explicit descriptions rather than borrowed KPI names such as conversion or retention.
 DAU/MAU MAY be identified as stickiness.
-The README MUST explain the unverified source windows and the distinction from returning-player retention; chart descriptions MUST focus on interpreting the metric rather than repeating these qualifications.
+DAU/MAU MUST NOT be described as returning-player retention; chart descriptions MUST focus on interpreting the metric rather than repeating qualifications about the source.
 
-The README MUST explain that DAU/MAU are the source's daily/monthly active fields with unverified counting semantics.
+DAU/MAU are the source's daily/monthly active fields; their exact counting windows and deduplication rules are unverified.
 The UI MUST label subscriptions as subscriptions, without equating them with unique people.
-Missing fields MUST NOT become zero; a literal published zero MUST remain zero, with source limitations documented in the README.
+Missing fields MUST NOT become zero; a literal published zero MUST remain zero.
 The dashboard MUST NOT infer MAU by summing observations.
 
 Starting-zone counts MAY be summed by zone ID across servers, and across zones within a server.
 An individual zone absent from a server's observation MUST remain unavailable, not zero.
 An all-server count for an individual zone MUST be unavailable when any observed server omits that zone; a partial sum MUST NOT be presented as a complete total.
 Starting-zone totals MUST sum each server's reported zone rows, including a zero total for a validated empty list.
-Daily/monthly activity MAY be summed across servers; the README and accessible chart descriptions MUST explain that these are sums without deduplication.
+Daily/monthly activity MAY be summed across servers; accessible chart descriptions MUST explain that these are sums without deduplication.
 Such sums MUST NOT be described as game-wide unique active users, since one account may use multiple servers.
 Global subscriptions MUST remain global in a per-server view; per-server subscription numbers MUST NOT be invented.
 
@@ -387,7 +387,7 @@ Details MUST identify:
 
 Heatmap details describe aggregates rather than individual observation timestamps.
 The UI MUST describe the heatmap values as averages of online populations.
-The README MUST explain that these are sampled averages whose coverage can be uneven.
+These are sampled averages whose coverage can be uneven.
 
 The shared Servers and time controls MUST govern both views, including more than two entities or periods.
 The heatmap MUST show a separate labeled panel per server scope and period, with “All Servers” representing the summed online count in each observation.
@@ -471,7 +471,6 @@ All-server ratios MUST divide the snapshot's summed online count by its summed d
 Period comparisons MUST preserve every original observation and its ratio while aligning timestamps using the ordinary comparison rules.
 Online-ratio hover details MUST use the ordinary two-line format with the rounded percentage, series name, and observation timestamp.
 These points MUST retain the ordinary connection-interval rules.
-The README MUST explain same-snapshot calculations, aggregation scope, and missing-data handling, with a calculation example.
 These ratios MUST be described as online presence, without claiming measured playtime, session length, retention, or subscriber conversion.
 
 **Example:** A snapshot at 08:00 reports 10 online and 40 daily active, producing a 25-percent point at 08:00.
@@ -575,7 +574,7 @@ The complete history means all project-collected snapshots, not the rolling hist
 ## Acceptance evidence
 
 Collection and deployment are not complete merely because local tests pass.
-The README MUST explain the unavailability of:
+The available data does not provide:
 
 - pre-collection history and missed collection intervals.
 - deduplicated global activity.

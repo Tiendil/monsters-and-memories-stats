@@ -342,7 +342,7 @@ Descriptions MUST use neutral, factual game-design language with familiar terms 
 Descriptions MUST omit redundant source-attribution and data-collection qualifiers already established by the page context.
 They MUST NOT address the reader with invitations such as “follow”, “discover”, or “see how”, or use playful or promotional language.
 Direct instructions MAY explain a chart control when needed.
-General caveats about unconfirmed counting methods and source windows MUST remain in the README rather than visible or accessible chart descriptions.
+General caveats about unconfirmed counting methods and source windows MUST remain in [requirements.md](requirements.md#metric-interpretation) rather than visible or accessible chart descriptions.
 Formulas MUST appear as compact blocks below the chart title and above their explanatory prose, using medium-weight monospace text in the dashboard's burnt-orange accent color.
 Each formula block MUST have a faint warm background, a subtle thin border, small rounded corners, and compact padding.
 Blocks MUST fit their text within the available width, with formulas wrapping naturally on narrow screens.
@@ -351,8 +351,7 @@ Chart descriptions MUST contain no reference links.
 Explanations MUST remain visible and accessible without hover or opening a disclosure.
 Online-presence explanations MUST identify the online population relative to daily or monthly active players.
 Subscriber-activity explanations MUST identify the global subscriber count and state that ratios can exceed 100 percent.
-Detailed calculation rules, aggregation scope, and missing-data handling MUST remain in the README rather than repeated in chart explanations or time-series tooltips.
-Detailed methodology, source limitations, all-server aggregation semantics, and archive coverage MUST be documented in the README.
+Detailed calculation rules, aggregation scope, missing-data handling, and archive coverage MUST remain in [requirements.md](requirements.md) rather than repeated in chart explanations or time-series tooltips.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.

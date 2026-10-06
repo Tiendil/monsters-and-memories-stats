@@ -115,14 +115,9 @@ This keeps regression coverage useful when implementation details change.
 Implementation-specific tests MAY be used when needed to reproduce a concrete defect.
 Application tests MUST follow [tests.md](tests.md) and be introduced with the behavior they verify.
 Tests run by local checks and CI MUST NOT contact the original statistics service; source investigation and deployment verification MUST remain separate from test execution.
-The README MUST identify the current project state and provide navigation to the specifications.
-Once tests exist, it MUST document test commands and any required dependency setup.
-As working commands become available, it MUST document:
-
-- local use.
-- collection.
-- deployment.
-- notification setup.
+The README MUST introduce the dashboard for players and interested visitors, with links to the dashboard, data download, feedback, and specifications.
+It MUST use concise, plain language and include one linked dashboard screenshot with descriptive alternative text.
+The README MUST link to the relevant specifications for metric definitions, development, and architecture rather than duplicate their detailed content in separate guides.
 
 ## Investigation notes
 
