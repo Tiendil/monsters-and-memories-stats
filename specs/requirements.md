@@ -327,7 +327,8 @@ Connections MUST be straight visual guides between observations, without adding 
 Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
 Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSONL.
-Hovering a plotted observation with the mouse MUST show its exact value followed by its series name on the first line and its collection date and time on the second line.
+Inspecting a plotted observation MUST show its exact value followed by its series name, then its collection date and time.
+Desktop hover labels MUST use two lines; narrow-screen details MUST wrap below the chart so complete names and values remain readable.
 The displayed time MUST convert the original observation instant to the selected time zone, omitting seconds and fractional seconds.
 It MUST use a readable date without an ISO `T` separator or `Z` suffix.
 Tooltip timestamps MUST end with the selected zone’s name, using `UTC` or the browser’s IANA name such as `Europe/Berlin`, without a numeric UTC-offset suffix.
@@ -335,8 +336,10 @@ The download MUST preserve each original timestamp at its full stored precision.
 This MUST work for every observation time-series chart and comparison mode, including dense series and overlapping comparison points.
 Aggregate heatmap details MUST follow Population insights below.
 Ratio details MUST show a percentage rounded to two decimal places, without a numerator/denominator breakdown or sample-coverage text.
-Series names MUST remain on one line without an authored tooltip-width or character-count limit.
-Hover details MUST refer only to collected observations, MUST NOT invent points inside gaps, and MUST clear when the pointer leaves the plot or the selection changes.
+Desktop series names MUST remain on one line without an authored tooltip-width or character-count limit.
+Point details MUST refer only to collected observations and MUST NOT invent points inside gaps.
+Desktop hover labels MUST clear when the pointer leaves the plot; narrow-screen details MUST persist for scrolling until another point is inspected or the chart selection changes.
+Changing the chart selection MUST clear its previous point details.
 Unavailable data, initialization, and errors MUST use the states defined in [dashboard-design.md](dashboard-design.md#data-and-loading-states).
 
 ### Time zones
@@ -465,7 +468,7 @@ Every selected observation MUST remain a separate point at its original timestam
 Missing hours and absent servers MUST NOT contribute zeros, interpolated values, or carried-forward observations.
 All-server ratios MUST divide the snapshot's summed online count by its summed daily or monthly active count, or by its global subscriber count.
 Period comparisons MUST preserve every original observation and its ratio while aligning timestamps using the ordinary comparison rules.
-Online-ratio hover details MUST use the ordinary two-line format with the rounded percentage, series name, and observation timestamp.
+Online-ratio point details MUST use the ordinary responsive format with the rounded percentage, series name, and observation timestamp.
 These points MUST retain the ordinary connection-interval rules.
 These ratios MUST be described as online presence, without claiming measured playtime, session length, retention, or subscriber conversion.
 

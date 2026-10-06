@@ -528,7 +528,7 @@ impl Browser {
         );
         let status = self.text("#history-status");
         self.expect_count("#latest-collection", 0);
-        assert!(status.contains("collected roughly hourly from M&M’s public statistics"));
+        assert!(status.contains("collected roughly hourly"));
         self.expect_text(
             "#history-status a[href='https://account.monstersandmemories.com/metrics'][target='_blank'][rel~='noopener']",
             "M&M’s public statistics",
@@ -566,7 +566,8 @@ impl Browser {
     }
 
     fn verify_presentation(&self, expected: &Value, scratch: &Path) {
-        let coverage = self.text("#history-status");
+        let coverage = || (self.text(".history-start"), self.text("#history-count"));
+        let expected_coverage = coverage();
         self.expect_count(".section-nav a", 4);
         self.expect_count("#nav-activity", 0);
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return Array.from(document.querySelectorAll('.chart-card'), card => card.dataset.metric);","args":[]})), json!(["online", "daily", "monthly", "subscriptions"]));
@@ -606,6 +607,7 @@ impl Browser {
                 "/window/rect",
                 json!({"width":width,"height":900}),
             );
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const lines=Array.from(document.querySelectorAll('.history-start,.history-frequency,.history-source'), e=>e.getBoundingClientRect()); const source=document.querySelector('.history-source').innerText.trim(); return innerWidth <= 375 ? lines.every((r,i)=>i===0 || r.top>=lines[i-1].bottom) && source.startsWith('Source:') : lines.every(r=>r.top===lines[0].top) && source.startsWith('from ');","args":[]})), true, "Coverage summary adapts to {width}px without losing its source");
             assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const summary=document.querySelector('.now-summary').getBoundingClientRect(); const controls=document.querySelector('.controls').getBoundingClientRect(); return summary.bottom <= controls.top && getComputedStyle(document.querySelector('#now-heading')).position !== 'absolute';","args":[]})), true, "Latest snapshot precedes the controls at {width}px");
             assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const h=document.querySelector('#now-heading').getBoundingClientRect(); const t=document.querySelector('#snapshot-time').getBoundingClientRect(); return innerWidth <= 375 ? t.top >= h.bottom : t.left >= h.right && t.top < h.bottom;","args":[]})), true, "Snapshot timestamp follows the heading at {width}px");
             assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const grid=document.querySelector('.chart-grid').getBoundingClientRect(); const cards=Array.from(document.querySelectorAll('.chart-card'), card => card.getBoundingClientRect()); return cards.every((card,i) => Math.abs(card.width-grid.width)<1 && Math.abs(card.left-grid.left)<1 && (i===0 || card.top>cards[i-1].bottom));","args":[]})), true, "Overview charts fill the width and stack in order at {width}px");
@@ -620,7 +622,7 @@ impl Browser {
         self.verify_now(expected);
         self.servers(&["a"]);
         self.select("#time-range", "7");
-        assert_eq!(self.text("#history-status"), coverage);
+        assert_eq!(coverage(), expected_coverage);
         self.click("#nav-population");
         self.expect_count(".chart-card", 3);
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('[data-metric=online]') === null;","args":[]})), true);
@@ -681,7 +683,7 @@ impl Browser {
         self.click("#nav-overview");
         self.verify_now(expected);
         self.expect_count(".comparison-summary", 0);
-        assert_eq!(self.text("#history-status"), coverage);
+        assert_eq!(coverage(), expected_coverage);
         self.servers(&["a"]);
         self.expect_count(".headline", 4);
         // Test chart-engine failure without a network request: data and download survive.
@@ -992,7 +994,7 @@ impl Browser {
             let point = self.request(Method::POST, "/execute/sync", json!({"script":"const p=document.querySelector('[data-metric=\"activity-heatmap\"] .plot-surface'); p.scrollIntoView({block:'center'}); const r=p.getBoundingClientRect(), l=p._fullLayout; return {x:r.x+l.xaxis._offset+l.xaxis.l2p(12), y:r.y+l.yaxis._offset+l.yaxis.l2p(0)};", "args":[]}));
             self.request(Method::POST, "/goog/cdp/execute", json!({"cmd":"Input.dispatchMouseEvent","params":{"type":"mouseMoved","x":point["x"],"y":point["y"]}}));
             self.expect_count("[data-metric='activity-heatmap'] .hovertext", 1);
-            let hover = self.text("[data-metric='activity-heatmap'] .hovertext");
+            let hover = self.hover_content("activity-heatmap");
             assert!(
                 hover.contains(&format!(
                     "{:.2} mean onlineAlpha <island> & West",
@@ -1175,19 +1177,9 @@ impl Browser {
             }
         }
         self.hover("[data-metric='online-presence'] .scatterlayer .point");
-        assert!(
-            !self
-                .text("[data-metric='online-presence'] .hoverlayer")
-                .contains("samples")
-        );
-        assert!(
-            self.text("[data-metric='online-presence'] .hoverlayer")
-                .contains('%')
-        );
-        assert!(
-            self.text("[data-metric='online-presence'] .hoverlayer")
-                .contains("UTC")
-        );
+        assert!(!self.hover_content("online-presence").contains("samples"));
+        assert!(self.hover_content("online-presence").contains('%'));
+        assert!(self.hover_content("online-presence").contains("UTC"));
         self.hover("[data-metric='online-presence'] .chart-heading");
         self.click("#online-metrics-toggle");
         for index in [1, 2] {
@@ -2030,7 +2022,7 @@ impl Browser {
         self.zones(&["w"]);
         self.hover("[data-metric='starting-zones'] .scatterlayer .point");
         assert!(
-            self.text("[data-metric='starting-zones'] .hoverlayer")
+            self.hover_content("starting-zones")
                 .contains("01 Feb 2024, 00:00 UTC")
         );
         self.move_pointer("[data-metric='starting-zones'] .plot-surface", 0, 0);
@@ -2104,6 +2096,7 @@ impl Browser {
                 .unwrap(),
         )
         .unwrap();
+        self.verify_time_axis();
         self.verify_fragment_navigation(url);
         self.verify_url_settings(url);
         self.verify_trends(url);
@@ -2119,8 +2112,44 @@ impl Browser {
         );
     }
 
+    fn verify_time_axis(&self) {
+        self.select("#comparison-mode", "disabled");
+        self.servers(&[""]);
+        self.primary_range("2024-02-01", "2024-02-07");
+        self.show_metric("daily");
+        self.ready("daily");
+        let values = self.request(Method::POST, "/execute/sync", json!({
+            "script":"return document.querySelector('[data-metric=daily] .plot-surface').data.map(t=>[t.x,t.y]);", "args":[]
+        }));
+        for width in [375, 1440, 430] {
+            self.request(
+                Method::POST,
+                "/window/rect",
+                json!({"width":width,"height":900}),
+            );
+            wait_until(
+                || {
+                    self.request(Method::POST, "/execute/sync", json!({
+                "script":"const p=document.querySelector('[data-metric=daily] .plot-surface'); const labels=Array.from(p.querySelectorAll('.xtick text')); const min=innerWidth<600?3:6,max=innerWidth<600?4:8;return p._fullLayout.width===p.clientWidth && labels.length>=min && labels.length<=max && labels.every((e,i)=>i===0 || e.getBoundingClientRect().left>=labels[i-1].getBoundingClientRect().right) && p._fullLayout.xaxis.tickangle===0;", "args":[]
+            })) == true
+                },
+                &format!("Readable horizontal time labels follow {width}px resizing"),
+            );
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+                "script":"return document.querySelector('[data-metric=daily] .plot-surface').data.map(t=>[t.x,t.y]);", "args":[]
+            })), values, "Resizing labels preserves every observation");
+        }
+    }
+
+    fn hover_content(&self, metric: &str) -> String {
+        self.request(Method::POST, "/execute/sync", json!({
+            "script":"return Array.from(document.querySelector(arguments[0]).querySelectorAll('.hovertext,.point-detail')).filter(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden').map(e => e.textContent).join('\\n');",
+            "args":[format!("[data-metric='{metric}']")]
+        })).as_str().unwrap().to_owned()
+    }
+
     fn expect_hover(&self, metric: &str, series: &str, at: &str, value: &str) {
-        let selector = format!("[data-metric='{metric}'] .hovertext");
+        let selector = format!("[data-metric='{metric}']");
         let displayed_time = chrono::DateTime::parse_from_rfc3339(at)
             .unwrap()
             .with_timezone(&chrono::Utc)
@@ -2129,7 +2158,7 @@ impl Browser {
         wait_until(
             || {
                 let rows = self.request(Method::POST, "/execute/sync", json!({
-                "script":"return Array.from(document.querySelectorAll(arguments[0]), row => row.textContent);",
+                "script":"return Array.from(document.querySelector(arguments[0]).querySelectorAll('.hovertext,.point-detail')).filter(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden').map(e => e.textContent);",
                 "args":[selector]
             }));
                 rows.as_array().unwrap().iter().any(|row| {
@@ -2223,10 +2252,7 @@ impl Browser {
             self.computed("[data-metric='daily'] .hovertext path", "stroke"),
             color
         );
-        assert!(
-            self.text("[data-metric='daily'] .hoverlayer")
-                .contains("UTC")
-        );
+        assert!(self.hover_content("daily").contains("UTC"));
         // Engagement retains full-width plots at both ordinary and changed breakpoints.
         self.click("#nav-relationships");
         self.ready("daily-monthly");
@@ -2322,8 +2348,38 @@ impl Browser {
             "resizing retains enough chart height for every comparison hover label",
         );
         self.hover("[data-metric='daily'] .scatterlayer .point");
-        self.expect_count("[data-metric='daily'] .hovertext", 7);
+        self.expect_count("[data-metric='daily'] .point-detail", 7);
+        assert_eq!(
+            self.computed("[data-metric='daily'] .hoverlayer", "visibility"),
+            "hidden"
+        );
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+            "script":"const chart=document.querySelector('[data-metric=daily]'); const rows=Array.from(chart.querySelectorAll('.point-detail')); const native=Array.from(chart.querySelectorAll('.hovertext'), e=>e.textContent).sort(); return JSON.stringify(rows.map(e=>e.textContent).sort())===JSON.stringify(native) && rows.every(e=>{const r=e.getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && e.scrollWidth<=e.clientWidth;});",
+            "args":[]
+        })), true, "All seven full comparison details fit without clipping or losing text");
+        let details = self.hover_content("daily");
+        self.move_pointer("[data-metric='daily'] .plot-surface", 0, 0);
+        assert_eq!(
+            self.hover_content("daily"),
+            details,
+            "Touch users can scroll after inspecting a point"
+        );
+        self.request(
+            Method::POST,
+            "/window/rect",
+            json!({"width":1280,"height":1000}),
+        );
+        assert_eq!(
+            self.computed("[data-metric='daily'] .point-details", "display"),
+            "none"
+        );
+        self.hover("[data-metric='daily'] .scatterlayer .point");
+        assert_eq!(
+            self.computed("[data-metric='daily'] .hoverlayer", "visibility"),
+            "visible"
+        );
         self.select("#comparison-mode", "disabled");
+        self.expect_count("[data-metric='daily'] .point-detail", 0);
     }
 
     fn verify_metadata(&self, url: &str) {
@@ -2716,7 +2772,7 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
         browser.expect_count("[data-metric='activity-heatmap'] .hovertext", 1);
         assert!(
             browser
-                .text("[data-metric='activity-heatmap'] .hovertext")
+                .hover_content("activity-heatmap")
                 .contains(&format!("{mean:.2} mean online"))
         );
     }

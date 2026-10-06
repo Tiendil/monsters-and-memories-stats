@@ -497,6 +497,10 @@
       },
       "x": {
         "$type": "dimension",
+        "tick-spacing": {
+          "$value": { "value": 200, "unit": "px" },
+          "$description": "Additional plot width per extra time-axis label beyond the two edge references; natural intervals and text width determine the final count."
+        },
         "label-area": {
           "$value": {
             "value": 36,

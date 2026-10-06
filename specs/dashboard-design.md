@@ -422,7 +422,11 @@ The same chart anatomy MUST be used across sections.
 The value-axis title MUST sit beside its axis and read “Count” for counts or “Percent (%)” for ratios.
 Charts MUST NOT repeat units beside the metric heading or display plotted-observation counts or a separate “Observation time (UTC)” caption.
 Qualifications necessary to interpret a chart MUST remain close to the affected values.
-Axis labels MUST remain readable at narrow widths; reduce tick density before reducing text size.
+Time-axis tick labels MUST remain horizontal and readable at narrow widths; adjust their density before reducing text size.
+Time-axis label density MUST follow the actual plot width and update on resize without changing observations or the selected range.
+Narrow plots SHOULD show about 3–4 labels, medium plots 4–6, and wide desktop plots 6–8, with fewer labels when their text needs more space.
+Tick positions MUST use readable clock or calendar intervals; calendar dates MUST follow the selected time zone.
+The default seven-day range SHOULD use roughly two-day spacing on phones and daily spacing on desktop.
 Counts MAY use compact axis labels when their scale is clear, while hover details MUST retain exact values.
 
 Normal time axes MUST run chronologically from left to right; the summary’s time-zone switch and point details MUST identify the selected zone.
@@ -459,11 +463,15 @@ The design MUST be reviewed with at least seven simultaneous series, including o
 
 ### Value inspection
 
-Native chart hover MUST retain the exact-value and original-instant timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
-The first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time with minute precision, ending in “UTC” or the browser’s IANA zone name such as “Europe/Berlin.”
+Chart point inspection MUST retain the exact-value and original-instant timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
+On desktop, the first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time with minute precision, ending in “UTC” or the browser’s IANA zone name such as “Europe/Berlin.”
 Time-series tooltips MUST contain only the value and series name followed by the timestamp, without calculation breakdowns or sample-coverage text.
-Tooltip widths MUST follow their content without an authored width or character-count limit, and series names MUST remain on one line, including in heatmap tooltips.
-Chart height MUST accommodate simultaneous two-line time-series labels.
+Desktop tooltip widths MUST follow their content without an authored width or character-count limit, and series names MUST remain on one line, including in heatmap tooltips.
+Chart height MUST accommodate simultaneous two-line time-series labels on desktop.
+On narrow screens, tapping or hovering a point MUST show the same complete details in a wrapping panel below its chart instead of floating labels.
+The panel MUST retain all inspected series, exact values, original timestamps, and series colors without clipping names or widening the page.
+Heatmap details MUST use the same narrow-screen presentation.
+Details MUST remain available for scrolling after the pointer leaves the point, update on the next inspected point, and clear when the chart selection changes.
 
 **Example:** “429 All Servers” on the first line and “02 Oct 2026, 10:00 UTC” on the second.
 

@@ -102,6 +102,7 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - All-server ratios using snapshot totals, global subscription denominators in per-server views, and preservation of every original observation and ratio during period comparisons.
 - Combined engagement metric selections with stable distinct identities across more than two scopes and periods, including empty selections.
 - All range presets and custom inclusive date boundaries in UTC and local time, including invalid or reversed inputs.
+- Responsive time-axis label counts, the seven-day single-label regression, natural calendar boundaries across DST and unequal months, and distinct labels within comparison ranges.
 - Today and Yesterday at midnight in the selected zone, month/year rollover, and leap-day boundaries; Today comparisons MUST use the same clock-time span on the prior day, and Yesterday comparisons MUST retain the full calendar day.
 - Series-colored connections below 3 hours, subdued gray connections from 3 hours to less than 24 hours, and no connections at 24 hours or more, including values immediately below and at both boundaries.
 - Interrupted connections for unavailable metric values and absent calendar dates, independently of interval styling.
@@ -201,7 +202,7 @@ Automated coverage MUST include the following cases.
 #### Engagement
 
 - Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
-- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and two-line online-ratio tooltips without calculation or coverage details.
+- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and online-ratio point details without calculation or coverage text.
 - Online presence and subscriber-activity series preserving individual collection points, with percentages calculated from the same snapshot and no daily averaging.
 
 #### Trends
@@ -219,6 +220,8 @@ Automated coverage MUST include the following cases.
 - Visible explanations on every chart, absence of reference links in descriptions, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.
+- Date-label density updating after resizing between phone and desktop widths, with horizontal, non-overlapping labels and unchanged plotted observations.
+- Full point details below charts at narrow widths, including long names, multiple comparison series, heatmaps, unchanged exact values and timestamps, persistence after unhover, and clearing after selection changes; desktop MUST retain native hover labels.
 - Keyboard operation of navigation, comparison editing, and downloads.
 - Keyboard toggling in the Servers dropdown, Escape and outside dismissal, focus restoration, and long server names at narrow widths.
 - Accessible names, selected states, useful focus retention, and local validation messages.

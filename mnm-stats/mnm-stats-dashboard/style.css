@@ -85,6 +85,7 @@ legend { padding-inline: var(--mnm-spacing-fieldset-legend-padding); }
 .swatch { width: var(--mnm-chart-legend-swatch-width); height: var(--mnm-chart-legend-swatch-height); flex-shrink: 0; overflow: visible; }
 .plot { overflow-x: auto; }
 .plot-surface .hoverlayer .axistext { display: none; }
+.point-details { display: none; }
 .plot-surface { min-width: 0; width: 100%; min-height: var(--mnm-chart-viewport-min-height); }
 .empty-chart { padding: var(--mnm-spacing-empty-padding-block) var(--mnm-spacing-empty-padding-inline); text-align: center; color: var(--mnm-color-text-unavailable); border: var(--mnm-border-width-default) dashed var(--mnm-color-border-unavailable); border-radius: var(--mnm-radius-input); }
 .muted, footer { color: var(--mnm-color-text-muted); font-size: var(--mnm-font-size-body-small); }
@@ -142,6 +143,9 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
   .date-menu-panel { width: min(100%, var(--mnm-layout-date-menu-preferred-width)); }
 }
 @media (max-width: token(breakpoint.narrow)) {
+  .plot-surface .hoverlayer { visibility: hidden; }
+  .point-details { display: grid; gap: var(--mnm-spacing-gap-small); margin-top: var(--mnm-spacing-gap-small); font-size: var(--mnm-font-size-body-small); overflow-wrap: anywhere; }
+  .point-detail { margin: 0; padding: var(--mnm-spacing-gap-tight) var(--mnm-spacing-gap-small); border-left: var(--mnm-border-width-default) solid; background: var(--mnm-color-surface-tooltip); }
   main { padding: var(--mnm-spacing-page-compact-block) var(--mnm-spacing-page-compact-inline); }
   .page-header { flex-direction: column; align-items: center; gap: var(--mnm-spacing-gap-tight); padding-bottom: var(--mnm-spacing-gap-large); }
   .header-title { width: 100%; text-align: center; }

@@ -58,7 +58,7 @@ The frontend build validates and embeds the complete JSONL history and packages 
 ### Frontend
 
 The dashboard uses Leptos client-side rendering, built by Trunk, with Plotly.rs constructing figures in Rust and Plotly.js rendering interactive charts in the browser.
-Rust owns metric calculations, heatmap aggregation, time alignment, gap detection, series selection, and exact hover text; Plotly owns chart layout and native hover labels.
+Rust owns metric calculations, heatmap aggregation, time alignment, gap detection, series selection, and exact hover text; Plotly owns chart layout and hover events, with native labels on desktop and Rust-rendered point details on narrow screens.
 Rust obtains the browser’s IANA time-zone name through the `Intl.DateTimeFormat` bindings and uses shared time-zone functions for calendar boundaries, comparisons, heatmap buckets, and timestamp formatting.
 Presentation time-zone changes MUST NOT alter stored UTC instants or the static history download.
 The frontend MUST load a pinned Plotly.js cartesian bundle compatible with the Rust wrapper from Plotly's official CDN.
@@ -69,7 +69,7 @@ Rust browser bindings MUST initialize charts after their DOM nodes mount, report
 Charts MUST resize with the viewport, with horizontal scrolling confined to chart regions where needed under [dashboard-design.md](dashboard-design.md#responsive-and-accessible-interaction).
 Chart height MUST accommodate simultaneous hover labels as comparison series are added; the renderer MUST NOT silently drop series details to fit a fixed chart height.
 The shared range controls govern the visible interval; chart-local zoom and the Plotly toolbar are disabled.
-This supports static GitHub Pages deployment with no backend or handwritten JavaScript application logic; the Rust UI provides complete-history JSONL downloads alongside native hover labels.
+This supports static GitHub Pages deployment with no backend or handwritten JavaScript application logic; the Rust UI provides complete-history JSONL downloads alongside responsive point details.
 The UI MUST support the time-frame and entity comparisons defined by [R17](requirements.md#r17-plot-comparisons), including more than two series per comparison.
 The complete history MUST be embedded in the compiled frontend for visualization and packaged as a static JSONL file for download, as required by [R18](requirements.md#r18-embedded-history) and [R19](requirements.md#r19-history-download).
 Both representations MUST use the same validated history input for each build.
