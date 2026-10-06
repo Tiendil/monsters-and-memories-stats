@@ -475,13 +475,13 @@ fn ActivityCard(
     view! {
         <article class="chart-card" id="chart-activity-heatmap" data-metric="activity-heatmap" tabindex="-1">
             <ChartHeading target="chart-activity-heatmap".into() title="Activity heatmap".into()/>
-            <p class="chart-note chart-explanation">"Average online population by weekday and hour (UTC). Brighter colors indicate more players; blank cells have no records. The scale follows the selected data and is shared across panels."</p>
+            <p class="chart-note chart-explanation">"Average online population by weekday and hour (UTC). Brighter colors indicate more players; blank cells have no records. Individual servers share a scale that includes unchecked servers. “All Servers” uses a separate scale so larger totals don’t hide differences between individual servers. Both scales cover the selected periods."</p>
             {move || match maps.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(maps) if maps.is_empty() => view! { <p class="empty-chart">"Select servers and a period to show activity."</p> }.into_any(),
                 Ok(maps) => {
-                    let bounds = heatmap_bounds(&maps).unwrap_or_default();
                     maps.into_iter().map(|map| {
+                        let bounds = map.color_bounds.unwrap_or_default();
                         let label = map.label.clone();
                         let available = map.cells.iter().flatten().any(|cell| cell.samples > 0);
                         view! {

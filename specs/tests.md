@@ -94,8 +94,9 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Zero starting-zone totals for validated empty lists, historical zone discovery, and preservation of differing per-server zone membership in the original observations.
 - Server population shares with the complete snapshot denominator, individual selections, All Servers expansion without duplicate lines, missing servers, and zero denominators.
 - Weekday/hour UTC means with exact sums and sample counts, uneven sampling, missing cells, published zeros, boundary timestamps, and absent servers.
-- Separate heatmaps for selected entities and periods, using original UTC buckets and common displayed color bounds, including more than two selections and empty ranges.
-- Heatmap bounds from available cell means, including nonzero minima, measured zeros, missing cells, empty selections, constant values, and fractional or narrowly separated averages, preserving common bounds across panels.
+- Separate heatmaps for selected entities and periods, using original UTC buckets and separate total and individual-server color bounds, including more than two selections and empty ranges.
+- Heatmap bounds from available cell means, including nonzero minima, measured zeros, missing cells, empty selections, constant values, and fractional or narrowly separated averages, preserving shared bounds within each scale group.
+- Individual-server bounds including unchecked and historical servers only within selected periods, excluding totals, and remaining unchanged when panels are hidden or restored.
 - Ratio values, including zero denominators and values above 100 percent.
 - Online ratios using each snapshot's online and denominator counts, including multiple observations within one UTC day, missing hours and servers, measured zeros, zero denominators, and selection boundaries.
 - All-server ratios using snapshot totals, global subscription denominators in per-server views, and preservation of every original observation and ratio during period comparisons.
@@ -162,7 +163,7 @@ Automated tests MUST cover:
 - Multiple zones combined with server and period comparisons, exact hover values, stable colors, and persistent choices across content sections.
 - Full-width server population shares and heatmaps in Player activity, correct percentage and aggregate hover details, independent zone filtering, entity/period changes, blank buckets versus zero, and narrow-screen labels and color scales.
 - Heatmap scale labels with visible lower and upper endpoints, grouped thousands without scientific notation, and distinct fractional values; labels MUST remain readable at narrow widths.
-- Inferno's low-to-high color progression, blank cells distinct from measured zero, and common observed bounds after server or period changes.
+- Inferno's low-to-high color progression, blank cells distinct from measured zero, and independent total and individual-server bounds shared across periods, with unchanged scales after server-visibility changes.
 - Zone checkbox keyboard operation, Escape and outside dismissal, long labels at narrow widths, empty-selection recovery, and independence from the shared view controls.
 - “Show zones” inside the starting-zone chart and “Show metrics” inside each applicable Engagement chart, after explanations and before legends, with accessible labels and recovery actions in their own cards.
 - Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.

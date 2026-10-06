@@ -1005,7 +1005,37 @@ impl Browser {
             || self.count(".heatmap-panel .plot-surface[data-ready='true']") == 6,
             "compared heatmaps",
         );
-        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const data=Array.from(document.querySelectorAll('.heatmap-panel .plot-surface'),p=>p.data[0]); const values=data.flatMap(d=>d.z.flat()).filter(v=>v!==null); const min=Math.min(...values), max=Math.max(...values); return data.every(d=>d.zmin===min && d.zmax===max);", "args":[]})), true);
+        let bounds = self.request(Method::POST, "/execute/sync", json!({"script": r#"
+            const panels = Array.from(document.querySelectorAll('.heatmap-panel'));
+            const bounds = {};
+            for (const total of [true, false]) {
+                const group = panels.filter(p => p.querySelector('h4').textContent.startsWith('All Servers ·') === total);
+                const data = group.map(p => p.querySelector('.plot-surface').data[0]);
+                const values = data.flatMap(d => d.z.flat()).filter(v => v !== null);
+                const range = [Math.min(...values), Math.max(...values)];
+                if (!data.every(d => d.zmin === range[0] && d.zmax === range[1])) return null;
+                bounds[total ? 'total' : 'server'] = range;
+            }
+            return bounds;
+        "#, "args":[]}));
+        assert!(
+            bounds.is_object(),
+            "separate shared heatmap scales: {bounds}"
+        );
+        assert_ne!(bounds["total"], bounds["server"]);
+        // Alpha contains the server maximum, Beta the minimum. Gamma must retain
+        // their range even when neither they nor the total are visible.
+        self.servers(&["c"]);
+        wait_until(
+            || self.count(".heatmap-panel .plot-surface[data-ready='true']") == 2,
+            "single-server comparison heatmaps",
+        );
+        assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return Array.from(document.querySelectorAll('.heatmap-panel .plot-surface'),p=>p.data[0]).every(d=>d.zmin===arguments[0][0] && d.zmax===arguments[0][1]);", "args":[bounds["server"]]})), true);
+        self.servers(&["", "a", "b"]);
+        wait_until(
+            || self.count(".heatmap-panel .plot-surface[data-ready='true']") == 6,
+            "restored comparison heatmaps",
+        );
         self.expect_count("[data-metric='online-share'] .legend li", 8);
         self.click("#comparison-mode");
         self.click("#match-date");

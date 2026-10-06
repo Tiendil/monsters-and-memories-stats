@@ -1512,16 +1512,16 @@ fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
             .flat_map(|m| m.cells.iter().flatten())
             .all(|cell| cell.mean().is_none())
     );
-    assert_eq!(heatmap_bounds(&maps), Some((0.0, 32.0)));
+    assert_eq!(maps[0].color_bounds, Some((2.0, 32.0)));
+    assert_eq!(feb_a.color_bounds, Some((0.0, 30.0)));
     let fig: serde_json::Value = serde_json::from_str(
-        &mnm_stats_dashboard::charts::render_heatmap(feb_a, heatmap_bounds(&maps).unwrap())
-            .to_json(),
+        &mnm_stats_dashboard::charts::render_heatmap(feb_a, feb_a.color_bounds.unwrap()).to_json(),
     )
     .unwrap();
     assert_eq!(fig["data"][0]["z"][0][10], 10.0);
     assert_eq!(fig["data"][0]["z"][0][11], 0.0);
     assert!(fig["data"][0]["z"][0][12].is_null());
-    assert_eq!(fig["data"][0]["zmax"], 32.0);
+    assert_eq!(fig["data"][0]["zmax"], 30.0);
     let colors = fig["data"][0]["colorscale"].as_array().unwrap();
     assert_eq!(colors.len(), 10);
     assert_eq!(colors[0], serde_json::json!([0.0, "rgba(0, 0, 4, 1)"]));
@@ -1560,8 +1560,91 @@ fn heatmap_means_count_only_available_samples_in_original_utc_buckets() {
 }
 
 #[test]
+fn heatmap_scales_separate_totals_and_include_unchecked_servers_in_selected_periods() {
+    let mut records = Vec::new();
+    for (at, values) in [
+        ("2024-01-05T10:00:00Z", [9000, 9000, 9000]),
+        ("2024-02-05T10:00:00Z", [100, 140, 180]),
+        ("2024-02-05T11:00:00Z", [136, 176, 216]),
+        ("2024-02-12T10:00:00Z", [140, 180, 220]),
+        ("2024-03-05T10:00:00Z", [0, 80, 160]),
+    ] {
+        let mut record = snapshot(at, 1, 2, 3);
+        let mut third = record.servers[1].clone();
+        third.id = "c".into();
+        third.name = "Gamma".into();
+        record.servers.push(third);
+        for (server, online) in record.servers.iter_mut().zip(values) {
+            server.online = online;
+        }
+        // Labels must not determine whether a panel contains totals.
+        record.servers[0].name = "All Servers".into();
+        if records.is_empty() {
+            let mut retired = record.servers[0].clone();
+            retired.id = "retired".into();
+            record.servers.push(retired);
+        }
+        records.push(record);
+    }
+    let history = History::new(records).unwrap();
+    let now = time("2024-05-01T00:00:00Z");
+    let range = TimeRange::custom("2024-02-01", "2024-02-29").unwrap();
+    let a = Scope::Server("a".into());
+    let b = Scope::Server("b".into());
+    let comparison = Comparison::periods(
+        ["2024-02", "2024-03", "2024-04"]
+            .map(|month| Period::month(month).unwrap())
+            .to_vec(),
+    );
+    for scopes in [
+        vec![a.clone(), Scope::All, b],
+        vec![a.clone()],
+        vec![Scope::All],
+    ] {
+        let maps = activity_heatmaps(&history, &scopes, range, now, &comparison).unwrap();
+        assert_eq!(
+            maps.len(),
+            scopes.len() * 3,
+            "unchecked servers remain hidden"
+        );
+        for (map, scope) in maps.iter().zip(scopes.iter().cycle()) {
+            let expected = if *scope == Scope::All {
+                (240.0, 528.0)
+            } else {
+                (0.0, 216.0)
+            };
+            assert_eq!(map.color_bounds, Some(expected));
+        }
+    }
+    let primary = activity_heatmaps(
+        &history,
+        &[a.clone(), Scope::All],
+        range,
+        now,
+        &Comparison::None,
+    )
+    .unwrap();
+    assert_eq!(
+        primary[0].color_bounds,
+        Some((120.0, 216.0)),
+        "bounds use cell means, not individual samples"
+    );
+    assert_eq!(primary[1].color_bounds, Some((480.0, 528.0)));
+    let empty = activity_heatmaps(
+        &history,
+        &[a, Scope::All],
+        TimeRange::custom("2024-04-01", "2024-04-30").unwrap(),
+        now,
+        &Comparison::None,
+    )
+    .unwrap();
+    assert!(empty.iter().all(|map| map.color_bounds.is_none()));
+}
+
+#[test]
 fn heatmap_bounds_follow_available_means_across_selected_panels() {
     let empty = ActivityHeatmap {
+        color_bounds: None,
         label: "No data".into(),
         cells: [[ActivityCell::default(); 24]; 7],
     };
@@ -1599,6 +1682,7 @@ fn heatmap_bounds_follow_available_means_across_selected_panels() {
 fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
     use mnm_stats_dashboard::charts::render_heatmap;
     let mut map = ActivityHeatmap {
+        color_bounds: None,
         label: "<West> & friends — Eastern North American realm".into(),
         cells: [[ActivityCell::default(); 24]; 7],
     };
@@ -1630,6 +1714,7 @@ fn heatmap_zero_cells_and_fractional_means_keep_distinct_color_bounds() {
 #[test]
 fn heatmap_scales_label_common_endpoints_with_fixed_point_numbers() {
     let map = ActivityHeatmap {
+        color_bounds: None,
         label: "Small server with a larger comparison partner".into(),
         cells: [[ActivityCell {
             total: 1,

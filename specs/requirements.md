@@ -353,18 +353,25 @@ The README MUST explain that these are sampled averages whose coverage can be un
 
 The shared Servers and time controls MUST govern both views, including more than two entities or periods.
 The heatmap MUST show a separate labeled panel per server scope and period, with “All Servers” representing the summed online count in each observation.
-Every displayed panel MUST use the same linear color scale from the smallest to the largest displayed cell mean so comparisons remain meaningful and differences within the selected data remain visible.
+Heatmaps MUST use two independent linear color scales, each spanning the smallest to the largest available cell mean in its group:
+
+- All-servers totals, shared across the selected periods.
+- Individual servers, shared across every discovered server and the selected periods, including unchecked servers.
+
+The total MUST NOT influence the individual-server scale, and individual-server means MUST NOT influence the total scale.
+Server selection MUST control panel visibility without changing either scale for the same selected periods.
 Missing cells MUST NOT affect these bounds; a measured zero MUST be included.
-If every available cell has the same mean, the scale MUST use a nonnegative, nonzero span containing and labeling that value so constant selections remain readable.
-The displayed range MUST be labeled and recomputed when the selected entities or periods change.
+If every available cell in a scale group has the same mean, that scale MUST use a nonnegative, nonzero span containing and labeling that value so constant selections remain readable.
+Each displayed scale range MUST be labeled and recomputed when the selected time range or comparison periods change.
 Period comparison MUST group by each observation's actual UTC weekday and hour rather than shift observations onto the primary period's calendar.
 Starting-zone selections MUST affect only the starting-zone chart.
 
 **Example:** One server has 20 of 80 online players, giving a 25-percent share even when it is the only selected server.
 Two Monday 10:00–11:00 UTC observations of 20 and 40 give a heatmap mean of 30 from two records; an unobserved Monday hour remains blank.
 
-**Example:** Displayed cell means range from 420 to 528, so the color scale spans 420–528.
-Adding a server panel with a mean of 100 changes every displayed panel to the same 100–528 scale.
+**Example:** Total cell means range from 420 to 528, while individual-server cell means range from 100 to 216.
+Total panels use 420–528 and individual-server panels use 100–216.
+Unchecking the server with the largest mean hides its panel but leaves the individual-server scale at 100–216.
 
 ### Ratios
 

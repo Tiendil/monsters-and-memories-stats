@@ -1045,6 +1045,8 @@ impl ActivityCell {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ActivityHeatmap {
     pub label: String,
+    /// Shared across periods, separately for totals and all individual servers.
+    pub color_bounds: Option<(f64, f64)>,
     /// Monday first, then UTC hour 00 through 23.
     pub cells: [[ActivityCell; 24]; 7],
 }
@@ -1056,34 +1058,83 @@ pub fn activity_heatmaps(
     now: DateTime<Utc>,
     comparison: &Comparison,
 ) -> Result<Vec<ActivityHeatmap>, String> {
-    plot(history, &Metric::Online, scopes, range, now, comparison)?
-        .series
-        .into_iter()
-        .map(|series| {
-            let mut cells = [[ActivityCell::default(); 24]; 7];
-            for point in series.points {
-                if let Some(MetricValue::Count(value)) = point.value {
-                    // Comparison x coordinates may be shifted. Bucket by original UTC time.
-                    let cell = &mut cells[point.at.weekday().num_days_from_monday() as usize]
-                        [point.at.hour() as usize];
-                    cell.total = cell
-                        .total
-                        .checked_add(value)
-                        .ok_or("Online sample total is too large.")?;
-                    cell.samples += 1;
-                }
+    if scopes.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut scale_scopes = scopes.to_vec();
+    if scopes.iter().any(|scope| matches!(scope, Scope::Server(_))) {
+        for id in servers(history).into_keys() {
+            let scope = Scope::Server(id);
+            if !scale_scopes.contains(&scope) {
+                scale_scopes.push(scope);
             }
-            Ok(ActivityHeatmap {
+        }
+    }
+    let maps = plot(
+        history,
+        &Metric::Online,
+        &scale_scopes,
+        range,
+        now,
+        comparison,
+    )?
+    .series
+    .into_iter()
+    // Online series repeat the requested scope order within each period.
+    .zip(scale_scopes.iter().cycle())
+    .map(|(series, scope)| {
+        let mut cells = [[ActivityCell::default(); 24]; 7];
+        for point in series.points {
+            if let Some(MetricValue::Count(value)) = point.value {
+                // Comparison x coordinates may be shifted. Bucket by original UTC time.
+                let cell = &mut cells[point.at.weekday().num_days_from_monday() as usize]
+                    [point.at.hour() as usize];
+                cell.total = cell
+                    .total
+                    .checked_add(value)
+                    .ok_or("Online sample total is too large.")?;
+                cell.samples += 1;
+            }
+        }
+        Ok((
+            scope,
+            ActivityHeatmap {
                 label: series.label,
+                color_bounds: None,
                 cells,
-            })
+            },
+        ))
+    })
+    .collect::<Result<Vec<_>, String>>()?;
+    let total_bounds = heatmap_bounds(
+        maps.iter()
+            .filter(|(scope, _)| **scope == Scope::All)
+            .map(|(_, map)| map),
+    );
+    let server_bounds = heatmap_bounds(
+        maps.iter()
+            .filter(|(scope, _)| **scope != Scope::All)
+            .map(|(_, map)| map),
+    );
+    Ok(maps
+        .into_iter()
+        .filter(|(scope, _)| scopes.contains(scope))
+        .map(|(scope, mut map)| {
+            map.color_bounds = if *scope == Scope::All {
+                total_bounds
+            } else {
+                server_bounds
+            };
+            map
         })
-        .collect()
+        .collect())
 }
 
-pub fn heatmap_bounds(maps: &[ActivityHeatmap]) -> Option<(f64, f64)> {
+pub fn heatmap_bounds<'a>(
+    maps: impl IntoIterator<Item = &'a ActivityHeatmap>,
+) -> Option<(f64, f64)> {
     let mut means = maps
-        .iter()
+        .into_iter()
         .flat_map(|map| map.cells.iter().flatten())
         .filter_map(|cell| cell.mean());
     let first = means.next()?;

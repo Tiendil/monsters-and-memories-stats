@@ -207,7 +207,7 @@ Server population share MUST use the time-series chart anatomy and a 0–100 per
 A short note MUST explain that “All Servers” shows individual shares of the complete observed total.
 Activity heatmap MUST use separate labeled panels for each selected server scope and period, arranged vertically at full width.
 Each panel MUST show weekday rows ordered Monday through Sunday and hour columns ordered 00 through 23, with the hour axis explicitly labeled UTC.
-A labeled sequential color scale MUST show mean online counts and use common bounds across the displayed panels.
+A labeled sequential color scale MUST show mean online counts, with independent bounds for all-servers totals and individual servers as defined in [requirements.md](requirements.md#population-insights).
 The scale MUST use the published Inferno sequential palette, progressing from near-black through purple and orange to bright yellow as activity increases.
 The scale MUST label its lower and upper bounds, with intermediate labels where space permits.
 Labels MUST use ordinary numbers with thousands separators rather than scientific notation, retaining decimals when needed to distinguish small averages.
@@ -215,7 +215,9 @@ Scale labels MUST remain readable without overlap or clipping at narrow widths.
 Unobserved cells MUST retain the neutral chart surface and remain distinguishable from measured zero.
 The heatmap MUST NOT use categorical line swatches to represent its intensity scale.
 A short note MUST explain weekday/hour averages and increasing brightness for higher values.
-It MUST identify blank cells as missing observations and explain that the scale follows the selected data and is shared across panels.
+It MUST identify blank cells as missing observations and explain that individual servers share a scale including unchecked servers, while “All Servers” uses a separate scale.
+It MUST briefly explain that separate scales keep larger totals from hiding differences between individual servers.
+It MUST explain that both scales cover the selected periods.
 Cell hover MUST expose the aggregate details defined in [requirements.md](requirements.md#population-insights).
 An unavailable panel MUST identify its scope and period and show an empty-state message.
 
