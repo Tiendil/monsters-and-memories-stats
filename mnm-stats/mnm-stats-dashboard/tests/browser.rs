@@ -562,7 +562,7 @@ impl Browser {
 
     fn verify_presentation(&self, expected: &Value, scratch: &Path) {
         let coverage = self.text("#history-status");
-        self.expect_count(".section-nav a", 3);
+        self.expect_count(".section-nav a", 4);
         self.expect_count("#nav-activity", 0);
         assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return Array.from(document.querySelectorAll('.chart-card'), card => card.dataset.metric);","args":[]})), json!(["online", "daily", "monthly", "subscriptions"]));
         for (metric, section) in [
@@ -2321,6 +2321,25 @@ impl Browser {
     }
 
     fn verify_metadata(&self, url: &str) {
+        let publication: Value = self
+            .client
+            .get(format!("{url}build-info.json"))
+            .send()
+            .unwrap()
+            .error_for_status()
+            .unwrap()
+            .json()
+            .unwrap();
+        for key in ["code_revision", "data_revision"] {
+            assert_eq!(publication[key].as_str().unwrap().len(), 40);
+        }
+        assert!(
+            publication["built_at"]
+                .as_str()
+                .unwrap()
+                .parse::<chrono::DateTime<chrono::Utc>>()
+                .is_ok()
+        );
         // Parse the HTTP response separately: metadata must not depend on WASM.
         let html = self
             .client
@@ -2462,11 +2481,24 @@ fn build_with_tokens(
     tokens: Option<&Path>,
 ) {
     let mut command = Command::new(root.join("bin/build-dashboard.sh"));
+    // Different inputs across cached builds must publish the current revision pair.
+    let code_revision = if public_url == "/" {
+        "a".repeat(40)
+    } else {
+        "b".repeat(40)
+    };
+    let data_revision = if public_url == "/" {
+        "c".repeat(40)
+    } else {
+        "d".repeat(40)
+    };
     if let Some(tokens) = tokens {
         command.env("MNM_STATS_TOKENS", tokens);
     }
     let output = command
         .env("MNM_STATS_HISTORY", history)
+        .env("MNM_STATS_BUILD_REVISION", &code_revision)
+        .env("MNM_STATS_DATA_REVISION", &data_revision)
         .arg("--dist")
         .arg(dist)
         .arg("--public-url")
@@ -2481,6 +2513,10 @@ fn build_with_tokens(
         String::from_utf8_lossy(&output.stderr)
     );
     if success {
+        let publication: Value =
+            serde_json::from_slice(&fs::read(dist.join("build-info.json")).unwrap()).unwrap();
+        assert_eq!(publication["code_revision"], code_revision);
+        assert_eq!(publication["data_revision"], data_revision);
         assert_eq!(
             fs::read(dist.join("history.jsonl")).unwrap(),
             fs::read(history).unwrap(),

@@ -1,6 +1,9 @@
 # Project-local workflow state
 .session/
 
+# Optional local archive; authoritative observations live on the data branch.
+/data/
+
 # Collector's local lock and atomic-write staging files
 *.jsonl.lock
 *.jsonl.tmp

@@ -6,7 +6,7 @@ project_root="$PWD"
 export MNM_STATS_UID="$(id -u)" MNM_STATS_GID="$(id -g)"
 mkdir -p .cache/docker/cargo .cache/docker/tools target/docker .session/playwright
 
-history="$(realpath -e -- "${MNM_STATS_HISTORY:-data/history.jsonl}")"
+history="$(./bin/history-input.sh)"
 export MNM_STATS_HISTORY_DIR="$(dirname "$history")"
 export MNM_STATS_CONTAINER_HISTORY="/input-history/$(basename "$history")"
 tokens="$(realpath -e -- "${MNM_STATS_TOKENS:-mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json}")"

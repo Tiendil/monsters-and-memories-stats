@@ -2,7 +2,7 @@
 
 A Rust collector and static dashboard for the public [Monsters & Memories metrics](https://account.monstersandmemories.com/metrics), using repository JSONL storage, GitHub Actions, and GitHub Pages.
 
-The workspace provides the Rust HTTP/WebSocket collector, shared history model, local history-validation CLI, and a Leptos dashboard. The dashboard embeds validated history in WASM and presents metric plots, comparisons, ratios, and complete-history JSONL downloads. Workflows provide code checks, hourly collection, and Pages deployment; repository setup and live acceptance are described below. The committed history starts empty.
+The workspace provides the Rust HTTP/WebSocket collector, shared history model, local history-validation CLI, and a Leptos dashboard. The dashboard embeds validated history in WASM and presents metric plots, comparisons, ratios, and complete-history JSONL downloads. Workflows provide code checks, hourly collection, and Pages deployment; repository setup and live acceptance are described below. Code lives on `main`; collected observations live on the independent `data` branch. Generated site assets are deployed as Pages artifacts.
 
 - [Specification index](specs/intro.md)
 - [Requirements](specs/requirements.md)
@@ -68,7 +68,7 @@ To preview existing history:
 ./bin/serve-dashboard.sh --history data/history.jsonl --port 8081
 ```
 
-Pass any existing JSONL file, including one outside the repository. The launcher mounts its parent directory read-only, prints the selected container path and observation count, and watches history changes. `MNM_STATS_HISTORY` remains supported. Without an override, the input is `data/history.jsonl`, which starts empty. Old samples require **All time** if they fall outside the default last 7 days. Missing or invalid inputs fail with diagnostics.
+Pass any existing JSONL file, including one outside the repository. The launcher mounts its parent directory read-only, prints the selected container path and observation count, and watches history changes. `MNM_STATS_HISTORY` remains supported. Without an override, an existing ignored local `data/history.jsonl` is used; otherwise the committed empty fixture is used. No archive is fetched automatically. Old samples require **All time** if they fall outside the default last 7 days. Missing or invalid inputs fail with diagnostics.
 
 Source, history, and design-token changes rebuild the preview and reload the browser. Preview output is under `.session/preview/dist/`, separate from release output. To validate history or build release assets:
 
@@ -78,7 +78,7 @@ Source, history, and design-token changes rebuild the preview and reload the bro
 ./bin/build-dashboard.sh --public-url /monsters-and-memories-stats/
 ```
 
-Release assets go to ignored `dist/`. `MNM_STATS_HISTORY` also selects a different build input. The build copies the selected input unchanged to `dist/history.jsonl` alongside the dashboard. Charts use embedded data without a separate runtime metrics request; the static archive is requested only when downloaded or opened directly. Paths passed to general container commands should be repository-relative; preview history paths may be outside the repository.
+Release assets go to ignored `dist/`. `MNM_STATS_HISTORY` also selects a different build input. The build copies the selected input unchanged to `dist/history.jsonl` alongside the dashboard. Charts use embedded data without a separate runtime metrics request; the static archive is requested only when downloaded or opened directly. The build also publishes `build-info.json` with the full `code_revision`, `data_revision`, and UTC `built_at` packaging time. CI supplies the two checkout IDs; local builds can supply `MNM_STATS_BUILD_REVISION` and `MNM_STATS_DATA_REVISION`, or leave them unset for null revision fields. Paths passed to general container commands should be repository-relative; preview history paths may be outside the repository.
 
 ## Browser inspection
 
@@ -139,11 +139,11 @@ Period comparisons plot each selected server for each period, with global subscr
 
 Hover a plotted point to see its exact value and series name on the first line, with its original collection instant formatted in the selected time zone to the minute on the second, including in comparisons. Overlapping points show their individual details. The **Download JSONL** action provides all recorded observations with full timestamp precision. Counts are exact; ratios show percentages rounded to two decimal places. Time-series tooltips contain only the value, series name, and timestamp, without calculation or sample-coverage details. Tooltip names stay on one line without an authored width or character limit, including on heatmaps. Zero denominators produce gaps, and ratios may exceed 100 percent. Narrow screens can scroll comparison charts horizontally when needed.
 
-**Download JSONL** links directly to `history.jsonl` alongside the dashboard, containing every observation from the latest published build regardless of filters or comparisons. Right-click the button and choose **Copy link address** to share it; the file is accessible without loading the dashboard or opening GitHub. It uses the repository JSONL format: one snapshot per line, each with `schema_version: 1`, with an empty file for an empty archive. The address stays the same after deployments, so a page left open across a deployment can show older data than the download until reloaded. The header summarizes the complete history's first date, latest date and time in the selected zone, and record count, with a link to M&M’s public statistics and collection described as roughly hourly. An empty repository history produces an empty dashboard until observations are collected.
+**Download JSONL** links directly to `history.jsonl` alongside the dashboard, containing every observation from the latest published build regardless of filters or comparisons. Right-click the button and choose **Copy link address** to share it; the file is accessible without loading the dashboard or opening GitHub. It uses the repository JSONL format: one snapshot per line, each with `schema_version: 1`, with an empty file for an empty archive. The address stays the same after deployments, so a page left open across a deployment can show older data than the download until reloaded. The header summarizes the complete history's first date, latest date and time in the selected zone, and record count, with a link to M&M’s public statistics and collection described as roughly hourly. An empty selected archive produces an empty dashboard.
 
 ## Collection
 
-Collect the current public state into the repository history:
+Collect the current public state into an ignored local archive:
 
 ```bash
 ./bin/collect.sh --history data/history.jsonl
@@ -213,25 +213,36 @@ Depmesh exposes only `governs` and `governed_by`. Agents use those relationships
 ### Workflows
 
 - **Code checks** (`code-checks.yml`) runs the shared checks on pull requests and manual dispatch. It has read-only repository access and does not publish a site or collect metrics.
-- **Collect metrics** (`collect.yml`) runs at minute 17 of every UTC hour and supports manual dispatch on the default branch. It checks out the latest default branch, collects one current-state observation, validates history, and commits only `data/history.jsonl` using `GITHUB_TOKEN`. Unchanged history produces no commit. Running collectors are serialized and are not canceled by another collection trigger.
-- **Publish dashboard** (`pages.yml`) runs on pushes to `main`, successful completion of **Collect metrics** on `main`, and manual dispatch on the default branch. It checks out the latest default branch, builds the complete history into WASM using the configured Pages path, and uploads/deploys through the official Pages actions. Only the deployment job has `pages: write` and `id-token: write` permissions.
+- **Collect metrics** (`collect.yml`) runs at minute 17 of every UTC hour and supports manual dispatch on the default branch. It checks out collector code from the latest default branch and history from `data` in a separate directory, collects one current-state observation, validates history, and commits only the data branch’s `data/history.jsonl` using `GITHUB_TOKEN`. Unchanged history produces no commit. Running collectors are serialized and are not canceled by another collection trigger.
+- **Publish dashboard** (`pages.yml`) runs on pushes to `main`, successful completion of **Collect metrics** on `main`, and manual dispatch on the default branch. It checks out the latest default-branch code and latest `data` archive separately, builds the complete history into WASM using the configured Pages path, records both commit IDs in `build-info.json`, and uploads/deploys through the official Pages actions. Only the deployment job has `pages: write` and `id-token: write` permissions.
 
-The default branch is `main`; update the two branch filters in `pages.yml` if it is renamed. Code and history stay on the same branch. Generated site assets are published as a Pages artifact, not committed to a deployment branch.
+The default branch is `main`; update the two branch filters in `pages.yml` if it is renamed. The `data` branch contains only `README.md` and `data/history.jsonl`, with independent ancestry. Never merge it into the code branch. Code checks use local fixtures and do not require access to the data branch. Generated site assets are published as a Pages artifact, not committed to a deployment branch.
 
 Collector commit subjects use `collector: record snapshot at <observed_at>`, for example `collector: record snapshot at 2026-10-02T20:39:21.494914513Z`. The timestamp comes from the latest stored observation in UTC, preserving fractional seconds, so publication retries still identify the collected data.
 
 The collection-completion trigger is essential: a push using `GITHUB_TOKEN` does not start another push workflow. The `workflow_run` event instead starts Pages after the collector has published its data commit. Both workflow files must exist on the default branch. [GitHub token behavior](https://docs.github.com/en/actions/concepts/security/github_token), [workflow-run events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run).
 
-Pages serializes the entire build/deploy cycle without canceling a running deployment. Every queued run checks out the latest branch after the preceding cycle finishes, so delayed older triggers cannot publish an older checkout over a newer deployment. Invalid history or a failed build prevents deployment and leaves the last published site in place. Failed-collection runs use separate concurrency groups so they cannot replace a pending successful collection's deployment. GitHub may replace other pending runs; the surviving run still builds the latest branch. [Concurrency behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
+Pages serializes the entire build/deploy cycle without canceling a running deployment. Every queued run checks out the latest source and data branches after the preceding cycle finishes, so delayed older triggers cannot publish an older checkout over a newer deployment. Invalid history or a failed build prevents deployment and leaves the last published site in place. Failed-collection runs use separate concurrency groups so they cannot replace a pending successful collection's deployment. GitHub may replace other pending runs; the surviving run still builds the latest source and data. [Concurrency behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
 
 ### Setup
 
-1. Review and publish the workflows to `main`.
+1. Initialize the `data` branch as described below before publishing the updated workflows to `main`.
 2. In repository **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source. The workflow reads this setting; it does not enable Pages automatically. Allow deployments from `main` in the `github-pages` environment. [Custom Pages workflow setup](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
-3. Ensure Actions can run and repository rules permit the collector's `GITHUB_TOKEN` to push the history commit. The workflow explicitly requests `contents: write` for collection. No personal access token is needed. If a branch rule rejects the bot, review that rule with the maintainer; the workflow does not bypass it.
+3. Ensure Actions can run and repository rules permit the collector's `GITHUB_TOKEN` to push history commits to `data`. Protect `main` independently; ordinary collection does not need to write to it. The workflow explicitly requests `contents: write` for collection. No personal access token is needed. If a branch rule rejects the bot, review that rule with the maintainer; the workflow does not bypass it.
 4. Configure native failure notifications as described below, then perform the acceptance checks.
 
 After a successful deployment, the expected default URL is [tiendil.github.io/monsters-and-memories-stats](https://tiendil.github.io/monsters-and-memories-stats/). The **Publish dashboard** run reports the actual URL, including any configured custom domain.
+
+### Moving existing history to the data branch
+
+This is an operational migration requiring permission to manage workflows and perform Git operations. Do it before publishing the code change that removes `data/history.jsonl` from `main`:
+
+1. Disable **Collect metrics** temporarily and wait for any active run to finish. Preserve the latest archive until migration is verified.
+2. From the reviewed code checkout, run `./bin/initialize-data-branch.sh main`. The command fetches the latest remote `main`, copies its archive unchanged into an isolated checkout under `.session/data-migration/`, validates it, and creates/pushes an orphan `data` commit with only the archive and README. It refuses to replace an existing `data` branch and never force-pushes. The original code checkout’s branch, index, and working files are not changed.
+3. Verify the new branch’s archive matches the copied source archive, then review, commit, and publish the source changes to `main`, including removal of the old tracked archive. Keep any desired local copy under ignored `data/` or supply it through `--history`.
+4. Re-enable **Collect metrics** and perform one authorized collection. Verify that only `data` advances, Pages publishes successfully, and `build-info.json` identifies the actual code/data pair. The downloaded JSONL must match that data revision.
+
+If initialization fails, inspect the retained migration checkout and restore collection on the old code before retrying. Do not publish the new workflows until `data` exists. Existing code-branch history is retained; this migration does not rewrite old commits. A separate branch keeps new hourly commits out of code history but still uses the same repository’s storage.
 
 ### Failure notifications
 
@@ -247,7 +258,7 @@ For source or validation failures, inspect the failing step, review the source c
 
 For a rejected history push, the run fails without force-pushing and retains `collection-history-RUN_ID-ATTEMPT` for 30 days. The artifact contains the complete local history, including the unpublished observation. Download it before retrying. Compare it with the latest branch history; preserve any missing observation in chronological order, retain existing records, reject duplicate UTC hours, and validate the result with `./bin/validate-history.sh PATH` before a reviewed recovery commit. Never replace the branch's history wholesale with the artifact. An ordinary retry collects the current hour and cannot recreate a lost earlier sample.
 
-If collection succeeds but Pages fails, fix the build or Pages configuration and manually run **Publish dashboard**. Its fresh checkout rebuilds all committed history. Invalid data cannot replace the last valid dashboard.
+If collection succeeds but Pages fails, fix the build or Pages configuration and manually run **Publish dashboard**. Its fresh data checkout rebuilds all committed history. Invalid data cannot replace the last valid dashboard.
 
 ### Deployment acceptance
 
@@ -257,5 +268,6 @@ Local checks do not establish hosted operation. Before leaving collection unatte
 - A passing manual **Collect metrics** run and its history-only commit.
 - A passing scheduled collection and preservation of earlier observations.
 - An automatically triggered **Publish dashboard** run containing the bot's committed observation.
-- The hosted dashboard's latest collection time and downloaded `history.jsonl` matching the complete committed history used by that build, including after a history-only update.
+- The hosted dashboard's latest collection time and downloaded `history.jsonl` matching the exact data commit recorded in `build-info.json`, including after a data-only update.
+- Source and data revisions in `build-info.json` matching the actual build checkouts, with data-only collection leaving `main` unchanged.
 - A received notification from the controlled failure probe, with the last valid page still available.

@@ -23,6 +23,8 @@ A GitHub Actions collector MUST be scheduled once per hour and collect the publi
 
 Collected history MUST be stored in a JSON Lines (JSONL) file in this repository and retained across collection runs.
 Each line MUST contain one versioned snapshot.
+Collected observations MUST have an independent history on a dedicated `data` branch, separate from application commits on the default branch.
+Generated site assets MUST be delivered as Pages artifacts rather than committed to either branch.
 
 ### R4: Dashboard hosting
 
@@ -119,6 +121,7 @@ Publishing newly collected observations MUST include rebuilding and deploying th
 
 The dashboard MUST provide a static JSONL file alongside its published assets containing all historical data included in that dashboard build.
 The download MUST preserve the original versioned JSONL records, independently of the selected time range, entity scope, or comparisons.
+Each published dashboard MUST provide a static `build-info.json` identifying the exact source and data commit IDs used for that deployment.
 
 ### R20: Tests without source access
 

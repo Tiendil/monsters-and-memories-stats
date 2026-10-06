@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 project_root="$(cd "$(dirname "$0")/.." && pwd)"
-history="${MNM_STATS_HISTORY:-$project_root/data/history.jsonl}"
+history="${MNM_STATS_HISTORY:-}"
 tokens="${MNM_STATS_TOKENS:-$project_root/mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json}"
 demo=0
 explicit_history=0
@@ -24,11 +24,11 @@ done
 if (( demo && explicit_history )); then
     echo "Use either --demo or --history." >&2; exit 2
 fi
-if (( demo )); then history="$project_root/data/history.jsonl"; fi
+if (( demo )); then history="$project_root/mnm-stats/mnm-stats-dashboard/tests/fixtures/empty-history.jsonl"; fi
 if [[ ! "${MNM_STATS_PORT:-8080}" =~ ^[1-9][0-9]{0,4}$ ]] || (( ${MNM_STATS_PORT:-8080} > 65535 )); then
     echo "--port must be between 1 and 65535." >&2; exit 2
 fi
-history="$(realpath -e -- "$history")"
+history="$("$project_root/bin/history-input.sh" "$history")"
 tokens="$(realpath -e -- "$tokens")"
 cd "$project_root"
 if [[ "${MNM_STATS_CONTAINER:-}" != 1 ]]; then

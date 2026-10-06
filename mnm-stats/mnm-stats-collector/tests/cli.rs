@@ -69,7 +69,7 @@ fn changing_zone_lists_preserve_history_and_invalid_rows_never_append() {
 fn notification_probe_fails_with_local_fixture_without_changing_repository_history() {
     let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     let history = project.join("data/history.jsonl");
-    let before = fs::read(&history).unwrap();
+    let before = fs::read(&history).map_err(|error| error.kind());
     let result = Command::new(project.join("bin/verify-collection-failure.sh"))
         .output()
         .unwrap();
@@ -77,7 +77,7 @@ fn notification_probe_fails_with_local_fixture_without_changing_repository_histo
     let error = String::from_utf8_lossy(&result.stderr);
     assert!(error.contains("Intentional notification verification"));
     assert!(error.contains("replay"), "{error}");
-    assert_eq!(fs::read(history).unwrap(), before);
+    assert_eq!(fs::read(history).map_err(|error| error.kind()), before);
 }
 
 #[test]

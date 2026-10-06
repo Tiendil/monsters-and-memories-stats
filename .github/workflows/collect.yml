@@ -27,29 +27,37 @@ jobs:
     steps:
       - name: Check out latest default branch
         id: source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Check out collected history
+        if: ${{ !inputs.verify_failure_notification }}
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: data
+          path: collected-data
       - uses: ./.github/actions/setup
       - name: Verify failure notification
         if: inputs.verify_failure_notification
         run: ./bin/verify-collection-failure.sh
+      - name: Validate existing archive
+        if: ${{ !inputs.verify_failure_notification }}
+        run: ./bin/validate-history.sh collected-data/data/history.jsonl
       - name: Collect current state
         if: ${{ !inputs.verify_failure_notification }}
         env:
           MNM_STATS_BUILD_REVISION: ${{ steps.source.outputs.commit }}
           MNM_STATS_BUILD_BRANCH: ${{ github.event.repository.default_branch }}
-        run: ./bin/collect.sh --history data/history.jsonl
+        run: ./bin/collect.sh --history collected-data/data/history.jsonl
       - name: Publish history commit
         if: ${{ !inputs.verify_failure_notification }}
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: ./bin/publish-history.sh "$DEFAULT_BRANCH"
+        run: ./bin/publish-history.sh collected-data
       - name: Retain history after failure
         if: ${{ failure() && !inputs.verify_failure_notification }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: collection-history-${{ github.run_id }}-${{ github.run_attempt }}
-          path: data/history.jsonl
+          path: collected-data/data/history.jsonl
           retention-days: 30
           if-no-files-found: warn

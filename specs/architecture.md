@@ -44,7 +44,12 @@ Session initialization, protocol handling, and parsing MUST remain Rust applicat
 
 ### History
 
-The collector retains one append-only logical history in `data/history.jsonl` on the default branch, with at most one snapshot per UTC hour.
+The collector retains one append-only logical history in `data/history.jsonl` on the independent `data` branch, with at most one snapshot per UTC hour.
+The data branch MUST contain only the archive and its README, with an orphan root commit and no merges with application history.
+Application source, workflows, and test fixtures MUST remain on the default branch.
+Production collection and deployment MUST keep data checkouts outside the local-development `.session/` directory.
+An optional local archive in `data/` MUST be ignored by the code checkout; a committed empty fixture MUST support code checks and local builds without downloading production data.
+Explicitly selected missing or invalid history MUST fail rather than use the empty fallback.
 Each snapshot occupies one JSONL line with its own schema version, so a new observation adds one record to the Git diff.
 Each snapshot MUST contain only the current reported state selected under the [collection contract](requirements.md#history-and-collection).
 Source-provided rolling history MUST NOT be stored in snapshots or imported as additional observations.
@@ -121,7 +126,7 @@ The data flow is:
 ```text
 Public metrics page and its connected LiveView updates
     -> Rust HTTP and WebSocket collector in hourly GitHub Actions
-    -> data/history.jsonl committed to the default branch
+    -> data/history.jsonl committed to the independent data branch
     -> frontend build validates JSONL, embeds the history in WASM, and packages history.jsonl
     -> GitHub Actions publishes the Pages artifact
     -> Leptos dashboard uses shared Rust snapshot values and links to the static history.jsonl
@@ -210,8 +215,7 @@ mnm-stats/
   mnm-stats-collector/    # native CLI and parser fixture tests
     tests/fixtures/      # sanitized public source fixtures
   mnm-stats-dashboard/    # calculations, Leptos source, HTML/CSS, and Trunk configuration
-data/
-  history.jsonl          # the committed source of collected history
+data/                   # optional ignored local archive in the code checkout
 docs/
   source-analysis.md     # dated source investigation evidence
 .github/workflows/
@@ -230,6 +234,7 @@ bin/                     # shared project commands and agent runner
 
 Generated build output and Donna session state MUST be ignored by Git.
 Dependencies and build tooling MUST be pinned reproducibly, with `Cargo.lock` committed and CI using locked resolution.
+GitHub Actions MUST use full release-version tags rather than commit hashes or floating major-version tags.
 Application files MUST gain appropriate `governed_by` and reverse `governs` rules when introduced.
 
 ## Storage contract
@@ -292,6 +297,18 @@ Generated embedded data and packaged archive copies MUST NOT be committed as a s
 **Example:** Two input lines contain two observations, each with its own `schema_version: 1`.
 The downloadable file contains exactly those two lines, even when only one observation is in the selected chart range.
 
+### Deployment metadata
+
+The dashboard MUST publish `build-info.json` next to `history.jsonl`, accessible directly at both root and repository-subpath URLs.
+It MUST contain `code_revision`, `data_revision`, and `built_at`.
+Production revision fields MUST be the complete hexadecimal commit IDs returned by the source and data checkouts, respectively.
+Local builds without supplied revisions MUST use JSON null for the unavailable fields rather than inventing a commit ID.
+Malformed nonempty revision inputs MUST fail packaging.
+`built_at` MUST identify packaging time as an RFC 3339 UTC timestamp.
+Packaging MUST read the supplied revisions for each invocation, including when build caches are reused.
+The archive and metadata MUST be staged with the dashboard and published only after successful completion; failures MUST preserve the previous published files.
+The application MUST continue using embedded metrics without a runtime dependency on metadata.
+
 ### Validation
 
 Counts MUST be nonnegative integers and identities MUST be unique within their scope.
@@ -352,9 +369,13 @@ Pull-request CI MUST have no production write permissions or deployment behavior
 `collect.yml` MUST support an hourly UTC `schedule` and `workflow_dispatch` for manual recovery/testing.
 The schedule SHOULD avoid the start of the hour to reduce exposure to GitHub's documented load peak; a different collection-time requirement MAY justify another schedule.
 GitHub schedules are best-effort and may be delayed or dropped.
-The workflow MUST live on the default branch and collect against its latest state.
+The workflow MUST live on the default branch and use its latest collector code.
+It MUST check out the `data` branch separately and update only that checkout’s archive.
+Missing data branches or archives MUST fail collection before contacting the source; production workflows MUST NOT initialize or replace an archive automatically.
+Only the data checkout MUST retain Git credentials for publication.
 Overlapping collection runs MUST preserve existing observations and MUST NOT cancel a writer while it is updating history.
-It MUST commit only the validated history file using the repository's `GITHUB_TOKEN` and `contents: write` permission.
+It MUST commit only the validated history file to `data` using the repository's `GITHUB_TOKEN` and `contents: write` permission.
+Publication MUST reject the code checkout and any branch other than `data`.
 Collector commits MUST use the subject `collector: record snapshot at <observed_at>`, where `<observed_at>` is the latest snapshot's stored collection timestamp, formatted as RFC 3339 UTC with a `Z` suffix and any nonzero fractional seconds preserved.
 The message MUST use the observation time rather than the workflow or commit execution time.
 It MUST skip a commit when the file is unchanged, and MUST NOT force-push or overwrite unrelated concurrent changes.
@@ -368,20 +389,30 @@ The collection workflow MUST publish any resulting history commit before reporti
 For collection, it MUST use GitHub's [`workflow_run`](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run) event with activity type `completed`, selecting the collection workflow by its declared name and restricting it to the default branch.
 The Pages workflow file MUST exist on the default branch for this trigger to operate.
 Collection-triggered build and deployment jobs MUST run only when the collection workflow's conclusion is `success`.
-They MUST check out the latest default-branch revision after collection completes so the build includes the published history commit.
+They MUST check out the latest default-branch source and latest `data` revision separately after collection completes.
+Each build MUST capture those checkout commit IDs and use the archive from that exact data checkout, without changing either checkout during the build.
 Pages deployment MUST NOT rely on a bot data push triggering another push workflow: [GitHub documents that `GITHUB_TOKEN` pushes do not do so](https://docs.github.com/en/actions/concepts/security/github_token).
 
-**Example:** Collection starts from commit A and publishes history in commit B.
-Its successful completion triggers Pages, which checks out the updated default branch containing B and compiles that history into the frontend.
+**Example:** Collection uses source commit A and publishes data commit B without advancing the code branch.
+Its successful completion triggers Pages, which builds the selected source with archive B and records both commit IDs.
 
 Concurrent deployments MUST NOT allow an older data build to replace a newer published build.
-The frontend build MUST read and validate `data/history.jsonl` using the shared model library and embed all observations in the compiled WASM artifact.
+The frontend build MUST read and validate the selected data checkout’s `data/history.jsonl` using the shared model library and embed all observations in the compiled WASM artifact.
 Invalid history MUST fail the build without replacing the last valid published dashboard.
 A history change MUST invalidate cached frontend output that would otherwise retain older embedded data.
 The dashboard MUST use that embedded history for visualization without a separate metrics-data request.
 The Pages artifact MUST include the static JSONL archive from the same build input; downloading it is a separate user action.
 The build MUST support the GitHub Pages repository subpath as well as local preview.
 Pages publication MUST use the official artifact/deployment actions and the required `pages: write` and `id-token: write` permissions only for deployment.
+
+### Data-branch initialization
+
+Initializing the data branch MUST be a separate, explicitly authorized operational action.
+Collection MUST be paused and active runs allowed to finish before copying the latest source-branch archive.
+Initialization MUST copy that archive byte for byte, validate it, create an orphan commit containing only the archive and README, and push without force.
+It MUST refuse an existing data branch and fail if the source archive cannot be read or validated.
+The data branch MUST be initialized before publishing code that requires it or removes the original archive from the default branch.
+Code history MUST NOT be rewritten as part of this migration.
 
 ### Operational setup
 

@@ -260,6 +260,12 @@ Browser inspection through MCP MUST use local synthetic data or existing local h
 
 ### Automation
 
+Native packaging tests MUST cover exact archive bytes, empty history, complete and unavailable revision IDs, changed revision pairs with reused output, and rejection of malformed metadata or history before replacing files.
+Browser/build integration MUST verify the static deployment metadata at root and repository-subpath URLs and current revision pairs across cached builds.
+Publication orchestration tests MUST use a command double rather than operate on a Git repository or remote service.
+They MUST verify the data-branch restriction, unchanged-history no-ops, the observation-based commit subject, history-only commits, and visible diff/push failures without force-pushing.
+Real branch initialization and publication MUST remain separately authorized operational verification, not an automatic test dependency.
+
 Notification-probe coverage MUST verify an intentional failure from local input without changing repository history.
 Automated checks MUST validate GitHub workflow syntax and expressions without dispatching production workflows or deploying the dashboard.
 

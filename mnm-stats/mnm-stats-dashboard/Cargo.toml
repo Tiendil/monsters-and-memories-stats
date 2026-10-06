@@ -1,5 +1,6 @@
 [package]
 name = "mnm-stats-dashboard"
+default-run = "mnm-stats-dashboard"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,6 +13,7 @@ chrono.workspace = true
 chrono-tz.workspace = true
 plotly.workspace = true
 form_urlencoded.workspace = true
+serde_json.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 leptos.workspace = true
@@ -28,7 +30,6 @@ csscolorparser.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 reqwest.workspace = true
-serde_json.workspace = true
 cssparser.workspace = true
 csscolorparser.workspace = true
 

@@ -14,7 +14,8 @@ x-dev: &dev
     MNM_STATS_CONTAINER: "1"
     MNM_STATS_BUILD_REVISION: "${MNM_STATS_BUILD_REVISION:-}"
     MNM_STATS_BUILD_BRANCH: "${MNM_STATS_BUILD_BRANCH:-}"
-    MNM_STATS_HISTORY: "${MNM_STATS_CONTAINER_HISTORY:-/workspace/data/history.jsonl}"
+    MNM_STATS_DATA_REVISION: "${MNM_STATS_DATA_REVISION:-}"
+    MNM_STATS_HISTORY: "${MNM_STATS_CONTAINER_HISTORY:-/workspace/mnm-stats/mnm-stats-dashboard/tests/fixtures/empty-history.jsonl}"
     MNM_STATS_TOKENS: "${MNM_STATS_CONTAINER_TOKENS:-/workspace/mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json}"
     CARGO_HOME: /workspace/.cache/docker/cargo
     CARGO_TARGET_DIR: /workspace/target/docker
@@ -23,7 +24,7 @@ x-dev: &dev
   volumes:
     - .:/workspace
     - type: bind
-      source: "${MNM_STATS_HISTORY_DIR:-./data}"
+      source: "${MNM_STATS_HISTORY_DIR:-./mnm-stats/mnm-stats-dashboard/tests/fixtures}"
       target: /input-history
       read_only: true
     - type: bind

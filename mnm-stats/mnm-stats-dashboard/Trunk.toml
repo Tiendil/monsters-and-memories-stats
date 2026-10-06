@@ -15,4 +15,4 @@ wasm_bindgen = "0.2.129"
 [[hooks]]
 stage = "post_build"
 command = "sh"
-command_arguments = ["-ec", 'cp -- "${MNM_STATS_HISTORY:-../../data/history.jsonl}" "$TRUNK_STAGING_DIR/history.jsonl"']
+command_arguments = ["-ec", 'cargo run --locked --quiet --bin package-dashboard -- "${MNM_STATS_HISTORY:-$(../../bin/history-input.sh)}" "$TRUNK_STAGING_DIR"']

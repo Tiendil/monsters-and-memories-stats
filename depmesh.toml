@@ -98,13 +98,13 @@ output = { type = "union", items = [
 # Commands that package or validate history also implement application contracts.
 [[rules]]
 relation = "governed_by"
-input = { type = "one_of", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-dashboard.sh", "@/bin/validate-history.sh", "@/bin/collect.sh", "@/bin/publish-history.sh", "@/bin/verify-collection-failure.sh"] }
+input = { type = "one_of", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-dashboard.sh", "@/bin/validate-history.sh", "@/bin/collect.sh", "@/bin/publish-history.sh", "@/bin/initialize-data-branch.sh", "@/bin/history-input.sh", "@/bin/verify-collection-failure.sh"] }
 output = { type = "list", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md"] }
 
 [[rules]]
 relation = "governs"
 input = { type = "one_of", artifacts = ["@/specs/requirements.md", "@/specs/architecture.md"] }
-output = { type = "list", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-dashboard.sh", "@/bin/validate-history.sh", "@/bin/collect.sh", "@/bin/publish-history.sh", "@/bin/verify-collection-failure.sh"] }
+output = { type = "list", artifacts = ["@/bin/build-dashboard.sh", "@/bin/serve-dashboard.sh", "@/bin/validate-history.sh", "@/bin/collect.sh", "@/bin/publish-history.sh", "@/bin/initialize-data-branch.sh", "@/bin/history-input.sh", "@/bin/verify-collection-failure.sh"] }
 
 # Presentation values are shared by CSS, Rust charts, and dashboard packaging.
 [[rules]]

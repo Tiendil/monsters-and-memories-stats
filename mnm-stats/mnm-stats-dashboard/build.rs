@@ -33,8 +33,12 @@ fn main() {
     println!("cargo:rerun-if-env-changed=MNM_STATS_HISTORY");
     let input = env::var_os("MNM_STATS_HISTORY").map_or_else(
         || {
-            PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap())
-                .join("../../data/history.jsonl")
+            let local = manifest.join("../../data/history.jsonl");
+            if local.is_file() {
+                local
+            } else {
+                manifest.join("tests/fixtures/empty-history.jsonl")
+            }
         },
         PathBuf::from,
     );
