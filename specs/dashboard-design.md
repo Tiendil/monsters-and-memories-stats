@@ -54,19 +54,20 @@ The repository action required by [requirements.md](requirements.md#dashboard-be
 The download action MUST retain native link behavior so users can copy and share the static archive address.
 All masthead actions MUST remain available from every content section.
 
-One visible summary near the masthead MUST show the first observation's date and the latest observation's date and time in the selected time zone.
+One visible summary near the masthead MUST show “Data since” followed by the first observation's date in the selected time zone.
+The latest observation's timestamp MUST appear only beside “Latest snapshot,” without repeating it in the coverage summary.
 It MUST also show the total number of records and describe collection as approximately hourly, without labeling the data “live.”
 Summary dates and times MUST omit time-zone suffixes; the adjacent switch MUST identify the selected zone.
 The collection phrase MUST link “M&M’s public statistics” to `https://account.monstersandmemories.com/metrics` using the normal link styling.
 This link MUST open in a new tab or window.
-The dates and record count MUST represent the complete loaded history, independently of selected filters or comparisons; one record means one collected observation.
-The dates and record count MUST use a medium font weight in the normal dark text color; the surrounding text and collection frequency MUST retain normal weight and muted color.
+The date and record count MUST represent the complete loaded history, independently of selected filters or comparisons; one record means one collected observation.
+The date and record count MUST use a medium font weight in the normal dark text color; the surrounding text and collection frequency MUST retain normal weight and muted color.
 The summary MUST wrap naturally on narrow screens without requiring an archive-details disclosure.
 Empty history MUST show a clear no-statistics message and zero records without inventing dates.
 
-**Example:** “Data from 2 Oct 2026 to 4 Oct 2026, 20:00 · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
+**Example:** “Data since 2 Oct 2026 · 42 records · collected roughly hourly from [M&M’s public statistics](https://account.monstersandmemories.com/metrics).”
 
-The summary's latest collection time MUST communicate data age without a separate freshness warning or status message.
+The “Latest snapshot” timestamp MUST communicate data age without a separate freshness warning or status message.
 Synthetic-data notices MUST remain visible without opening another view or disclosure.
 Human-readable dates in the selected time zone SHOULD be used in the summary to reduce scanning effort; point details MUST show the original observation time to the minute, and downloads MUST retain full timestamp precision.
 
@@ -82,7 +83,7 @@ Unavailable local time MUST follow the UTC fallback defined in [requirements.md]
 
 ### Exploration controls
 
-A shared control area MUST follow “Now” and precede the active content.
+A shared control area MUST follow “Latest snapshot” and precede the active content.
 It MUST expose a multi-select labeled “Servers,” the time range, and period comparison for chart sections.
 In Trends, the chart date controls MUST be hidden while retaining their applied settings for return navigation.
 The Servers control MUST provide independently toggleable checkboxes for “All Servers” and every server discovered in the complete history.
@@ -169,7 +170,7 @@ Each plot heading MUST have an adjacent native link displaying `#`, with an acce
 The link MUST remain subtly visible on desktop and mobile, with clear hover and keyboard-focus states and an adequate touch target.
 Activating it MUST set the plot fragment in the address bar and navigate to that plot.
 It MUST support native link actions, including copying the link address and opening it in a new tab, without replacing them with clipboard behavior.
-Section navigation and “Now” links MUST use the same behavior and include the current selections in their addresses.
+Section navigation and “Latest snapshot” links MUST use the same behavior and include the current selections in their addresses.
 
 ##### Applied view settings
 
@@ -208,9 +209,9 @@ Changing filters MUST NOT scroll to the fragment's plot again; following a plot 
 **Example:** `#chart-online-presence?range=30&scope=server%3Aa&compare=previous` opens Online presence for server `a`, with the last 30 days compared with the previous period.
 Copying the chart link preserves that configuration; selecting another time range and pressing Back restores the previous range.
 
-### Now
+### Latest snapshot
 
-A section titled “Now” MUST appear after the collection-status summary and before the view controls.
+A section titled “Latest snapshot” MUST appear after the collection-status summary and before the view controls.
 It MUST remain visible in every content section, including during comparisons and empty chart selections.
 It MUST show four counts from the latest collected snapshot in the complete loaded history:
 
@@ -221,13 +222,15 @@ It MUST show four counts from the latest collected snapshot in the complete load
 
 Online, daily, and monthly counts MUST sum all servers in that snapshot; the subscriber count MUST use its global active-subscription value.
 Server, time-range, and comparison controls MUST NOT change these counts or hide the section.
-“Now” MUST mean the latest collected state, not a live measurement; the collection-status summary supplies its timestamp.
+The heading MUST have an adjacent smaller, muted timestamp from that same snapshot, displayed to the minute in the selected time zone without a zone suffix.
+The timestamp MUST appear below the heading on narrow screens and update when the time-zone selection changes.
+Empty history MUST omit the timestamp rather than invent a date.
 Empty history MUST show “Not available” for all four values, and published zeros MUST remain zero.
 The UI MUST NOT retrieve older values or sum successive daily/monthly observations to fill these counts.
-The section MUST NOT repeat the observation timestamp or an all-server aggregation explanation above the counts.
+The section MUST NOT repeat an all-server aggregation explanation above the counts.
 
 **Example:** A visitor selects a retired server and a historical month for the plots.
-“Now” continues to show all-server totals from the latest collected snapshot, even when the selected charts have no observations.
+“Latest snapshot” continues to show all-server totals from the latest collected snapshot, even when the selected charts have no observations.
 
 Counts MUST be exact, readable integers with digit grouping, rather than abbreviated values or unexplained growth percentages.
 They MUST be visually stronger than supporting text.

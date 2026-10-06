@@ -456,9 +456,20 @@ impl Browser {
     }
 
     fn verify_now(&self, expected: &Value) {
-        self.expect_text("#now-heading", "Now");
+        self.expect_text("#now-heading", "Latest snapshot");
         self.expect_count(".headline", 4);
         let last = expected["snapshots"].as_array().unwrap().last();
+        if let Some(snapshot) = last {
+            let observed_at: chrono::DateTime<chrono::Utc> =
+                snapshot["observed_at"].as_str().unwrap().parse().unwrap();
+            self.expect_text(
+                "#snapshot-time",
+                &observed_at.format("%d %b %Y, %H:%M").to_string(),
+            );
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"return document.querySelector('#snapshot-time').dateTime;","args":[]})), observed_at.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true));
+        } else {
+            self.expect_count("#snapshot-time", 0);
+        }
         for (metric, field) in [
             ("online", "online"),
             ("daily", "daily_active"),
@@ -516,6 +527,7 @@ impl Browser {
             self.count(".plot-surface"),
         );
         let status = self.text("#history-status");
+        self.expect_count("#latest-collection", 0);
         assert!(status.contains("collected roughly hourly from M&M’s public statistics"));
         self.expect_text(
             "#history-status a[href='https://account.monstersandmemories.com/metrics'][target='_blank'][rel~='noopener']",
@@ -527,16 +539,9 @@ impl Browser {
         } else {
             let first: chrono::DateTime<chrono::Utc> =
                 records[0]["observed_at"].as_str().unwrap().parse().unwrap();
-            let latest: chrono::DateTime<chrono::Utc> = records[count - 1]["observed_at"]
-                .as_str()
-                .unwrap()
-                .parse()
-                .unwrap();
             self.expect_text("#first-collection", &first.format("%d %b %Y").to_string());
-            self.expect_text(
-                "#latest-collection",
-                &latest.format("%d %b %Y, %H:%M").to_string(),
-            );
+            assert!(status.starts_with("Data since "));
+            self.expect_count("#history-status time", 1);
         }
         self.request(
             Method::POST,
@@ -601,7 +606,8 @@ impl Browser {
                 "/window/rect",
                 json!({"width":width,"height":900}),
             );
-            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const summary=document.querySelector('.now-summary').getBoundingClientRect(); const controls=document.querySelector('.controls').getBoundingClientRect(); return summary.bottom <= controls.top && getComputedStyle(document.querySelector('#now-heading')).position !== 'absolute';","args":[]})), true, "Now precedes the controls at {width}px");
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const summary=document.querySelector('.now-summary').getBoundingClientRect(); const controls=document.querySelector('.controls').getBoundingClientRect(); return summary.bottom <= controls.top && getComputedStyle(document.querySelector('#now-heading')).position !== 'absolute';","args":[]})), true, "Latest snapshot precedes the controls at {width}px");
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const h=document.querySelector('#now-heading').getBoundingClientRect(); const t=document.querySelector('#snapshot-time').getBoundingClientRect(); return innerWidth <= 375 ? t.top >= h.bottom : t.left >= h.right && t.top < h.bottom;","args":[]})), true, "Snapshot timestamp follows the heading at {width}px");
             assert_eq!(self.request(Method::POST, "/execute/sync", json!({"script":"const grid=document.querySelector('.chart-grid').getBoundingClientRect(); const cards=Array.from(document.querySelectorAll('.chart-card'), card => card.getBoundingClientRect()); return cards.every((card,i) => Math.abs(card.width-grid.width)<1 && Math.abs(card.left-grid.left)<1 && (i===0 || card.top>cards[i-1].bottom));","args":[]})), true, "Overview charts fill the width and stack in order at {width}px");
         }
         self.expect_count(".headline", 4);
@@ -1437,10 +1443,10 @@ impl Browser {
         self.request(Method::POST, "/url", json!({"url":"about:blank"}));
         self.request(Method::POST, "/url", json!({"url":url}));
         self.expect_count("#time-zone-local[aria-pressed='true']", 1);
-        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 17:45");
+        self.expect_text("#snapshot-time", "01 Jun 2026, 17:45");
         self.click("#time-zone-utc");
         self.expect_count("#time-zone-utc[aria-pressed='true']", 1);
-        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 12:00");
+        self.expect_text("#snapshot-time", "01 Jun 2026, 12:00");
         let utc_url = self.request(Method::GET, "/url", Value::Null);
         assert!(utc_url.as_str().unwrap().ends_with("#overview?tz=utc"));
         self.activate("#time-zone-local");
@@ -1449,7 +1455,7 @@ impl Browser {
         let local_label = self.text("#time-zone-local");
         let zone_name = local_label.strip_suffix(" (local)").unwrap();
         assert!(matches!(zone_name, "Asia/Kathmandu" | "Asia/Katmandu"));
-        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 17:45");
+        self.expect_text("#snapshot-time", "01 Jun 2026, 17:45");
         let local_url = self.request(Method::GET, "/url", Value::Null);
         assert!(local_url.as_str().unwrap().ends_with("#overview"));
         self.ready("online");
@@ -1468,13 +1474,13 @@ impl Browser {
         self.click("#time-range");
         self.request(Method::POST, "/refresh", json!({}));
         self.expect_count("#time-zone-local[aria-pressed='true']", 1);
-        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 17:45");
+        self.expect_text("#snapshot-time", "01 Jun 2026, 17:45");
         self.click("#time-zone-utc");
-        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 12:00");
+        self.expect_text("#snapshot-time", "01 Jun 2026, 12:00");
         self.request(Method::POST, "/back", json!({}));
-        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 17:45");
+        self.expect_text("#snapshot-time", "01 Jun 2026, 17:45");
         self.request(Method::POST, "/forward", json!({}));
-        assert_eq!(self.text("#latest-collection"), "01 Jun 2026, 12:00");
+        self.expect_text("#snapshot-time", "01 Jun 2026, 12:00");
 
         // The two near-midnight UTC records fall in the same Monday 05:00 local cell.
         self.request(Method::POST, "/url", json!({"url":format!("{url}#chart-activity-heatmap?tz=local&range=custom&from=2026-06-01&to=2026-06-01")}));

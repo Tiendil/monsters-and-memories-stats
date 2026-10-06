@@ -170,7 +170,7 @@ Presentation coverage MUST verify [dashboard-design.md](dashboard-design.md) alo
 Automated tests MUST cover:
 
 - The summary-row time-zone switch, its selected state and persistent “zone name (local)” button label, local summary and tooltip times, heatmap rebucketing, date-control labels, and restoration through refresh and Back/Forward.
-- A visible coverage summary with the complete history's first date, latest date and time in the selected zone, and record count, independently of filters and comparisons, including empty history and a single record.
+- A visible “Data since” coverage summary with the complete history's first date in the selected zone and record count, independently of filters and comparisons, including empty history and a single record, without duplicating the latest timestamp shown beside “Latest snapshot.”
 - Navigation between Overview, Player activity, and Engagement while retaining the selected scope, range, and comparisons.
 - Trends navigation and table permalinks, preserved chart settings, simultaneous Week/Month/Year columns with date tooltips, hour grouping, URL restoration, server filtering, unavailable states, and table reflow at narrow widths.
 - Trends cells matched by server identity across independently ranked periods; Starting-area activity MUST have one combined row per server and Server, Week, Month, Year columns, retaining servers without qualifying weekly values.
@@ -182,8 +182,8 @@ Automated tests MUST cover:
 - Native plot-header links with correct destinations and accessible names, keyboard activation, repeated activation of the current fragment, and retained filters during in-page navigation.
 - Empty and unknown fragments selecting Overview, and the content skip link preserving the current section and URL.
 - Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
-- A visible “Now” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count.
-- Unchanged “Now” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
+- A visible “Latest snapshot” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count, an adjacent timestamp in the selected zone that moves below the heading on narrow screens, and no timestamp for empty history.
+- Unchanged “Latest snapshot” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
 - Card link text matching the plot titles, with mouse and keyboard activation opening Overview and scrolling to and focusing the corresponding plot without changing filters.
 - Persistent cards during comparisons, without a duplicate comparison-information section.
 - A single full-width starting-zone plot with independently selectable “All Zones” and discovered zones, including historical and unavailable zones, without a duplicate Online chart.

@@ -187,10 +187,17 @@ fn focus_target(target: &str) {
 #[component]
 fn Summary(history: Arc<History>) -> impl IntoView {
     let navigation = expect_context::<ViewSignals>();
+    let time_zone = expect_context::<Memo<TimeZone>>();
     let latest = history.snapshots().last();
     view! {
         <section class="now-summary" aria-labelledby="now-heading">
-        <h2 class="summary-heading" id="now-heading">"Now"</h2>
+        <div class="summary-header">
+            <h2 class="summary-heading" id="now-heading">"Latest snapshot"</h2>
+            {latest.map(|snapshot| {
+                let observed_at = snapshot.observed_at;
+                view! { <time class="summary-time" id="snapshot-time" datetime=utc(observed_at)>{move || time_zone.get().format(observed_at, "%d %b %Y, %H:%M")}</time> }
+            })}
+        </div>
         <div class="headline-grid">{[Metric::Online, Metric::Daily, Metric::Monthly, Metric::Subscriptions].into_iter().map(|metric| {
             let key = metric.key();
             let label = metric.title();
@@ -1016,7 +1023,6 @@ pub fn App() -> impl IntoView {
     });
     navigation.scroll_to_plot(navigation.target.get_untracked());
     let count = history.snapshots().len();
-    let latest = history.snapshots().last().map(|s| s.observed_at);
     let first = history.snapshots().first().map(|s| s.observed_at);
     let names = servers(&history);
     let zone_scopes = navigation.zones;
@@ -1077,8 +1083,8 @@ pub fn App() -> impl IntoView {
             </header>
             <section class="history-summary" aria-label="Statistics coverage">
                 <p id="history-status">
-                    {first.zip(latest).map_or_else(|| "No statistics collected yet".into_any(), |(first, last)| view! {
-                        "Data from "<time id="first-collection" datetime=utc(first)>{move || time_zone.get().format(first, "%d %b %Y")}</time>" to "<time id="latest-collection" datetime=utc(last)>{move || time_zone.get().format(last, "%d %b %Y, %H:%M")}</time>
+                    {first.map_or_else(|| "No statistics collected yet".into_any(), |first| view! {
+                        "Data since "<time id="first-collection" datetime=utc(first)>{move || time_zone.get().format(first, "%d %b %Y")}</time>
                     }.into_any())}
                     " · "<span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly from "<a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a>
                 </p>

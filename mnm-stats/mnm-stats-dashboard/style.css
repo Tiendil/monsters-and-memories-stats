@@ -100,7 +100,9 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
 .section-nav a { color: var(--mnm-color-text-secondary); background: transparent; }
 .section-nav a:hover { background: var(--mnm-color-control-secondary-background-hover); }
 .section-nav a[aria-current="page"] { background: var(--mnm-color-control-primary-background-default); color: var(--mnm-color-control-primary-text); }
+.summary-header { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--mnm-spacing-gap-tight) var(--mnm-spacing-gap-medium); }
 .summary-heading { margin: 0; }
+.summary-time { color: var(--mnm-color-text-muted); font-size: var(--mnm-font-size-body-small); font-variant-numeric: tabular-nums; }
 .headline-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--mnm-spacing-gap-medium); margin: var(--mnm-spacing-gap-medium) 0 var(--mnm-spacing-gap-extra-large); }
 .headline { min-width: 0; background: var(--mnm-color-surface-panel); padding: var(--mnm-spacing-panel-padding); border: var(--mnm-border-width-default) solid var(--mnm-color-border-panel); border-radius: var(--mnm-radius-panel); }
 .headline h3 { font-size: var(--mnm-font-size-body-small); color: var(--mnm-color-text-secondary); }
@@ -159,6 +161,7 @@ footer a { display: inline-flex; align-items: center; min-height: var(--mnm-layo
   .section-nav a { font-size: var(--mnm-font-size-body-small); padding-inline: var(--mnm-spacing-gap-tight); }
   #content:has(.overview-chart) > .section-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .summary-heading { line-height: var(--mnm-font-line-height-title); }
+  .summary-header { flex-direction: column; align-items: flex-start; }
   .headline-grid { gap: var(--mnm-spacing-gap-small); margin-block: var(--mnm-spacing-gap-small) var(--mnm-spacing-gap-large); }
   .headline { padding: var(--mnm-spacing-gap-tight) var(--mnm-spacing-gap-small); }
   .headline-value { font-size: var(--mnm-font-size-summary-compact); margin-block: var(--mnm-spacing-gap-tight); }
