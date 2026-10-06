@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 # Serialize the complete build/deploy cycle. Even a delayed older trigger checks
 # out the latest branch only after the previous deployment finishes.

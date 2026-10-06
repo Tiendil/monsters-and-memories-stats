@@ -3,11 +3,15 @@ set -euo pipefail
 source "$(dirname "$0")/container.sh"
 cd "$(dirname "$0")/.."
 # Reuse the cache across build identities, then verify the development fallback.
-check_build_identity() {
-    MNM_STATS_BUILD_REVISION="$1" MNM_STATS_BUILD_BRANCH="$2" MNM_STATS_EXPECT_USER_AGENT="$3" \
-        cargo test --locked -p mnm-stats-collector --test acquisition \
+mkdir -p .session/tests
+scratch="$(mktemp -d .session/tests/build-metadata-XXXXXX)"
+check_build_identity() (
+    export MNM_STATS_BUILD_REVISION="$1" MNM_STATS_BUILD_BRANCH="$2" MNM_STATS_EXPECT_USER_AGENT="$3"
+    export MNM_STATS_COLLECTOR_BINARY="$scratch/collector"
+    ./bin/build-collector.sh
+    cargo test --locked -p mnm-stats-collector --test acquisition \
         initializes_http_session_then_receives_delayed_local_websocket_updates -- --exact
-}
+)
 check_build_identity 0123456789abcdef0123456789abcdef01234567 main \
     'mnm-stats-collector/0123456789ab (branch=main; +https://github.com/Tiendil/monsters-and-memories-stats)'
 check_build_identity fedcba9876543210fedcba9876543210fedcba98 'feature/(trial)' \

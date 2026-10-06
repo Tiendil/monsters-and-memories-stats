@@ -14,6 +14,7 @@ x-dev: &dev
     MNM_STATS_CONTAINER: "1"
     MNM_STATS_BUILD_REVISION: "${MNM_STATS_BUILD_REVISION:-}"
     MNM_STATS_BUILD_BRANCH: "${MNM_STATS_BUILD_BRANCH:-}"
+    MNM_STATS_COLLECTOR_BINARY: "${MNM_STATS_COLLECTOR_BINARY:-}"
     MNM_STATS_DATA_REVISION: "${MNM_STATS_DATA_REVISION:-}"
     MNM_STATS_HISTORY: "${MNM_STATS_CONTAINER_HISTORY:-/workspace/mnm-stats/mnm-stats-dashboard/tests/fixtures/empty-history.jsonl}"
     MNM_STATS_TOKENS: "${MNM_STATS_CONTAINER_TOKENS:-/workspace/mnm-stats/mnm-stats-dashboard/design-tokens.tokens.json}"

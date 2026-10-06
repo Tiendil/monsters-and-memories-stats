@@ -24,6 +24,9 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
+      packages: read
+    env:
+      MNM_STATS_COLLECTOR_BINARY: .cache/collector/mnm-stats-collector
     steps:
       - name: Check out latest default branch
         id: source
@@ -37,7 +40,28 @@ jobs:
         with:
           ref: data
           path: collected-data
+      - name: Restore exact collector executable
+        id: collector
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: ${{ env.MNM_STATS_COLLECTOR_BINARY }}
+          # The source revision also identifies the image and build configuration.
+          key: collector-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.event.repository.default_branch }}-${{ steps.source.outputs.commit }}
       - uses: ./.github/actions/setup
+        with:
+          cargo: ${{ steps.collector.outputs.cache-hit != 'true' }}
+      - name: Prepare collector executable
+        if: steps.collector.outputs.cache-hit != 'true'
+        env:
+          MNM_STATS_BUILD_REVISION: ${{ steps.source.outputs.commit }}
+          MNM_STATS_BUILD_BRANCH: ${{ github.event.repository.default_branch }}
+        run: ./bin/build-collector.sh
+      - name: Save exact collector executable
+        if: steps.collector.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: ${{ env.MNM_STATS_COLLECTOR_BINARY }}
+          key: ${{ steps.collector.outputs.cache-primary-key }}
       - name: Verify failure notification
         if: inputs.verify_failure_notification
         run: ./bin/verify-collection-failure.sh
@@ -46,9 +70,6 @@ jobs:
         run: ./bin/validate-history.sh collected-data/data/history.jsonl
       - name: Collect current state
         if: ${{ !inputs.verify_failure_notification }}
-        env:
-          MNM_STATS_BUILD_REVISION: ${{ steps.source.outputs.commit }}
-          MNM_STATS_BUILD_BRANCH: ${{ github.event.repository.default_branch }}
         run: ./bin/collect.sh --history collected-data/data/history.jsonl
       - name: Publish history commit
         if: ${{ !inputs.verify_failure_notification }}

@@ -357,6 +357,27 @@ Test runs MUST use local data and MUST NOT invoke the production collector again
 GitHub Actions workflows MUST own GitHub event handling and job orchestration, invoking the shared project commands defined in [development.md](development.md#project-commands).
 Tool invocations and their options MUST remain in those commands or the underlying tool configuration so local and automated runs share the same implementation.
 
+### Build reuse
+
+CI MUST share Cargo dependency downloads across workflows while keeping compilation caches separate by workflow, platform, toolchain, and build configuration.
+Compilation cache keys MUST account for the workspace manifest, dependency lockfile, Cargo configuration, and source/build inputs.
+Cache misses MUST rebuild from the checked-out inputs without changing application behavior.
+Credentials and production history MUST NOT be stored in dependency caches.
+
+Collection MUST reuse a prepared executable only for an exact match of the checked-out source revision, branch metadata, and build environment.
+Archive validation, collection, and publication validation MUST use that same executable without recompiling for different metadata between steps.
+An exact executable cache hit MUST skip Cargo downloads and compilation-cache restoration.
+An explicitly selected missing or unusable executable MUST fail rather than silently run another build.
+Ordinary local commands without a prepared executable MUST retain Cargo's source-change checks.
+
+The development image MUST be published to GitHub Container Registry by a separate default-branch workflow when its build inputs change, with manual recovery available.
+Image references MUST identify their checked-out build inputs; publication MUST NOT replace an existing reference for those inputs.
+Only that publication job MUST receive package-write permission.
+Consumer jobs MUST try the matching prebuilt image and fall back to building the checked-out Dockerfile when it is unavailable.
+Pull requests MUST NOT publish images.
+Image publication MUST NOT collect statistics or deploy the dashboard.
+Dashboard builds MUST continue validating and embedding the selected history and regenerating publication metadata when build caches are restored.
+
 ### Code checks
 
 `code-checks.yml` MUST run the shared verification commands for pull requests and support manual execution.

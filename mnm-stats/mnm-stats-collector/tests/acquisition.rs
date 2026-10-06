@@ -374,8 +374,31 @@ fn initializes_http_session_then_receives_delayed_local_websocket_updates() {
         }
         assert!(matches!(socket.read().unwrap(), Message::Close(_)));
     });
-    let snapshot = collect(&source, Duration::from_secs(2)).unwrap();
-    assert_eq!(snapshot.active_subscriptions, 18_910);
+    let scratch = Scratch::new();
+    let history = scratch.0.join("collected-history.jsonl");
+    let project = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let binary = std::env::var("MNM_STATS_COLLECTOR_BINARY")
+        .ok()
+        .filter(|path| !path.is_empty())
+        .unwrap_or_else(|| env!("CARGO_BIN_EXE_mnm-stats-collector").to_owned());
+    let output = std::process::Command::new(project.join("bin/collect.sh"))
+        .env("MNM_STATS_COLLECTOR_BINARY", binary)
+        .env("PATH", "/usr/bin:/bin")
+        .arg("--source")
+        .arg(&source)
+        .arg("--history")
+        .arg(&history)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stored =
+        mnm_stats_model::History::from_jsonl(&std::fs::read_to_string(history).unwrap()).unwrap();
+    assert_eq!(stored.snapshots().len(), 1);
+    assert_eq!(stored.snapshots()[0].active_subscriptions, 18_910);
     server.join().unwrap();
 }
 

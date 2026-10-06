@@ -5,4 +5,4 @@ cd "$(dirname "$0")/.."
 if [[ $# == 0 ]]; then
     set -- "$(./bin/history-input.sh)"
 fi
-exec cargo run --locked --quiet -p mnm-stats-collector -- validate-history "$@"
+exec ./bin/run-collector.sh validate-history "$@"

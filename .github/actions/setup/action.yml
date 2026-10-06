@@ -1,11 +1,40 @@
 name: Set up project tools
 description: Load the shared Docker development image and prepare locked dependencies.
+inputs:
+  cargo:
+    description: Restore compilation caches and fetch dependencies (false for an exact collector executable hit).
+    default: 'true'
 runs:
   using: composite
   steps:
+    - uses: ./.github/actions/image-reference
+      id: image
+    - name: Log in to the project image registry
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
+      uses: docker/login-action@v4.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    - name: Pull prebuilt development image
+      id: pull
+      shell: bash
+      env:
+        DEV_IMAGE: ${{ steps.image.outputs.image }}
+      run: |
+        if docker pull --platform linux/amd64 "$DEV_IMAGE"; then
+          docker tag "$DEV_IMAGE" mnm-stats-dev:local
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+        else
+          echo 'Prebuilt image unavailable; building the checked-out Dockerfile.'
+          echo 'ready=false' >> "$GITHUB_OUTPUT"
+        fi
     - name: Set up Docker build cache
+      if: steps.pull.outputs.ready != 'true'
       uses: docker/setup-buildx-action@v4.4.1
     - name: Build development image
+      if: steps.pull.outputs.ready != 'true'
       uses: docker/build-push-action@v7.4.0
       with:
         context: .
@@ -15,15 +44,28 @@ runs:
         tags: mnm-stats-dev:local
         cache-from: type=gha,scope=development
         cache-to: type=gha,scope=development,mode=max
-    - name: Restore Cargo cache
+    - name: Restore shared Cargo downloads
+      if: inputs.cargo == 'true'
       uses: actions/cache@v6.1.0
       with:
         path: |
-          .cache/docker/cargo
-          target/docker
-        key: cargo-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'docker/dev/Dockerfile') }}-${{ hashFiles('mnm-stats/**', 'bin/**') }}
+          .cache/docker/cargo/registry/index
+          .cache/docker/cargo/registry/cache
+          .cache/docker/cargo/registry/src
+          .cache/docker/cargo/git/db
+          .cache/docker/cargo/git/checkouts
+        key: cargo-downloads-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock') }}
         restore-keys: |
-          cargo-${{ runner.os }}-${{ github.workflow }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml', 'docker/dev/Dockerfile') }}-
+          cargo-downloads-v1-${{ runner.os }}-${{ runner.arch }}-
+    - name: Restore workflow compilation cache
+      if: inputs.cargo == 'true'
+      uses: actions/cache@v6.1.0
+      with:
+        path: target/docker
+        key: cargo-build-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.workflow }}-${{ steps.image.outputs.key }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', '.cargo/**', 'docker-compose.yml') }}-${{ hashFiles('mnm-stats/**', 'bin/**') }}
+        restore-keys: |
+          cargo-build-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.workflow }}-${{ steps.image.outputs.key }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', '.cargo/**', 'docker-compose.yml') }}-
     - name: Fetch locked dependencies
+      if: inputs.cargo == 'true'
       shell: bash
       run: ./bin/dev.sh setup --image-ready

@@ -2,6 +2,75 @@ use std::{fs, path::PathBuf, process::Command};
 mod common;
 
 #[test]
+fn prepared_executable_runs_commands_without_cargo_and_preserves_failures() {
+    let scratch = common::Scratch::new();
+    let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let binary = scratch.0.join("cached collector");
+    fs::copy(env!("CARGO_BIN_EXE_mnm-stats-collector"), &binary).unwrap();
+    let history = scratch.0.join("history with spaces.jsonl");
+    let run = |script: &str, args: &[&str]| {
+        Command::new(project.join("bin").join(script))
+            .env("MNM_STATS_COLLECTOR_BINARY", &binary)
+            // Cargo is deliberately unavailable; the shell helpers remain available.
+            .env("PATH", "/usr/bin:/bin")
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    fs::write(&history, "").unwrap();
+    assert!(
+        run("validate-history.sh", &[history.to_str().unwrap()])
+            .status
+            .success()
+    );
+    let fixture = project.join("mnm-stats/mnm-stats-collector/tests/fixtures/liveview.json");
+    let output = run(
+        "collect.sh",
+        &[
+            "--history",
+            history.to_str().unwrap(),
+            "--replay",
+            fixture.to_str().unwrap(),
+            "--observed-at",
+            "2026-10-02T15:20:00Z",
+        ],
+    );
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let before = fs::read(&history).unwrap();
+    let output = run(
+        "validate-history.sh",
+        &[history.to_str().unwrap(), "--latest-observed-at"],
+    );
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        "2026-10-02T15:20:00Z\n"
+    );
+    assert_eq!(fs::read(&history).unwrap(), before);
+
+    let invalid = scratch.0.join("invalid.jsonl");
+    fs::write(&invalid, "{broken").unwrap();
+    let output = run("validate-history.sh", &[invalid.to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("line 1"));
+    assert_eq!(fs::read_to_string(&invalid).unwrap(), "{broken");
+    assert!(
+        !run("run-collector.sh", &["unknown-command"])
+            .status
+            .success()
+    );
+
+    fs::remove_file(&binary).unwrap();
+    let output = run("validate-history.sh", &[history.to_str().unwrap()]);
+    assert!(!output.status.success());
+    assert_eq!(fs::read(&history).unwrap(), before);
+}
+
+#[test]
 fn changing_zone_lists_preserve_history_and_invalid_rows_never_append() {
     let scratch = common::Scratch::new();
     let history = scratch.0.join("history.jsonl");

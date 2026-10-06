@@ -1,0 +1,20 @@
+name: Development image reference
+description: Identify the tool image from the checked-out build inputs.
+outputs:
+  image:
+    description: GHCR image tagged by its build inputs.
+    value: ${{ steps.reference.outputs.image }}
+  key:
+    description: Build input fingerprint.
+    value: ${{ steps.reference.outputs.key }}
+runs:
+  using: composite
+  steps:
+    - id: reference
+      shell: bash
+      env:
+        REPOSITORY: ${{ github.repository }}
+        IMAGE_KEY: ${{ hashFiles('docker/dev/Dockerfile', '.dockerignore', 'rust-toolchain.toml') }}
+      run: |
+        echo "image=ghcr.io/${REPOSITORY,,}/dev:inputs-$IMAGE_KEY" >> "$GITHUB_OUTPUT"
+        echo "key=$IMAGE_KEY" >> "$GITHUB_OUTPUT"

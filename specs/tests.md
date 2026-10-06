@@ -268,6 +268,8 @@ Real branch initialization and publication MUST remain separately authorized ope
 
 Notification-probe coverage MUST verify an intentional failure from local input without changing repository history.
 Automated checks MUST validate GitHub workflow syntax and expressions without dispatching production workflows or deploying the dashboard.
+Collector command tests MUST verify that a prepared executable supports validation and fixture replay without Cargo, preserves failure results and history, and fails for a missing executable without falling back to compilation.
+Build-metadata checks MUST verify the prepared executable's identifying headers against a local fixture server across different cached build identities.
 
 ## Delivery and reporting
 
