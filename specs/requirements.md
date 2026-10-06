@@ -32,7 +32,7 @@ The dashboard MUST be a static website hosted on GitHub Pages.
 
 ### R5: Application technology
 
-Collector and dashboard application logic MUST be implemented in Rust, using Leptos for the frontend if feasible.
+Collector and dashboard application logic MUST be implemented in Rust, with Leptos for the frontend.
 Third-party chart engines MAY use another language; a Rust API is useful for integration but is not required.
 
 ### R6: Metric coverage
@@ -43,6 +43,7 @@ The dashboard MUST present the following metric families:
 - monthly active counts.
 - active subscriptions.
 - starting-zone statistics.
+- online population.
 
 ### R7: Server scope
 
@@ -85,8 +86,7 @@ Work MUST proceed in consistent, working steps, each ending with a request for u
 
 ### R15: Simplicity
 
-The project MUST remain simple and SHOULD use existing libraries rather than recreate their functionality.
-Using existing libraries under R15 reduces code the project must maintain.
+The project MUST remain simple and SHOULD use existing libraries rather than recreate their functionality, to reduce maintenance.
 A direct implementation MAY be used when available libraries would add disproportionate complexity for the required behavior.
 
 ### R16: Server discovery
@@ -150,7 +150,7 @@ DAU/MAU MAY be identified as stickiness.
 DAU/MAU MUST NOT be described as returning-player retention; chart descriptions MUST focus on interpreting the metric rather than repeating qualifications about the source.
 
 DAU/MAU are the source's daily/monthly active fields; their exact counting windows and deduplication rules are unverified.
-The UI MUST label subscriptions as subscriptions, without equating them with unique people.
+“Subscribers” and “Global subscribers” MUST refer to the source's active-subscription count, without asserting that it counts distinct people.
 Missing fields MUST NOT become zero; a literal published zero MUST remain zero.
 The dashboard MUST NOT infer MAU by summing observations.
 
@@ -158,13 +158,12 @@ Starting-zone counts MAY be summed by zone ID across servers, and across zones w
 An individual zone absent from a server's observation MUST remain unavailable, not zero.
 An all-server count for an individual zone MUST be unavailable when any observed server omits that zone; a partial sum MUST NOT be presented as a complete total.
 Starting-zone totals MUST sum each server's reported zone rows, including a zero total for a validated empty list.
-Daily/monthly activity MAY be summed across servers; accessible chart descriptions MUST explain that these are sums without deduplication.
+All-server daily/monthly activity MUST sum the source counts across servers without deduplication.
 Such sums MUST NOT be described as game-wide unique active users, since one account may use multiple servers.
 Global subscriptions MUST remain global in a per-server view; per-server subscription numbers MUST NOT be invented.
 
 **Example:** Daily active counts of 10 and 20 on two servers yield a reported sum of 30, but do not establish that 30 different players were active.
 
-The dashboard SHOULD plot online populations as the additional statistic under R11.
 Starting-zone population MUST NOT be described as new players or character creation counts.
 Historical values MUST retain server and zone identities even if those entities later disappear from the source.
 
@@ -298,7 +297,8 @@ The available ranges MUST be:
 - all time.
 - a custom inclusive range of dates in the selected time zone.
 
-Custom dates MUST be valid, with the end on or after the start. Both boundary dates MUST be included in full.
+Custom dates MUST be valid, with the end on or after the start.
+Both boundary dates MUST be included in full.
 Invalid inputs MUST leave the applied range unchanged and show a local validation message.
 
 The default range MUST be the last 7 days.
@@ -309,7 +309,7 @@ Rolling ranges MUST use elapsed days of 24 hours each.
 The rolling ranges and All time MUST end at the current instant; “last year” MUST mean the previous 365 days, and “all time” MUST include all collected history.
 The UI MUST state the selected interval and show when it contains no observations.
 
-The UI MUST show the latest collection time and the available history interval.
+The coverage summary MUST show the first observation's date, and “Latest snapshot” MUST show the latest observation's timestamp, as defined in [dashboard-design.md](dashboard-design.md#masthead-and-collection-status).
 The displayed latest collection time MUST indicate data age without a separate freshness warning or status label.
 Displayed times MUST identify the selected time zone as defined below.
 Missing samples MUST NOT be plotted as zeros or added as synthetic observations.
@@ -337,11 +337,7 @@ Aggregate heatmap details MUST follow Population insights below.
 Ratio details MUST show a percentage rounded to two decimal places, without a numerator/denominator breakdown or sample-coverage text.
 Series names MUST remain on one line without an authored tooltip-width or character-count limit.
 Hover details MUST refer only to collected observations, MUST NOT invent points inside gaps, and MUST clear when the pointer leaves the plot or the selection changes.
-The following states MUST be understandable:
-
-- initialization.
-- empty data.
-- invalid data.
+Unavailable data, initialization, and errors MUST use the states defined in [dashboard-design.md](dashboard-design.md#data-and-loading-states).
 
 ### Time zones
 
@@ -494,7 +490,8 @@ The comparison choices MUST be:
   For calendar-date ranges, use the same number of preceding calendar dates.
   For Today, compare midnight through the same local clock time on the preceding day.
 - **Year over year:** the primary range's dates shifted back one calendar year when matching exact dates; a February 29 boundary MUST clamp to February 28 where necessary.
-- **Custom period:** an inclusive range of dates in the selected time zone. Users MUST be able to add and remove any number of custom periods, including periods longer or shorter than the primary range.
+- **Custom period:** an inclusive range of dates in the selected time zone.
+  Users MUST be able to add and remove any number of custom periods, including periods longer or shorter than the primary range.
 
 Changing the primary range MUST recalculate automatic comparisons and retain the selected custom periods.
 The dashboard MUST retain the primary chart while a custom comparison has no periods yet.
@@ -552,7 +549,8 @@ The all-servers series includes A and B when they are present in the correspondi
 
 ### Embedded history
 
-The committed JSONL history MUST be the source for the embedded history.
+Production builds MUST embed the JSONL history from the selected `data` branch revision.
+Local builds and previews MAY use an existing archive or local test data under [tests.md](tests.md#test-data).
 Embedding MUST preserve every observation and its order without changing metric values or identities.
 Malformed or unsupported JSONL records MUST fail the build rather than be skipped.
 Displayed data MUST remain consistent with the history embedded in the loaded frontend build.

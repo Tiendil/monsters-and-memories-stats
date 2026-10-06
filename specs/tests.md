@@ -167,38 +167,55 @@ Coverage MUST include empty files, history paths containing spaces, root and rep
 ### Dashboard presentation
 
 Presentation coverage MUST verify [dashboard-design.md](dashboard-design.md) alongside the metric and comparison contracts.
-Automated tests MUST cover:
+Automated coverage MUST include the following cases.
+
+#### Summary and Overview
 
 - The summary-row time-zone switch, its selected state and persistent “zone name (local)” button label, local summary and tooltip times, heatmap rebucketing, date-control labels, and restoration through refresh and Back/Forward.
 - A visible “Data since” coverage summary with the complete history's first date in the selected zone and record count, independently of filters and comparisons, including empty history and a single record, without duplicating the latest timestamp shown beside “Latest snapshot.”
-- Navigation between Overview, Player activity, and Engagement while retaining the selected scope, range, and comparisons.
-- Trends navigation and table permalinks, preserved chart settings, simultaneous Week/Month/Year columns with date tooltips, hour grouping, URL restoration, server filtering, unavailable states, and table reflow at narrow widths.
-- Trends cells matched by server identity across independently ranked periods; Starting-area activity MUST have one combined row per server and Server, Week, Month, Year columns, retaining servers without qualifying weekly values.
-- Obsolete Trends period parameters ignored without affecting the other shared URL settings.
+- Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
+- A visible “Latest snapshot” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count, an adjacent timestamp in the selected zone that moves below the heading on narrow screens, and no timestamp for empty history.
+- Unchanged “Latest snapshot” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
+- Card link text matching the plot titles, with mouse and keyboard activation opening Overview and scrolling to and focusing the corresponding plot without changing filters.
+- Persistent cards during comparisons, without a duplicate comparison-information section.
+
+#### Navigation and shared links
+
+- Navigation between all four sections while retaining the selected scope, range, and comparisons.
 - Direct visits to every tab and plot fragment, plot focus and scrolling after section mounting, refresh, and browser Back/Forward.
 - Complete applied settings restored from copied URLs, including the UTC/local choice, custom calendar dates, multiple comparisons, inactive chart selectors, explicit empty selections, and removable unavailable entity IDs.
 - Back/Forward restoring filters without extra history entries or scrolling again to an unchanged plot target.
 - Menu opening, unapplied date drafts, and validation errors leaving the URL and history unchanged.
 - Native plot-header links with correct destinations and accessible names, keyboard activation, repeated activation of the current fragment, and retained filters during in-page navigation.
 - Empty and unknown fragments selecting Overview, and the content skip link preserving the current section and URL.
-- Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
-- A visible “Latest snapshot” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count, an adjacent timestamp in the selected zone that moves below the heading on narrow screens, and no timestamp for empty history.
-- Unchanged “Latest snapshot” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
-- Card link text matching the plot titles, with mouse and keyboard activation opening Overview and scrolling to and focusing the corresponding plot without changing filters.
-- Persistent cards during comparisons, without a duplicate comparison-information section.
+
+#### Player activity
+
 - A single full-width starting-zone plot with independently selectable “All Zones” and discovered zones, including historical and unavailable zones, without a duplicate Online chart.
 - Multiple zones combined with server and period comparisons, exact hover values, stable colors, and persistent choices across content sections.
 - Full-width server population shares and heatmaps in Player activity, correct percentage and aggregate hover details, independent zone filtering, entity/period changes, blank buckets versus zero, and narrow-screen labels and color scales.
 - Heatmap scale labels with visible lower and upper endpoints, grouped thousands without scientific notation, and distinct fractional values; labels MUST remain readable at narrow widths.
 - Inferno's low-to-high color progression, blank cells distinct from measured zero, and independent total and individual-server bounds shared across periods, with unchanged scales after server-visibility changes.
 - Zone checkbox keyboard operation, Escape and outside dismissal, long labels at narrow widths, empty-selection recovery, and independence from the shared view controls.
+
+#### Engagement
+
+- Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
+- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and two-line online-ratio tooltips without calculation or coverage details.
+- Online presence and subscriber-activity series preserving individual collection points, with percentages calculated from the same snapshot and no daily averaging.
+
+#### Trends
+
+- Trends navigation and table permalinks, preserved chart settings, simultaneous Week/Month/Year columns with date tooltips, hour grouping, URL restoration, server filtering, unavailable states, and table reflow at narrow widths.
+- Trends cells matched by server identity across independently ranked periods; Starting-area activity MUST have one combined row per server and Server, Week, Month, Year columns, retaining servers without qualifying weekly values.
+- Obsolete Trends period parameters ignored without affecting the other shared URL settings.
+
+#### Shared controls and chart presentation
+
 - “Show zones” inside the starting-zone chart and “Show metrics” inside each applicable Engagement chart, after explanations and before legends, with accessible labels and recovery actions in their own cards.
 - Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes.
-- Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
-- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and two-line online-ratio tooltips without calculation or coverage details.
-- Online presence and subscriber-activity series preserving individual collection points, with percentages calculated from the same snapshot and no daily averaging.
 - Visible explanations on every chart, absence of reference links in descriptions, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.
@@ -207,6 +224,8 @@ Automated tests MUST cover:
 - Accessible names, selected states, useful focus retention, and local validation messages.
 - Empty-range recovery through all time, preserving server scope.
 - Chart-engine failure leaving summary values and history download usable.
+
+#### Rendered review
 
 Rendered review MUST cover:
 
@@ -273,12 +292,12 @@ Build-metadata checks MUST verify the prepared executable's identifying headers 
 
 ## Delivery and reporting
 
-Each implementation step MUST include passing tests for the behavior it introduces.
+Each implementation step MUST pass the checks applicable to its changes under [development.md](development.md#verification).
+New or changed application behavior MUST have automated test coverage.
+Copy- or style-only changes MUST receive rendered review and the existing required checks; new tests SHOULD target behavioral regressions rather than duplicate static wording or style values.
 Regression fixes to covered behavior MUST include a test that demonstrates the corrected result.
 Tests run locally and in CI MUST follow the same rules for local data and internet requests.
-Native behavior tests MUST run through regular Donna polish for code changes.
-Collector build-metadata checks, browser/build integration, and the release WASM build MUST run through build polish when build logic changes, following the workflow selection rules in [development.md](development.md#donna).
-Ordinary code changes MUST NOT require repeated build-validation scenarios; rendered frontend changes MUST retain the interactive browser review required by [development.md](development.md#browser-inspection).
+Local workflow selection MUST follow [development.md](development.md#donna); browser inspection MUST follow its [rendered-review requirements](development.md#browser-inspection).
 CI MUST continue running the complete test and build coverage through the shared commands.
 Missing or skipped required tests MUST NOT be reported as passing coverage.
 Test reports MUST identify failed cases and the relevant local inputs without relying on responses from the original statistics service.

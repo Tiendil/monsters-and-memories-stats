@@ -76,16 +76,12 @@ Both representations MUST use the same validated history input for each build.
 
 ### Design tokens
 
-The dashboard owns the presentation contract defined in [design-tokens.md](design-tokens.md), including the machine-readable token artifact in the dashboard crate.
-The token artifact MUST select palette and shared style values from Tailwind's pinned default theme through the import convention in the token specification.
+The dashboard package MUST own the token artifact and its build-time adapter, following [design-tokens.md](design-tokens.md).
 Rust build tooling MUST resolve the theme references, validate the artifact, and generate CSS custom properties, typed values for Plotly figure configuration, and a self-contained DTCG document from one resolved token set.
-This keeps browser styles and chart presentation consistent without introducing a separate runtime styling service.
-Generation MUST use the project's supported DTCG profile and existing Cargo/Trunk build flow.
-Handwritten CSS MUST retain selectors and layout rules, with token references supplying reusable presentation values.
+Generation MUST use the existing Cargo/Trunk build flow without a runtime styling service.
 Generated CSS MUST be embedded in the compiled frontend and applied when the WASM application mounts, without a separate runtime stylesheet request.
-Build-time resolution MUST supply token values in CSS contexts that cannot use custom properties.
 Generated output MUST remain in ignored build locations.
-The preview MUST watch the selected token artifact and rebuild both representations when it changes, including when an override selects a file outside the application crate.
+The preview MUST rebuild token-dependent outputs as defined by [design-tokens.md](design-tokens.md#build-behavior).
 
 ### Automation and notifications
 

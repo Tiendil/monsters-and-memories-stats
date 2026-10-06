@@ -43,12 +43,13 @@ Production metadata URLs MUST be updated together when the public site address c
 
 The masthead MUST use the heading “Statistics for Monsters & Memories” and the sentence-case credit “Made with love and curiosity by Tiendil” above it.
 On narrow screens, the heading MUST use three centered lines: “Statistics”, “for”, and “Monsters & Memories”.
-The middle line MUST use smaller text in the same color as the other title lines with tight vertical spacing, and the author credit and action row MUST also be centered.
-On wide screens, the heading MUST retain its inline wording and existing alignment.
+The middle line MUST use smaller text in the same color as the other title lines, with tight vertical spacing.
+The author credit and action row MUST also be centered on narrow screens.
+On wide screens, the heading MUST use inline text and align left.
 The name “Tiendil” MUST link to `https://tiendil.org`, open in a new tab, and be visibly identifiable as a link.
 Its action group MUST provide “Download JSONL,” “Star on GitHub,” and “Feedback.”
 “Star on GitHub” and “Feedback” MUST open in a new tab or window; the latter MUST link to GitHub's chooser for the Feature suggestion, Bug report, and Other forms.
-It MUST remain compact rather than use a promotional hero layout.
+The masthead MUST remain compact rather than use a promotional hero layout.
 On wide screens, the action group MUST sit beside the title; on narrow screens, the title MUST precede a compact action row.
 At all widths, the actions MUST share a control height, neutral surfaces, and subtle borders.
 On narrow screens, all three actions MUST share one row when they fit; “Feedback” MUST retain the same outlined button styling as the other actions.
@@ -58,8 +59,8 @@ The download action MUST retain native link behavior so users can copy and share
 All masthead actions MUST remain available from every content section.
 
 One visible summary near the masthead MUST show “Data since” followed by the first observation's date in the selected time zone.
-The latest observation's timestamp MUST appear only beside “Latest snapshot,” without repeating it in the coverage summary.
-It MUST also show the total number of records and describe collection as approximately hourly, without labeling the data “live.”
+The latest observation's timestamp MUST appear beside “Latest snapshot,” without repeating it in the coverage summary.
+The coverage summary MUST also show the total number of records and describe collection as approximately hourly, without labeling the data “live.”
 Summary dates and times MUST omit time-zone suffixes; the adjacent switch MUST identify the selected zone.
 The collection phrase MUST link “M&M’s public statistics” to `https://account.monstersandmemories.com/metrics` using the normal link styling.
 This link MUST open in a new tab or window.
@@ -259,6 +260,8 @@ Daily and monthly activity MUST retain their distinct source labels, and subscri
 
 ### Detailed sections
 
+#### Player activity
+
 The Player activity section MUST show full-width views in this order: Starting-zone population, Server population share, and Activity heatmap.
 The Starting-zone population chart MUST combine the selected starting-zone totals and individual zones.
 Online MUST remain in Overview without a duplicate chart in Player activity.
@@ -294,6 +297,8 @@ It MUST briefly explain that separate scales keep larger totals from hiding diff
 It MUST explain that both scales cover the selected periods.
 Cell hover MUST expose the aggregate details defined in [requirements.md](requirements.md#population-insights).
 An unavailable panel MUST identify its scope and period and show an empty-state message.
+
+#### Engagement
 
 Engagement MUST show three full-width charts in this order:
 
@@ -355,7 +360,8 @@ Chart descriptions MUST contain no reference links.
 Explanations MUST remain visible and accessible without hover or opening a disclosure.
 Online-presence explanations MUST identify the online population relative to daily or monthly active players.
 Subscriber-activity explanations MUST identify the global subscriber count and state that ratios can exceed 100 percent.
-Detailed calculation rules, aggregation scope, missing-data handling, and archive coverage MUST remain in [requirements.md](requirements.md) rather than repeated in chart explanations or time-series tooltips.
+Detailed calculation rules, counting limitations, and missing-data rules MUST remain in [requirements.md](requirements.md) rather than repeated in chart explanations or time-series tooltips.
+Series labels MUST identify the selected scope; heatmap and Trends details MUST retain their aggregate and coverage information defined above.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.
@@ -507,7 +513,7 @@ These checks MUST include a synthetic-data notice and representative long source
 
 All reusable presentation values MUST follow [design-tokens.md](design-tokens.md).
 The token artifact MUST remain the single authored source for the palette, typography, spacing, chart styling, and responsive values consumed by implementation.
-Changes to visual roles MUST update CSS and Plotly presentation together.
+Changes to a shared visual role MUST update all CSS and Plotly consumers of that role.
 The implementation MUST NOT copy proposed numeric values from a layout illustration into an independent handwritten palette.
 
 Any game artwork or logo MUST come from the game's published media resources, with its source and applicable usage terms recorded alongside the asset.
