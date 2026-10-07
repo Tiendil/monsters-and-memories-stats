@@ -1415,7 +1415,7 @@ impl Browser {
                     "/url",
                     json!({"url":format!("{url}#{tab}?tz=utc&range=30&compare=previous")}),
                 );
-                self.expect_count("main > .methodology li", 6);
+                self.expect_count("main > .methodology li", 8);
                 self.expect_count("[data-summary='daily'] .methodology-reference a", 1);
                 self.expect_count("[data-summary='monthly'] .methodology-reference a", 1);
                 self.expect_count("[data-summary='subscriptions'] .methodology-reference a", 1);

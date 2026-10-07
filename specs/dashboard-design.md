@@ -391,10 +391,15 @@ Statement 3 MUST explain that Subscribers counts game-wide active subscriptions,
 Statement 4 MUST distinguish starting-area population from new players or newly created characters and explain that Starting-area activity combines the areas within each server.
 Statement 5 MUST explain that typical online is the median of daily medians, with equal weight for each included day.
 Statement 6 MUST separately explain that Busiest hours applies the same calculation within each three-hour window.
+Statement 7 MUST explain elapsed-time differences for Rate of change and omission of intervals of 24 hours or more.
+Statement 8 MUST explain the fitted straight-line slope for Trend rate and gaps for insufficient data coverage.
+Both rate statements MUST explain possible use of observations before the displayed range and percentage-point units for percentage charts, and clarify that rates describe past changes rather than forecasts.
 The collection-frequency phrase MUST have a superscript `[1]` link; the DAU and MAU chart headings, latest-snapshot values, and Engagement formulas using these counts MUST have superscript `[2]` links.
 The Subscribers snapshot value and the Subscribers and Activity relative to subscribers chart headings MUST link to statement 3.
 The Starting-zone population and Starting-area activity headings MUST link to statement 4.
 References after “typical online population” in the Server growth and Starting-area activity descriptions MUST link to statement 5; the corresponding phrase in Busiest hours MUST link to statement 6.
+Each visible Rate of change explanation MUST end with a superscript `[7]` link to `methodology-rates`; each visible Trend rate explanation MUST end with a superscript `[8]` link to `methodology-trend-rate`.
+Value mode MUST NOT show either rate reference.
 References MUST remain separate from chart permalinks and summary-to-chart links, retain visible focus, and have accessible names identifying their numbered notes.
 Statements MUST have stable anchors and be focusable when followed, without becoming additional tab stops in ordinary keyboard navigation.
 

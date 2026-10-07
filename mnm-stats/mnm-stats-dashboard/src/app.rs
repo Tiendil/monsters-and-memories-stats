@@ -228,6 +228,8 @@ fn Methodology() -> impl IntoView {
         "Starting-area population counts players currently in those areas. It does not count new players or newly created characters. “Starting-area activity” combines all starting areas within each server, so an increase does not necessarily mean more people joined the game.",
         "“Typical online” is the median of daily medians, giving each included day equal weight.",
         "Busiest hours applies the same calculation within each three-hour window.",
+        "“Rate of change” is the change between consecutive snapshots divided by the elapsed time. Intervals of 24 hours or more are omitted. Calculations may use observations before the displayed date range. Percentage-chart rates use percentage points, not relative percentage growth. Rates describe past changes, not forecasts.",
+        "“Trend rate” is the slope of a straight line fitted to observations within the selected window. Gaps indicate insufficient data coverage. Calculations may use observations before the displayed date range. Percentage-chart rates use percentage points, not relative percentage growth. Rates describe past changes, not forecasts.",
     ];
     view! {
         <section id="methodology" tabindex="-1" class="methodology" aria-labelledby="methodology-heading">
@@ -632,7 +634,7 @@ fn ChartCard(
                     RateMode::Change => "Net change between consecutive snapshots, divided by elapsed time. Intervals of 24 hours or more are omitted.".to_owned(),
                     RateMode::Trend => format!("Estimated rate over the {}. Gaps indicate insufficient coverage.", chart_view.get().window.label().to_lowercase()),
                     RateMode::Value => String::new(),
-                }}</p>
+                }}{move || view! { <MethodologyReference number=if chart_view.get().mode == RateMode::Trend { 8 } else { 7 }/> }}</p>
             </Show>
             {move || match plotted.get() {
                 _ if selection_empty.get() => ().into_any(),
