@@ -980,8 +980,8 @@ fn CheckboxPicker(
                 if event.key() == "Escape" { event.prevent_default(); close_menu(node, &format!("{id}-toggle")); }
             } on:focusout=move |event| close_menu_on_focus_out(node, event)>
                 <summary id=format!("{id}-toggle") aria-labelledby=format!("{id}-label {id}-selection")><span class="selection-summary-text">
-                    {width_labels.map(|labels| view! { <span class="selection-summary-size" aria-hidden="true">{move || labels.get().join("\n")}</span> })}
                     <span class="selection-summary" id=format!("{id}-selection")>{move || summary.get()}</span>
+                    {width_labels.map(|labels| view! { <span class="selection-summary-size" aria-hidden="true">{move || labels.get().join("\n")}</span> })}
                 </span></summary>
                 <div class="selection-options" id=format!("{id}-options") role="group" aria-labelledby=format!("{id}-label")>
                     <For each=move || choices.get() key=|(value, _)| value.clone() children=move |(value, label)| {

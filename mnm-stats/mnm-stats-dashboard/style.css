@@ -44,7 +44,7 @@ input, select { font-size: var(--mnm-font-size-body); width: 100%; min-width: 0;
 .selection-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .selection-summary-text { display: grid; min-width: 0; }
 .selection-summary-text > span { grid-area: 1 / 1; }
-.selection-summary-size { visibility: hidden; height: 0; white-space: pre; }
+.selection-summary-size { visibility: hidden; height: 0; overflow: hidden; pointer-events: none; white-space: pre; }
 .selection-picker summary::-webkit-details-marker { display: none; }
 .selection-options { position: absolute; inset-inline: 0; top: 100%; z-index: var(--mnm-layer-dropdown); max-height: var(--mnm-layout-server-options-max-height); overflow-y: auto; padding: var(--mnm-spacing-gap-small); border: var(--mnm-border-width-default) solid var(--mnm-color-border-input); border-radius: var(--mnm-radius-input); background: var(--mnm-color-surface-input); }
 .selection-options .checkbox { display: flex; margin: 0; overflow-wrap: anywhere; }
