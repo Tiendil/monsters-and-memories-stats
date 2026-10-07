@@ -1444,15 +1444,17 @@ impl Browser {
                             },
                             "methodology reference focuses its statement",
                         );
+                        // Sections may extend below the viewport; their heading must be visible.
+                        // Individual note links must still bring the whole statement into view.
                         let result = self.request(Method::POST, "/execute/sync", json!({
-                            "script":"const note=document.activeElement.getBoundingClientRect(); return {tab:document.querySelector('.section-nav [aria-current=page]').id, hash:location.hash, visible:note.top >= 0 && note.bottom <= innerHeight, overflow:document.documentElement.scrollWidth > innerWidth};", "args":[]
+                            "script":"const target=document.activeElement; const rect=(target.querySelector('h2') || target).getBoundingClientRect(); return {tab:document.querySelector('.section-nav [aria-current=page]').id, hash:location.hash, visible:rect.top >= 0 && rect.bottom <= innerHeight, top:rect.top, bottom:rect.bottom, viewport:innerHeight, overflow:document.documentElement.scrollWidth > innerWidth};", "args":[]
                         }));
                         assert_eq!(result["tab"], format!("nav-{nav}"));
                         assert_eq!(
                             result["hash"],
                             format!("#{tab}/{note}?tz=utc&range=30&compare=previous")
                         );
-                        assert_eq!(result["visible"], true);
+                        assert_eq!(result["visible"], true, "{note} at width {width}: {result}");
                         assert_eq!(result["overflow"], false);
                     }
                 }
