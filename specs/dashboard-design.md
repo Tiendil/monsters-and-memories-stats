@@ -193,6 +193,8 @@ Parameters MUST encode applied view settings with these names:
 - Repeated `zone`: `all` or `zone:<source ID>`.
 - Repeated `online-metric`: `online-daily` or `online-monthly`.
 - Repeated `subscriber-metric`: `daily-subscriptions`, `monthly-subscriptions`, or `online-subscriptions`.
+- `view-<chart>`: `value`, `change`, or `trend`, independently for each line chart's existing identifier without its `chart-` prefix.
+- `window-<chart>`: `6h`, `24h`, or `7d`, retained even when Trend rate is inactive.
 
 Server and zone IDs MUST be used instead of display names so renaming an entity does not invalidate its links.
 Missing entity IDs MUST remain selected and appear as removable options labeled with their ID and “unavailable.”
@@ -276,7 +278,7 @@ Daily and monthly activity MUST retain their distinct source labels, and subscri
 The Player activity section MUST show full-width views in this order: Starting-zone population, Server population share, and Activity heatmap.
 The Starting-zone population chart MUST combine the selected starting-zone totals and individual zones.
 Online MUST remain in Overview without a duplicate chart in Player activity.
-A checkbox dropdown labeled “Show zones” MUST appear inside the Starting-zone population card, after its explanation and before its legend, and provide “All Zones” plus every zone discovered in the complete history.
+A checkbox dropdown labeled “zones” MUST appear inside the Starting-zone population card, after its explanation and before its legend, and provide “All Zones” plus every zone discovered in the complete history.
 “All Zones” MUST plot the total across all reported starting zones; it MUST NOT select individual-zone checkboxes or sum only checked zones.
 Only “All Zones” MUST be selected initially.
 Every option MUST toggle independently, allowing the total and more than two individual zones on the same chart.
@@ -317,7 +319,7 @@ Engagement MUST show three full-width charts in this order:
 2. Online presence — online population divided by daily or monthly active counts from the same snapshot.
 3. Activity relative to subscribers — daily active, monthly active, or online population divided by global subscriptions from the same snapshot.
 
-The latter two charts MUST each have a checkbox dropdown labeled “Show metrics,” using the Servers control's interaction and accessibility behavior.
+The latter two charts MUST each have a checkbox dropdown labeled “metrics,” using the Servers control's interaction and accessibility behavior.
 Online presence MUST initially select both Online / daily active and Online / monthly active.
 Activity relative to subscribers MUST initially select daily activity, monthly activity, and online.
 Each metric MUST remain independently toggleable, and restoring defaults MUST select all metrics offered by that chart.
@@ -341,7 +343,9 @@ Each table MUST show all three period columns together; the section MUST NOT rep
 Column-header tooltips and accessible labels MUST identify the latest complete 7-, 30-, or 365-day interval and the preceding equal-length interval, with the selected time-zone name.
 Server and starting-area cells MUST show absolute change with percentage change in parentheses when available.
 Busiest-hours cells MUST contain their own ordered lists of up to three windows, each with typical online and absolute change.
-Busiest hours MUST contain a control labeled “Group hours,” offering All days and By weekday.
+Busiest hours MUST contain a compact control labeled “group hours,” offering All days and By weekday.
+Its bold lowercase label MUST sit beside the dropdown below the description, aligned with its text baseline.
+The dropdown MUST match the other local controls' height and font size, use regular-weight option text, and retain a width that fits its longest option when the selection changes.
 Each card MUST have a concise factual explanation of its ranking rather than a second raw-metric summary.
 Typical population and change cells MUST provide current/prior values and qualifying-day coverage through accessible descriptions and native tooltips.
 Counts MUST use grouped digits and retain up to one decimal place for derived medians.
@@ -436,13 +440,26 @@ Each time-series chart MUST present its content in this order:
 1. Short metric title.
 2. Formula, when applicable.
 3. Short explanation.
-4. Selector affecting only that chart, when present.
+4. A grouped control area for the chart view, its active trend window, and metric or zone selectors when present.
 5. Series legend.
 6. Visualization.
 
+Each line chart MUST have a segmented control with Value, Rate of change, and Trend rate, an accessible name without a visible heading, the existing selected-control colors, and visible keyboard focus.
+Trend rate MUST reveal a dropdown containing Last 6 hours, Last 24 hours, and Last 7 days, with a semibold lowercase “window” label without a colon beside the dropdown.
+The view choices, label, and dropdown MUST align their text baselines, with equal horizontal gaps on either side of the label when on one row.
+The dropdown MUST match the height of the single-row view selector.
+Chart controls MUST sit after the description and before the legend, with metric or zone controls first, followed by the view choices and window when active.
+Controls SHOULD share a row when they fit; narrow layouts MUST stack groups and allow view choices to wrap when needed without page overflow.
+Changing a view MUST retain focus on its control and preserve all chart and shared selections.
+Rates MUST use the signed units and coverage behavior defined in [requirements.md](requirements.md#chart-rates), with concise method descriptions visible in rate views.
+
 A selector affecting only one chart MUST remain inside that chart's card rather than above the section's charts.
-Its label MUST use semibold dark text, distinct from muted explanatory prose and smaller than the chart title.
-The label MUST sit directly above its dropdown, with a smaller gap than the space separating the control group from the explanation above it.
+Metric and zone labels MUST use semibold dark text, distinct from muted explanatory prose and smaller than the chart title.
+Metric and zone labels MUST sit beside their dropdowns, sharing the view controls' text baseline, font size, and control height.
+The primary selector MUST keep its position when switching views.
+Zone and metric dropdowns MUST reserve the width of their widest possible closed label, including empty and multiple-selection summaries, while remaining within the available width on narrow screens.
+Empty-selection guidance and recovery actions MUST appear below the controls, without displacing them or repeating a no-observations message for the same empty selection.
+On narrow screens, its label and dropdown MUST occupy the first row together, followed by the view controls.
 Chart selectors MUST share this presentation and MUST NOT add an enclosing border or background beyond the dropdown's own control styling.
 Their labels MUST contribute to their accessible names.
 Heatmaps MUST use the panel labels and color scale defined under Detailed sections.
@@ -461,7 +478,7 @@ Normal time axes MUST run chronologically from left to right; the summary’s ti
 Period-comparison axes MUST describe their alignment in human terms beside the horizontal axis, retaining original timestamps in details.
 Gridlines MUST be visually subordinate to series and use a small number of labeled, meaningful intervals.
 Charts MUST use a linear value scale and MUST NOT combine unrelated units with dual axes.
-Time-series count and ratio charts SHOULD begin at zero to make magnitude comparisons straightforward.
+Value-view count and ratio charts SHOULD begin at zero to make magnitude comparisons straightforward.
 A nonzero lower bound MAY be used for a line-only chart when needed to reveal variation, provided that the scale is clearly visible and the same scale applies to every compared series.
 Activity ratios MUST remain able to exceed 100 percent; server population shares MUST use their bounded percentage scale.
 
@@ -493,7 +510,8 @@ The design MUST be reviewed with at least seven simultaneous series, including o
 
 Chart point inspection MUST retain the exact-value and original-instant timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
 On desktop, the first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time with minute precision, ending in “UTC” or the browser’s IANA zone name such as “Europe/Berlin.”
-Time-series tooltips MUST contain only the value and series name followed by the timestamp, without calculation breakdowns or sample-coverage text.
+Value-view time-series tooltips MUST contain only the value and series name followed by the timestamp, without calculation breakdowns or sample-coverage text.
+Rate-view tooltips MUST show the signed rate and units with the series name, followed by the original interval used for the estimate.
 Desktop tooltip widths MUST follow their content without an authored width or character-count limit, and series names MUST remain on one line, including in heatmap tooltips.
 Chart height MUST accommodate simultaneous two-line time-series labels on desktop.
 On narrow screens, tapping or hovering a point MUST show the same complete details in a wrapping panel below its chart instead of floating labels.

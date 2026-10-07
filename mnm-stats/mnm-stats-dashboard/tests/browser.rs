@@ -812,7 +812,7 @@ impl Browser {
         self.servers(&["a"]);
         self.zones(&["", "w", "z"]);
         self.expect_count(".chart-card", 3);
-        self.expect_text("#chart-starting-zones #zones-label", "Show zones");
+        self.expect_text("#chart-starting-zones #zones-label", "zones");
         self.expect_count("[data-metric='starting-zones'] .legend li", 3);
         self.expect_text("#zones-selection", "All Zones + 2");
         assert_eq!(
@@ -886,12 +886,20 @@ impl Browser {
         self.click("#time-range");
         self.expect_count(".selection-picker[open]", 0);
         self.click("#time-range");
+        let zone_width = self.computed("#zones-toggle", "width");
         self.zones(&[]);
         self.expect_count(".empty-zones", 1);
         self.expect_count("[data-metric='starting-zones'] .plot-surface", 0);
+        self.expect_count("[data-metric='starting-zones'] .empty-chart", 0);
+        self.expect_count(
+            "[data-metric='starting-zones'] .chart-controls [role=status]",
+            0,
+        );
         self.expect_text("#zones-selection", "Choose zones");
+        assert_eq!(self.computed("#zones-toggle", "width"), zone_width);
         self.click(".empty-zones button");
         self.expect_text("#zones-selection", "All Zones");
+        assert_eq!(self.computed("#zones-toggle", "width"), zone_width);
         self.expect_count("[data-metric='starting-zones'] .legend li", 4);
         self.select("#comparison-mode", "disabled");
         self.servers(&[""]);
@@ -1099,13 +1107,10 @@ impl Browser {
         );
         self.expect_count("#online-metrics-options input:checked", 2);
         self.expect_count("#subscriber-metrics-options input:checked", 3);
-        self.expect_text(
-            "#chart-online-presence #online-metrics-label",
-            "Show metrics",
-        );
+        self.expect_text("#chart-online-presence #online-metrics-label", "metrics");
         self.expect_text(
             "#chart-subscriber-activity #subscriber-metrics-label",
-            "Show metrics",
+            "metrics",
         );
         self.expect_count("[data-metric='subscriber-activity'] .legend li", 3);
         self.click("#online-metrics-toggle");
@@ -1310,6 +1315,86 @@ impl Browser {
         self.expect_destination("", "overview");
         self.verify_requests(url, true);
         self.request(Method::POST, "/url", json!({"url":url}));
+    }
+
+    fn verify_rate_views(&self, url: &str) {
+        use mnm_stats_dashboard::rates::LineChart;
+        for width in [390, 1440] {
+            self.request(
+                Method::POST,
+                "/window/rect",
+                json!({"width":width,"height":900}),
+            );
+            for chart in LineChart::ALL {
+                let key = chart.key();
+                self.request(
+                    Method::POST,
+                    "/url",
+                    json!({"url":format!("{url}#chart-{key}?tz=utc&range=all")}),
+                );
+                let card = format!("#chart-{key}");
+                self.expect_count(&format!("{card} [data-view=value][aria-pressed=true]"), 1);
+                self.expect_count(&format!("{card} .rate-window"), 0);
+                self.activate(&format!("{card} [data-view=change]"));
+                self.expect_count(&format!("{card} [data-view=change][aria-pressed=true]"), 1);
+                self.ready(key);
+                let axis=self.request(Method::POST,"/execute/sync",json!({
+                    "script":"const p=document.querySelector(arguments[0]+' .plot-surface'); return {zero:p._fullLayout.yaxis.zeroline,title:p._fullLayout.yaxis.title.text,hash:location.hash,overflow:document.documentElement.scrollWidth>innerWidth};","args":[card]
+                }));
+                assert_eq!(axis["zero"], true);
+                assert!(axis["title"].as_str().unwrap().contains('/'));
+                assert!(
+                    axis["hash"]
+                        .as_str()
+                        .unwrap()
+                        .contains(&format!("view-{key}=change"))
+                );
+                assert_eq!(axis["overflow"], false);
+                self.activate(&format!("{card} [data-view=trend]"));
+                self.expect_count(&format!("{card} .rate-window option"), 3);
+                assert_eq!(self.request(Method::POST,"/execute/sync",json!({"script":"return document.querySelector(arguments[0]).value;","args":[format!("{card} .rate-window select")]})),chart.default_view().window.key());
+                self.select(&format!("{card} .rate-window select"), "7d");
+                self.expect_count(&format!("{card} .empty-chart"), 1);
+                self.request(Method::POST, "/refresh", json!({}));
+                self.expect_count(&format!("{card} [data-view=trend][aria-pressed=true]"), 1);
+                assert_eq!(self.request(Method::POST,"/execute/sync",json!({"script":"return document.querySelector(arguments[0]).value;","args":[format!("{card} .rate-window select")]})),"7d");
+                self.activate(&format!("{card} [data-view=value]"));
+                self.expect_count(&format!("{card} .rate-window"), 0);
+                self.request(Method::POST, "/back", json!({}));
+                self.expect_count(&format!("{card} [data-view=trend][aria-pressed=true]"), 1);
+                self.request(Method::POST, "/forward", json!({}));
+                self.expect_count(&format!("{card} [data-view=value][aria-pressed=true]"), 1);
+            }
+        }
+        self.request(
+            Method::POST,
+            "/url",
+            json!({"url":format!("{url}#chart-starting-zones?range=all")}),
+        );
+        self.ready("starting-zones");
+        self.request(Method::POST, "/execute/sync", json!({
+            "script":"window.menuNavigationErrors=[]; window.addEventListener('error',e=>window.menuNavigationErrors.push(e.message)); document.getElementById('zones-toggle').focus(); location.hash='#engagement?range=all';", "args":[]
+        }));
+        self.ready("online-presence");
+        assert_eq!(
+            self.request(
+                Method::POST,
+                "/execute/sync",
+                json!({
+                    "script":"return window.menuNavigationErrors;", "args":[]
+                })
+            ),
+            json!([]),
+            "Removing a focused dropdown must not access disposed state"
+        );
+        self.request(
+            Method::POST,
+            "/url",
+            json!({"url":format!("{url}#chart-activity-heatmap?range=all")}),
+        );
+        self.expect_count("#chart-activity-heatmap .rate-switch", 0);
+        self.click("#nav-trends");
+        self.expect_count(".rate-switch", 0);
     }
 
     fn verify_methodology(&self, url: &str) {
@@ -2282,6 +2367,7 @@ impl Browser {
         self.verify_time_axis();
         self.verify_fragment_navigation(url);
         self.verify_methodology(url);
+        self.verify_rate_views(url);
         self.verify_url_settings(url);
         self.verify_trends(url);
         println!(

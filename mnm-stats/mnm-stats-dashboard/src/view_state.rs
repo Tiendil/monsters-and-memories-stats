@@ -1,8 +1,10 @@
 //! Shareable applied dashboard settings; transient menu and hover state stays in the UI.
 use crate::analysis::{ComparisonMode, DateMatching, Metric, Period, Scope, TimeRange, ZoneScope};
+use crate::rates::{ChartView, LineChart, RateMode, TrendWindow};
 use crate::time::{TimeMode, TimeZone};
 use crate::trends::BusyGrouping;
 use chrono::Duration;
+use std::collections::BTreeMap;
 
 pub const ONLINE_METRICS: [Metric; 2] = [Metric::OnlineDaily, Metric::OnlineMonthly];
 pub const SUBSCRIBER_METRICS: [Metric; 3] = [
@@ -116,6 +118,7 @@ pub struct ViewState {
     pub zones: Vec<ZoneScope>,
     pub online_metrics: Vec<Metric>,
     pub subscriber_metrics: Vec<Metric>,
+    pub chart_views: BTreeMap<LineChart, ChartView>,
 }
 
 impl Default for ViewState {
@@ -132,6 +135,10 @@ impl Default for ViewState {
             zones: vec![ZoneScope::All],
             online_metrics: ONLINE_METRICS.to_vec(),
             subscriber_metrics: SUBSCRIBER_METRICS.to_vec(),
+            chart_views: LineChart::ALL
+                .into_iter()
+                .map(|chart| (chart, chart.default_view()))
+                .collect(),
         }
     }
 }
@@ -258,6 +265,17 @@ impl ViewState {
                     .into_iter()
                     .find(|metric| metric.key() == value)
             });
+        for chart in LineChart::ALL {
+            let view = state.chart_views.get_mut(&chart).unwrap();
+            view.mode = RateMode::ALL
+                .into_iter()
+                .find(|mode| Some(mode.key()) == one(&format!("view-{}", chart.key())))
+                .unwrap_or_default();
+            view.window = TrendWindow::ALL
+                .into_iter()
+                .find(|window| Some(window.key()) == one(&format!("window-{}", chart.key())))
+                .unwrap_or(chart.default_view().window);
+        }
         state
     }
 
@@ -346,6 +364,19 @@ impl ViewState {
                 for metric in selected {
                     query.append_pair(key, &metric.key());
                 }
+            }
+        }
+        for chart in LineChart::ALL {
+            let view = self
+                .chart_views
+                .get(&chart)
+                .copied()
+                .unwrap_or(chart.default_view());
+            if view.mode != RateMode::Value {
+                query.append_pair(&format!("view-{}", chart.key()), view.mode.key());
+            }
+            if view.window != chart.default_view().window {
+                query.append_pair(&format!("window-{}", chart.key()), view.window.key());
             }
         }
         let query = query.finish();

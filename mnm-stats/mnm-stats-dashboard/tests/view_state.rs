@@ -121,6 +121,7 @@ fn complete_view_round_trips_without_losing_ids_or_inactive_settings() {
         zones: vec![ZoneScope::Zone(id.into()), ZoneScope::All],
         online_metrics: vec![Metric::OnlineMonthly],
         subscriber_metrics: vec![Metric::OnlineSubscriptions, Metric::DailySubscriptions],
+        chart_views: ViewState::default().chart_views,
     };
     let fragment = state.fragment();
     assert!(fragment.contains("tz=utc"));
@@ -227,4 +228,47 @@ fn presets_remain_relative_and_defaults_stay_short() {
         };
         assert_eq!(ViewState::from_fragment(&state.fragment()), state);
     }
+}
+
+#[test]
+fn chart_rate_views_round_trip_independently_with_inactive_windows() {
+    use mnm_stats_dashboard::rates::*;
+    let mut state = ViewState::default();
+    for chart in LineChart::ALL {
+        assert_eq!(state.chart_views[&chart].mode, RateMode::Value);
+        assert_eq!(
+            state.chart_views[&chart].window,
+            if matches!(chart, LineChart::Online | LineChart::StartingZones) {
+                TrendWindow::Hours6
+            } else {
+                TrendWindow::Hours24
+            }
+        );
+        for mode in RateMode::ALL {
+            for window in TrendWindow::ALL {
+                state.chart_views.insert(chart, ChartView { mode, window });
+                assert_eq!(ViewState::from_fragment(&state.fragment()), state);
+                let link = state.link("trends");
+                assert_eq!(
+                    ViewState::from_fragment(&link).chart_views,
+                    state.chart_views
+                );
+            }
+        }
+    }
+    let invalid = ViewState::from_fragment(
+        "#engagement?view-online=bogus&window-online=2h&view-monthly=trend&window-monthly=7d&view-unknown=change",
+    );
+    assert_eq!(
+        invalid.chart_views[&LineChart::Online],
+        LineChart::Online.default_view()
+    );
+    assert_eq!(
+        invalid.chart_views[&LineChart::Monthly],
+        ChartView {
+            mode: RateMode::Trend,
+            window: TrendWindow::Days7
+        }
+    );
+    assert!(!invalid.fragment().contains("unknown"));
 }

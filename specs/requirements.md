@@ -331,7 +331,7 @@ Connections MUST be straight visual guides between observations, without adding 
 Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
 Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSONL.
-Inspecting a plotted observation MUST show its exact value followed by its series name, then its collection date and time.
+In Value view, inspecting a plotted observation MUST show its exact value followed by its series name, then its collection date and time. Rate views MUST use the interval details defined in Chart rates below.
 Desktop hover labels MUST use two lines; narrow-screen details MUST wrap below the chart so complete names and values remain readable.
 The displayed time MUST convert the original observation instant to the selected time zone, omitting seconds and fractional seconds.
 It MUST use a readable date without an ISO `T` separator or `Z` suffix.
@@ -339,12 +339,44 @@ Tooltip timestamps MUST end with the selected zone’s name, using `UTC` or the 
 The download MUST preserve each original timestamp at its full stored precision.
 This MUST work for every observation time-series chart and comparison mode, including dense series and overlapping comparison points.
 Aggregate heatmap details MUST follow Population insights below.
-Ratio details MUST show a percentage rounded to two decimal places, without a numerator/denominator breakdown or sample-coverage text.
+In Value view, ratio details MUST show a percentage rounded to two decimal places, without a numerator/denominator breakdown or sample-coverage text.
 Desktop series names MUST remain on one line without an authored tooltip-width or character-count limit.
 Point details MUST refer only to collected observations and MUST NOT invent points inside gaps.
 Desktop hover labels MUST clear when the pointer leaves the plot; narrow-screen details MUST persist for scrolling until another point is inspected or the chart selection changes.
 Changing the chart selection MUST clear its previous point details.
 Unavailable data, initialization, and errors MUST use the states defined in [dashboard-design.md](dashboard-design.md#data-and-loading-states).
+
+### Chart rates
+
+Every chronological line chart MUST offer Value, Rate of change, and Trend rate, defaulting to Value.
+Heatmaps and Trends tables MUST retain their existing representations without rate controls.
+The selection MUST apply to every metric, entity, and comparison series within its chart and remain independent of other charts.
+Trend rate MUST offer trailing windows of 6 hours, 24 hours, and 7 elapsed days.
+Online and starting-zone charts MUST default to 6 hours; the other line charts MUST default to 24 hours.
+Changing the view MUST retain the selected window, including while that window is inactive.
+Chart views and windows MUST survive tab navigation, shared links, refresh, and Back/Forward.
+
+Rate of change MUST divide the difference between consecutive available snapshots by their actual elapsed time and place the result at the later observation.
+The first observation, a missing metric, or an interval of at least 24 hours MUST yield an unavailable rate rather than zero.
+Trend rate MUST use ordinary least-squares slope against original elapsed timestamps within the trailing window, without future samples, interpolation, or extrapolated observations.
+A trend MUST require at least four observations and at least half the window's expected hourly observations, spanning at least half the window.
+Its included samples MUST have no internal gap exceeding 3 hours for the 6-hour window or 6 hours for the 24-hour window; gaps of at least 24 hours MUST break every rate series, including the 7-day trend.
+Unavailable metrics and changes in the contributing server or starting-zone identities MUST break the calculation history for affected metrics.
+Unrelated server changes MUST NOT interrupt an individual server's count or the global subscription count.
+Server-share rates MUST treat changes in the all-server denominator's membership as a break.
+Rates MAY resume after a break once the remaining observations satisfy their coverage rules.
+
+Calculations MUST use original instants before period alignment and MAY use preceding history outside the displayed range to avoid changing a rate when the visible range changes.
+The time-zone switch MUST NOT change a rate for the same observation and window.
+Ratios MUST be calculated per snapshot before their rates are estimated.
+Online and starting-zone rates MUST use players per hour; DAU/MAU MUST use count per elapsed 24-hour day; subscribers MUST use subscriptions per elapsed 24-hour day.
+Percentage-chart rates MUST use percentage points per elapsed 24-hour day, not relative percentage growth.
+Rate values MUST retain negative and zero results, a visible zero line, and an axis spanning all available values without percentage-chart bounds.
+Rate point details MUST identify the signed estimate, units, series, and original interval from the first contributing observation to the current one.
+Insufficient coverage MUST have a clear unavailable state without silently switching calculation methods.
+Rate estimates MUST NOT be described as forecasts, new-player acquisition, or individual arrivals and departures.
+
+**Example:** A server's share rising from 20 to 23 percent over one hour produces 72 percentage points per day, not a relative percentage increase or a forecast for the next day.
 
 ### Time zones
 

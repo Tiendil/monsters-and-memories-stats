@@ -1,4 +1,5 @@
 //! Plotly figure construction from Rust-owned observations and presentation tokens.
+use crate::rates::{RateMode, RateUnit};
 use crate::{
     analysis::{ActivityHeatmap, Alignment, Connection, Metric, Plot},
     time::TimeZone,
@@ -264,7 +265,11 @@ fn hover_text(point: &crate::analysis::Point, label: &str, zone: TimeZone) -> St
             "<b>{} {}</b><br>{}",
             value.display(),
             escape(label),
-            zone.timestamp(point.at),
+            match value {
+                crate::analysis::MetricValue::Rate { start, .. } =>
+                    format!("{} – {}", zone.timestamp(start), zone.timestamp(point.at)),
+                _ => zone.timestamp(point.at),
+            },
         )
     })
 }
@@ -272,6 +277,14 @@ fn hover_text(point: &crate::analysis::Point, label: &str, zone: TimeZone) -> St
 pub fn render(plot: &Plot, metric: &Metric) -> Figure {
     let mut figure = Figure::new();
     let mut sparse_traces = Vec::new();
+    let is_rate = plot.view.mode != RateMode::Value;
+    let minimum = plot
+        .series
+        .iter()
+        .flat_map(|s| &s.points)
+        .filter_map(|p| p.value)
+        .map(|v| v.number())
+        .fold(0.0_f64, f64::min);
     let maximum = plot
         .series
         .iter()
@@ -431,18 +444,39 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             .x_axis(x_axis)
             .y_axis(
                 axis()
-                    .title(Title::with_text(metric.unit()).font(font.clone()))
+                    .title(
+                        Title::with_text(if is_rate {
+                            RateUnit::for_metric(metric).label()
+                        } else {
+                            metric.unit()
+                        })
+                        .font(font.clone()),
+                    )
                     .range(vec![
-                        0.0,
-                        if *metric == Metric::OnlineShare {
+                        if is_rate && minimum == 0.0 && maximum == 0.0 {
+                            -1.0
+                        } else if is_rate {
+                            minimum * 1.12
+                        } else {
+                            0.0
+                        },
+                        if is_rate && (minimum != 0.0 || maximum != 0.0) {
+                            maximum * 1.12
+                        } else if *metric == Metric::OnlineShare && !is_rate {
                             100.0
                         } else {
                             (maximum * 1.12).max(1.0)
                         },
                     ])
+                    .zero_line(is_rate)
+                    .zero_line_color(tokens::T_CHART_AXIS_LINE_COLOR)
                     .n_ticks(5)
-                    .tick_format(",.0f")
-                    .tick_suffix(if metric.is_ratio() { "%" } else { "" }),
+                    .tick_format(if is_rate { ",.2~f" } else { ",.0f" })
+                    .tick_suffix(if metric.is_ratio() && !is_rate {
+                        "%"
+                    } else {
+                        ""
+                    }),
             )
             .hover_mode(HoverMode::X)
             .hover_distance(tokens::T_CHART_HOVER_HIT_RADIUS.pixels() as i32),
@@ -657,7 +691,11 @@ pub mod browser {
         let label = format!(
             "{}; {}. {} Hover a point for its exact value and timestamp in {}, or use Download JSONL for all recorded observations.",
             metric.title(),
-            metric.unit(),
+            if plot.view.mode != RateMode::Value {
+                RateUnit::for_metric(&metric).label()
+            } else {
+                metric.unit()
+            },
             metric.description(),
             plot.zone.name()
         );

@@ -542,6 +542,8 @@ fn lines_break_on_missing_values_long_intervals_and_absent_calendar_dates() {
     })
     .to_vec();
     let series = Series {
+        metric: Metric::Online,
+        scope: Scope::All,
         identity: "test".into(),
         style: 0,
         label: "test".into(),
@@ -581,8 +583,11 @@ fn plotly_keeps_zero_and_singleton_observations() {
 fn plotly_preserves_gaps_original_dates_exact_values_and_literal_names() {
     let start = time("2024-02-01T12:34:56.123Z");
     let plot = Plot {
+        view: Default::default(),
         zone: TimeZone::UTC,
         series: vec![Series {
+            metric: Metric::Online,
+            scope: Scope::All,
             identity: "test".into(),
             style: 0,
             label: "Alpha <island> & West".into(),
@@ -652,8 +657,11 @@ fn plotly_styles_interval_boundaries_without_extra_hover_observations() {
         .collect();
     let x: Vec<_> = points.iter().map(|p| p.x).collect();
     let plot = Plot {
+        view: Default::default(),
         zone: TimeZone::UTC,
         series: vec![Series {
+            metric: Metric::Online,
+            scope: Scope::All,
             identity: "intervals".into(),
             style: 0,
             label: "Intervals".into(),
@@ -719,8 +727,11 @@ fn plotly_styles_interval_boundaries_without_extra_hover_observations() {
 fn dense_plots_keep_every_observation_for_hover() {
     let start = time("2024-01-01T00:00:00Z");
     let plot = Plot {
+        view: Default::default(),
         zone: TimeZone::UTC,
         series: vec![Series {
+            metric: Metric::Online,
+            scope: Scope::All,
             identity: "test".into(),
             style: 0,
             label: "Dense series".into(),
@@ -762,8 +773,11 @@ fn dense_plots_keep_every_observation_for_hover() {
 fn dense_history_keeps_isolated_observations_visible() {
     let start = time("2024-01-01T00:00:00Z");
     let plot = Plot {
+        view: Default::default(),
         zone: TimeZone::UTC,
         series: vec![Series {
+            metric: Metric::Online,
+            scope: Scope::All,
             identity: "test".into(),
             style: 0,
             label: "Sparse history".into(),
