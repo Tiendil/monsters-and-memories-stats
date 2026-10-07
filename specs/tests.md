@@ -98,6 +98,8 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Heatmap bounds from available cell means, including nonzero minima, measured zeros, missing cells, empty selections, constant values, and fractional or narrowly separated averages, preserving shared bounds within each scale group.
 - Individual-server bounds including unchecked and historical servers only within selected periods, excluding totals, and remaining unchanged when panels are hidden or restored.
 - Ratio values, including zero denominators and values above 100 percent.
+- Consecutive and trailing-regression rates on irregular samples, exact interval and coverage boundaries, negative and zero values, large baselines, missing metrics, contributor changes, and all approved trend windows.
+- Rate calculations before comparison alignment, lookback outside the display range, time-zone independence, percentage-point units, and unchanged earlier estimates after later observations change.
 - Online ratios using each snapshot's online and denominator counts, including multiple observations within one UTC day, missing hours and servers, measured zeros, zero denominators, and selection boundaries.
 - All-server ratios using snapshot totals, global subscription denominators in per-server views, and preservation of every original observation and ratio during period comparisons.
 - Combined engagement metric selections with stable distinct identities across more than two scopes and periods, including empty selections.
@@ -215,10 +217,12 @@ Automated coverage MUST include the following cases.
 
 #### Shared controls and chart presentation
 
-- “Show zones” inside the starting-zone chart and “Show metrics” inside each applicable Engagement chart, after explanations and before legends, with accessible labels and recovery actions in their own cards.
+- “zones” inside the starting-zone chart and “metrics” inside each applicable Engagement chart, after explanations and before legends, with accessible labels and recovery actions in their own cards.
 - Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes.
+- Independent Value, Rate of change, and Trend rate controls on every line chart, window defaults and choices, metric/zone preservation, URL restoration and Back/Forward, signed axes and units, interval details, insufficient-coverage states, and narrow-screen reflow.
+- Heatmaps and Trends tables retaining their existing representations without rate controls.
 - Visible explanations on every chart, absence of external reference links in descriptions, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.

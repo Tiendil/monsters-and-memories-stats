@@ -2,6 +2,7 @@ use crate::{
     analysis::*,
     charts,
     charts::browser::{InteractiveHeatmap, InteractivePlot},
+    rates::{self, ChartView, LineChart, RateMode, TrendWindow},
     time::{TimeMode, TimeZone, browser_time_zone},
     trends::{self, BusyGrouping, PopulationSummary, TrendPeriod},
     view_state::*,
@@ -85,6 +86,7 @@ struct ViewSignals {
     zones: RwSignal<Vec<ZoneScope>>,
     online_metrics: RwSignal<Vec<Metric>>,
     subscriber_metrics: RwSignal<Vec<Metric>>,
+    chart_views: RwSignal<BTreeMap<LineChart, ChartView>>,
     last_url_state: StoredValue<ViewState>,
 }
 
@@ -102,6 +104,7 @@ impl ViewSignals {
             zones: RwSignal::new(state.zones.clone()),
             online_metrics: RwSignal::new(state.online_metrics.clone()),
             subscriber_metrics: RwSignal::new(state.subscriber_metrics.clone()),
+            chart_views: RwSignal::new(state.chart_views.clone()),
             last_url_state: StoredValue::new(state),
         }
     }
@@ -119,6 +122,7 @@ impl ViewSignals {
             zones: self.zones.get(),
             online_metrics: self.online_metrics.get(),
             subscriber_metrics: self.subscriber_metrics.get(),
+            chart_views: self.chart_views.get(),
         }
     }
 
@@ -152,6 +156,7 @@ impl ViewSignals {
         restore!(zones, zones);
         restore!(online_metrics, online_metrics);
         restore!(subscriber_metrics, subscriber_metrics);
+        restore!(chart_views, chart_views);
         if changed_target {
             self.scroll_to_target(target);
         }
@@ -223,6 +228,8 @@ fn Methodology() -> impl IntoView {
         "Starting-area population counts players currently in those areas. It does not count new players or newly created characters. “Starting-area activity” combines all starting areas within each server, so an increase does not necessarily mean more people joined the game.",
         "“Typical online” is the median of daily medians, giving each included day equal weight.",
         "Busiest hours applies the same calculation within each three-hour window.",
+        "“Rate of change” is the change between consecutive snapshots divided by the elapsed time. Intervals of 24 hours or more are omitted. Calculations may use observations before the displayed date range. Percentage-chart rates use percentage points, not relative percentage growth. Rates describe past changes, not forecasts.",
+        "“Trend rate” is the slope of a straight line fitted to observations within the selected window. Gaps indicate insufficient data coverage. Calculations may use observations before the displayed date range. Percentage-chart rates use percentage points, not relative percentage growth. Rates describe past changes, not forecasts.",
     ];
     view! {
         <section id="methodology" tabindex="-1" class="methodology" aria-labelledby="methodology-heading">
@@ -332,7 +339,8 @@ fn close_menu(node: NodeRef<leptos::html::Details>, id: &str) {
 
 fn close_menu_on_focus_out(node: NodeRef<leptos::html::Details>, event: web_sys::FocusEvent) {
     if let (Some(element), Some(target)) = (
-        node.get(),
+        // Removing a focused menu can emit focusout after its reactive owner is disposed.
+        node.try_get().flatten(),
         event.related_target().and_then(|t| t.dyn_into::<web_sys::Node>().ok()),
     ) && !element.contains(Some(&target))
         // Pressing a label can focus an outside ancestor before activating its
@@ -492,6 +500,32 @@ fn DateControls(
 }
 
 #[component]
+fn RateControls(chart: LineChart, selected: Memo<ChartView>) -> impl IntoView {
+    let views = expect_context::<ViewSignals>().chart_views;
+    view! {
+        <div class="chart-control rate-control">
+            <div class="rate-switch" role="group" aria-label="Chart view">
+                {RateMode::ALL.into_iter().map(|mode| view! {
+                    <button type="button" data-view=mode.key() aria-pressed=move || (selected.get().mode == mode).to_string()
+                        on:click=move |_| views.update(|views| views.get_mut(&chart).unwrap().mode = mode)>{mode.label()}</button>
+                }).collect_view()}
+            </div>
+        <Show when=move || selected.get().mode == RateMode::Trend>
+            <label class="chart-control rate-window"><span class="control-label">"window"</span>
+                <select prop:value=move || selected.get().window.key() on:change=move |event| {
+                    if let Some(window) = TrendWindow::ALL.into_iter().find(|window| window.key() == event_target_value(&event)) {
+                        views.update(|views| views.get_mut(&chart).unwrap().window = window);
+                    }
+                }>
+                    {TrendWindow::ALL.into_iter().map(|window| view! { <option value=window.key()>{window.label()}</option> }).collect_view()}
+                </select>
+            </label>
+        </Show>
+        </div>
+    }
+}
+
+#[component]
 fn ChartCard(
     history: Arc<History>,
     metric: Metric,
@@ -517,9 +551,19 @@ fn ChartCard(
     } else {
         (metric.key(), metric.title())
     };
+    let navigation = expect_context::<ViewSignals>();
+    let chart = LineChart::ALL
+        .into_iter()
+        .find(|chart| chart.key() == key)
+        .expect("line chart identity");
+    let chart_view = Memo::new(move |_| navigation.chart_views.with(|views| views[&chart]));
     let explanation_metric = metric.clone();
     let picker_metric = metric.clone();
     let chart_metric = metric.clone();
+    let selection_empty = Memo::new(move |_| {
+        zone_scopes.is_some_and(|zones| zones.get().is_empty())
+            || metric_choices.is_some_and(|metrics| metrics.get().is_empty())
+    });
     let zone_options = zone_scopes.map(|selected| (selected, zones(&history)));
     let styles = expect_context::<Arc<Mutex<charts::SeriesStyles>>>();
     let plotted = Memo::new(move |_| {
@@ -556,6 +600,7 @@ fn ChartCard(
                 )
             };
             result.map(|mut plot| {
+                rates::apply(&mut plot, &history, chart_view.get());
                 styles.lock().expect("series styles").assign(&mut plot);
                 Arc::new(plot)
             })
@@ -565,8 +610,12 @@ fn ChartCard(
         <article class="chart-card" id=format!("chart-{key}") tabindex="-1" data-metric=key.clone()>
             <ChartHeading target=format!("chart-{key}") title=title.clone()/>
             <ChartExplanation metric=explanation_metric/>
-            {zone_options.map(|(selected, names)| view! {
-                <ZonePicker names zones=selected/>
+            <div class="chart-controls">
+            {zone_options.map(|(selected, names)| view! { <ZonePicker names zones=selected/> })}
+            {metric_choices.map(|selected| view! { <MetricPicker online=picker_metric == Metric::OnlineDaily selected/> })}
+            <RateControls chart selected=chart_view/>
+            </div>
+            {zone_scopes.map(|selected| view! {
                 <Show when=move || selected.get().is_empty()>
                     <div class="empty-zones" role="status"><p>"Select at least one starting zone to show statistics."</p><button class="secondary" on:click=move |_| selected.set(vec![ZoneScope::All])>"Show All Zones"</button></div>
                 </Show>
@@ -574,14 +623,21 @@ fn ChartCard(
             {metric_choices.map(|selected| {
                 let online = picker_metric == Metric::OnlineDaily;
                 view! {
-                    <MetricPicker online selected/>
                     <Show when=move || selected.get().is_empty()>
-                        <p class="chart-note">"Choose at least one metric."</p>
-                        <button class="secondary" on:click=move |_| selected.set(if online { ONLINE_METRICS.to_vec() } else { SUBSCRIBER_METRICS.to_vec() })>"Restore default metrics"</button>
+                        <div class="empty-metrics" role="status"><p>"Choose at least one metric."</p>
+                        <button class="secondary" on:click=move |_| selected.set(if online { ONLINE_METRICS.to_vec() } else { SUBSCRIBER_METRICS.to_vec() })>"Restore default metrics"</button></div>
                     </Show>
                 }
             })}
+            <Show when=move || chart_view.get().mode != RateMode::Value && !selection_empty.get()>
+                <p class="chart-note rate-explanation">{move || match chart_view.get().mode {
+                    RateMode::Change => "Net change between consecutive snapshots, divided by elapsed time. Intervals of 24 hours or more are omitted.".to_owned(),
+                    RateMode::Trend => format!("Estimated rate over the {}. Gaps indicate insufficient coverage.", chart_view.get().window.label().to_lowercase()),
+                    RateMode::Value => String::new(),
+                }}{move || view! { <MethodologyReference number=if chart_view.get().mode == RateMode::Trend { 8 } else { 7 }/> }}</p>
+            </Show>
             {move || match plotted.get() {
+                _ if selection_empty.get() => ().into_any(),
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(plot) => {
                     let has_values = plot.series.iter().any(|s| s.points.iter().any(|p| p.value.is_some()));
@@ -593,7 +649,7 @@ fn ChartCard(
                         {if has_values {
                             view! { <InteractivePlot plot=plot.clone() metric=chart_metric.clone()/> }.into_any()
                         } else {
-                            view! { <p class="empty-chart">"No available observations for this selection."</p> }.into_any()
+                            view! { <p class="empty-chart">{if chart_view.get().mode == RateMode::Value { "No available observations for this selection." } else { "Not enough observations to calculate rates for this selection. Choose a different range or view." }}</p> }.into_any()
                         }}
                     }.into_any()
                 }
@@ -856,7 +912,7 @@ fn TrendsSection(history: Arc<History>, now: RwSignal<DateTime<Utc>>) -> impl In
             <article class="chart-card" id="table-busiest-hours" tabindex="-1">
                 <ChartHeading target="table-busiest-hours".into() title="Busiest hours".into()/>
                 <p class="chart-note chart-explanation">"The three busiest recurring three-hour windows for each server and period, with typical online population"<MethodologyReference number=6/>" and change from the preceding period."</p>
-                <div class="chart-control"><label class="trend-grouping-control">"Group hours"
+                <div class="chart-controls"><label class="chart-control trend-grouping-control"><span class="control-label">"group hours"</span>
                     <select id="busy-hours-grouping" prop:value=move || if grouping.get() == BusyGrouping::AllDays { "all" } else { "weekday" } on:change=move |event| grouping.set(if event_target_value(&event) == "weekday" { BusyGrouping::Weekday } else { BusyGrouping::AllDays })>
                         <option value="all">"All days"</option><option value="weekday">"By weekday"</option>
                     </select>
@@ -908,6 +964,7 @@ fn CheckboxPicker(
     selected: Signal<Vec<String>>,
     summary: Signal<String>,
     on_toggle: Callback<String>,
+    #[prop(optional)] width_labels: Option<Memo<Vec<String>>>,
 ) -> impl IntoView {
     let node = NodeRef::<leptos::html::Details>::new();
     let outside = window_event_listener(ev::click, move |event| {
@@ -924,7 +981,10 @@ fn CheckboxPicker(
             <details class="selection-picker" node_ref=node on:keydown=move |event| {
                 if event.key() == "Escape" { event.prevent_default(); close_menu(node, &format!("{id}-toggle")); }
             } on:focusout=move |event| close_menu_on_focus_out(node, event)>
-                <summary id=format!("{id}-toggle") aria-labelledby=format!("{id}-label {id}-selection")><span class="selection-summary" id=format!("{id}-selection")>{move || summary.get()}</span></summary>
+                <summary id=format!("{id}-toggle") aria-labelledby=format!("{id}-label {id}-selection")><span class="selection-summary-text">
+                    <span class="selection-summary" id=format!("{id}-selection")>{move || summary.get()}</span>
+                    {width_labels.map(|labels| view! { <span class="selection-summary-size" aria-hidden="true">{move || labels.get().join("\n")}</span> })}
+                </span></summary>
                 <div class="selection-options" id=format!("{id}-options") role="group" aria-labelledby=format!("{id}-label")>
                     <For each=move || choices.get() key=|(value, _)| value.clone() children=move |(value, label)| {
                         let checked = value.clone();
@@ -991,7 +1051,7 @@ fn ServerPicker(names: BTreeMap<String, String>, scopes: RwSignal<Vec<Scope>>) -
 #[component]
 fn ZonePicker(names: BTreeMap<String, String>, zones: RwSignal<Vec<ZoneScope>>) -> impl IntoView {
     let choice_names = names.clone();
-    let choices = Memo::new(move |_| {
+    let choices: Memo<Vec<(String, String)>> = Memo::new(move |_| {
         std::iter::once(("all".into(), "All Zones".into()))
             .chain(
                 choice_names
@@ -1039,7 +1099,17 @@ fn ZonePicker(names: BTreeMap<String, String>, zones: RwSignal<Vec<ZoneScope>>) 
             }
         });
     });
-    view! { <div class="chart-control"><CheckboxPicker id="zones" label="Show zones" choices selected summary on_toggle/></div> }
+    let width_labels = Memo::new(move |_| {
+        let choices = choices.get();
+        let mut labels = vec!["Choose zones".into()];
+        labels.extend(choices.iter().map(|(_, name)| name.clone()));
+        for count in 1..choices.len() {
+            labels.push(format!("All Zones + {count}"));
+            labels.push(format!("{count} zones"));
+        }
+        labels
+    });
+    view! { <div class="chart-control chart-picker"><CheckboxPicker id="zones" label="zones" choices selected summary on_toggle width_labels/></div> }
 }
 
 #[component]
@@ -1050,7 +1120,7 @@ fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView 
         SUBSCRIBER_METRICS.to_vec()
     };
     let choice_metrics = options.clone();
-    let choices = Memo::new(move |_| {
+    let choices: Memo<Vec<(String, String)>> = Memo::new(move |_| {
         choice_metrics
             .iter()
             .map(|m| (m.key(), m.title()))
@@ -1073,7 +1143,14 @@ fn MetricPicker(online: bool, selected: RwSignal<Vec<Metric>>) -> impl IntoView 
             });
         }
     });
-    view! { <div class="chart-control"><CheckboxPicker id=if online { "online-metrics" } else { "subscriber-metrics" } label="Show metrics" choices selected=selected_keys summary on_toggle/></div> }
+    let width_labels = Memo::new(move |_| {
+        let choices = choices.get();
+        let mut labels = vec!["Choose metrics".into()];
+        labels.extend(choices.iter().map(|(_, name)| name.clone()));
+        labels.extend((2..=choices.len()).map(|count| format!("{count} metrics")));
+        labels
+    });
+    view! { <div class="chart-control chart-picker"><CheckboxPicker id=if online { "online-metrics" } else { "subscriber-metrics" } label="metrics" choices selected=selected_keys summary on_toggle width_labels/></div> }
 }
 
 #[component]

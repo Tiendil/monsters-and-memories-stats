@@ -230,13 +230,22 @@ impl Metric {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MetricValue {
     Count(u128),
-    Ratio { numerator: u128, denominator: u128 },
+    Ratio {
+        numerator: u128,
+        denominator: u128,
+    },
+    Rate {
+        value: f64,
+        unit: crate::rates::RateUnit,
+        start: DateTime<Utc>,
+    },
 }
 
 impl MetricValue {
     pub fn number(self) -> f64 {
         match self {
             Self::Count(n) => n as f64,
+            Self::Rate { value, .. } => value,
             Self::Ratio {
                 numerator,
                 denominator,
@@ -247,6 +256,11 @@ impl MetricValue {
     pub fn display(self) -> String {
         match self {
             Self::Count(n) => n.to_string(),
+            Self::Rate { value, unit, .. } => format!(
+                "{:+.2} {}",
+                if value.abs() < 0.005 { 0.0 } else { value },
+                unit.suffix()
+            ),
             Self::Ratio { .. } => format!("{:.2}%", self.number()),
         }
     }
@@ -829,6 +843,8 @@ impl Point {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Series {
+    pub metric: Metric,
+    pub scope: Scope,
     pub identity: String,
     pub style: usize,
     pub label: String,
@@ -859,6 +875,7 @@ impl Series {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Plot {
+    pub view: crate::rates::ChartView,
     pub zone: TimeZone,
     pub series: Vec<Series>,
     pub alignment: Alignment,
@@ -885,6 +902,7 @@ pub fn plot(
     };
     let (start, end) = range.bounds(history, now, zone);
     let mut result = Plot {
+        view: crate::rates::ChartView::default(),
         zone,
         series: Vec::new(),
         alignment: Alignment::Chronological,
@@ -942,6 +960,8 @@ pub fn plot(
                 }
                 for scope in scopes {
                     result.series.push(Series {
+                        metric: metric.clone(),
+                        scope: scope.clone(),
                         identity: format!("period:{}:{scope:?}", selected.identity),
                         style: result.series.len(),
                         label: format!("{} · {}", scope_label(scope), period.label(zone)),
@@ -967,6 +987,8 @@ pub fn plot(
         Comparison::None => {
             for scope in scopes {
                 result.series.push(Series {
+                    metric: metric.clone(),
+                    scope: scope.clone(),
                     identity: if *metric == Metric::Subscriptions {
                         "global".into()
                     } else {
