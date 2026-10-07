@@ -19,6 +19,15 @@ const REPOSITORY_URL: &str = "https://github.com/Tiendil/monsters-and-memories-s
 
 #[component]
 fn ChartExplanation(metric: Metric) -> impl IntoView {
+    let activity_note = matches!(
+        metric,
+        Metric::DailyMonthly
+            | Metric::OnlineDaily
+            | Metric::OnlineMonthly
+            | Metric::DailySubscriptions
+            | Metric::MonthlySubscriptions
+            | Metric::OnlineSubscriptions
+    );
     let (formula, text) = match metric {
         Metric::Online => (None, "Number of players online at the same time."),
         Metric::Daily => (
@@ -53,7 +62,7 @@ fn ChartExplanation(metric: Metric) -> impl IntoView {
     };
     view! {
         <p class="chart-note chart-explanation">
-            {formula.map(|formula| view! { <span class="chart-formula">{formula}</span> })}
+            {formula.map(|formula| view! { <span class="chart-formula">{formula}{activity_note.then(|| view! { <MethodologyReference number=2/> })}</span> })}
             {text}
         </p>
     }
@@ -210,6 +219,10 @@ fn Methodology() -> impl IntoView {
     let notes = [
         "We collect data through GitHub Actions on an hourly schedule. GitHub may delay or skip scheduled runs, so the time between snapshots varies and the history can contain gaps. Missing snapshots are not filled in.",
         "The official statistics provide daily active (DAU) and monthly active (MAU) counts for each server, but no game-wide totals. We calculate “All Servers” DAU and MAU by adding the server counts. Players active on multiple servers may be counted more than once, so these sums can exceed the number of distinct active players.",
+        "“Subscribers” shows active subscriptions across the game, not necessarily distinct players. Subscription totals are not available per server.",
+        "Starting-area population counts players currently in those areas. It does not count new players or newly created characters. “Starting-area activity” combines all starting areas within each server, so an increase does not necessarily mean more people joined the game.",
+        "“Typical online” is the median of daily medians, giving each included day equal weight.",
+        "Busiest hours applies the same calculation within each three-hour window.",
     ];
     view! {
         <section id="methodology" tabindex="-1" class="methodology" aria-labelledby="methodology-heading">
@@ -242,9 +255,14 @@ fn Summary(history: Arc<History>) -> impl IntoView {
             let value = latest.and_then(|s| metric.value(s, &Scope::All)).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() });
             let target = format!("chart-{key}");
             let link_target = target.clone();
+            let note = match metric {
+                Metric::Daily | Metric::Monthly => Some(2),
+                Metric::Subscriptions => Some(3),
+                _ => None,
+            };
             view! { <article class="headline" data-summary=key>
                 <h3><a class="text-action" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label>{label}</a></h3>
-                <div class="headline-count"><p class="headline-value">{value}</p>{matches!(metric, Metric::Daily | Metric::Monthly).then(|| view! { <MethodologyReference number=2/> })}</div>
+                <div class="headline-count"><p class="headline-value">{value}</p>{note.map(|number| view! { <MethodologyReference number/> })}</div>
             </article> }
         }).collect_view()}</div>
         </section>
@@ -286,10 +304,15 @@ fn SectionHeading(target: String, title: String, #[prop(optional)] hidden: bool)
 
 #[component]
 fn ChartHeading(target: String, title: String) -> impl IntoView {
-    let activity_note = matches!(target.as_str(), "chart-daily" | "chart-monthly");
+    let note = match target.as_str() {
+        "chart-daily" | "chart-monthly" => Some(2),
+        "chart-subscriptions" | "chart-subscriber-activity" => Some(3),
+        "chart-starting-zones" | "table-starting-areas" => Some(4),
+        _ => None,
+    };
     view! {
         <div class="chart-header">
-            <div class="chart-title"><h3 class="chart-heading">{title.clone()}</h3>{activity_note.then(|| view! { <MethodologyReference number=2/> })}</div>
+            <div class="chart-title"><h3 class="chart-heading">{title.clone()}</h3>{note.map(|number| view! { <MethodologyReference number/> })}</div>
             <HeadingLink target title/>
         </div>
     }
@@ -816,7 +839,7 @@ fn TrendsSection(history: Arc<History>, now: RwSignal<DateTime<Utc>>) -> impl In
         <div class="chart-grid trends-grid">
             <article class="chart-card" id="table-server-growth" tabindex="-1">
                 <ChartHeading target="table-server-growth".into() title="Server growth".into()/>
-                <p class="chart-note chart-explanation">"Change in typical online population compared with the preceding period, ordered by weekly growth."</p>
+                <p class="chart-note chart-explanation">"Change in typical online population"<MethodologyReference number=5/>" compared with the preceding period, ordered by weekly growth."</p>
                 {move || {
                     let data = ranked.get();
                     let rows = data[0].servers.iter().map(|server| {
@@ -832,7 +855,7 @@ fn TrendsSection(history: Arc<History>, now: RwSignal<DateTime<Utc>>) -> impl In
             </article>
             <article class="chart-card" id="table-busiest-hours" tabindex="-1">
                 <ChartHeading target="table-busiest-hours".into() title="Busiest hours".into()/>
-                <p class="chart-note chart-explanation">"The three busiest recurring three-hour windows for each server and period, with typical online population and change from the preceding period."</p>
+                <p class="chart-note chart-explanation">"The three busiest recurring three-hour windows for each server and period, with typical online population"<MethodologyReference number=6/>" and change from the preceding period."</p>
                 <div class="chart-control"><label class="trend-grouping-control">"Group hours"
                     <select id="busy-hours-grouping" prop:value=move || if grouping.get() == BusyGrouping::AllDays { "all" } else { "weekday" } on:change=move |event| grouping.set(if event_target_value(&event) == "weekday" { BusyGrouping::Weekday } else { BusyGrouping::AllDays })>
                         <option value="all">"All days"</option><option value="weekday">"By weekday"</option>
@@ -859,7 +882,7 @@ fn TrendsSection(history: Arc<History>, now: RwSignal<DateTime<Utc>>) -> impl In
             </article>
             <article class="chart-card" id="table-starting-areas" tabindex="-1">
                 <ChartHeading target="table-starting-areas".into() title="Starting-area activity".into()/>
-                <p class="chart-note chart-explanation">"Change in typical online population across each server’s starting areas."</p>
+                <p class="chart-note chart-explanation">"Change in typical online population"<MethodologyReference number=5/>" across each server’s starting areas."</p>
                 {move || {
                     let data = ranked.get();
                     let rows = data[0].areas.iter().map(|server| {

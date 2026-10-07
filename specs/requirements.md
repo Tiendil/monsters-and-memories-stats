@@ -143,7 +143,7 @@ Source investigation evidence is recorded in the [source analysis](../docs/sourc
 
 The UI MUST distinguish source-reported counts from derived values.
 Every chart MUST have a concise explanation of what it measures and how to interpret it.
-Chart descriptions MUST NOT contain reference links.
+Chart descriptions MUST NOT contain external reference links; internal Methodology references MAY explain relevant calculations or limitations.
 Background definitions MAY be linked in specifications.
 Custom ratios and source-specific counts MUST use explicit descriptions rather than borrowed KPI names such as conversion or retention.
 DAU/MAU MAY be identified as stickiness.
@@ -160,7 +160,7 @@ An all-server count for an individual zone MUST be unavailable when any observed
 Starting-zone totals MUST sum each server's reported zone rows, including a zero total for a validated empty list.
 All-server daily/monthly activity MUST sum the source counts across servers without deduplication.
 Such sums MUST NOT be described as game-wide unique active users, since one account may use multiple servers.
-The dashboard's shared Methodology section MUST explain this aggregation and link it from the DAU/MAU chart headings and their latest-snapshot values.
+The dashboard's shared Methodology section MUST explain this aggregation and link it from the DAU/MAU chart headings, their latest-snapshot values, and the Engagement formulas using these counts.
 Global subscriptions MUST remain global in a per-server view; per-server subscription numbers MUST NOT be invented.
 
 **Example:** Daily active counts of 10 and 20 on two servers yield a reported sum of 30, but do not establish that 30 different players were active.
