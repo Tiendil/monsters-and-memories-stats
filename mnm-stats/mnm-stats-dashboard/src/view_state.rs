@@ -11,6 +11,8 @@ pub const SUBSCRIBER_METRICS: [Metric; 3] = [
     Metric::OnlineSubscriptions,
 ];
 
+pub const METHODOLOGY_IDS: [&str; 2] = ["methodology-collection", "methodology-activity-totals"];
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Section {
     Overview,
@@ -52,6 +54,21 @@ impl Section {
     }
 
     pub fn from_fragment(fragment: &str) -> Option<Self> {
+        // Shared notes keep their originating tab in the destination, so opening
+        // or sharing a footnote does not change the surrounding dashboard view.
+        if let Some((tab, note)) = fragment.split_once('/') {
+            return METHODOLOGY_IDS
+                .contains(&note)
+                .then_some(())
+                .and_then(|()| {
+                    Self::ALL
+                        .into_iter()
+                        .find(|section| section.fragment() == tab)
+                });
+        }
+        if METHODOLOGY_IDS.contains(&fragment.trim_start_matches('#')) {
+            return Some(Self::Overview);
+        }
         match fragment {
             ""
             | "#overview"

@@ -163,12 +163,16 @@ impl ViewSignals {
     }
 
     fn scroll_to_plot(self, target: String) {
-        if !target.starts_with("chart-") && !target.starts_with("table-") {
+        let anchor = target.rsplit('/').next().unwrap_or(&target).to_owned();
+        if !anchor.starts_with("chart-")
+            && !anchor.starts_with("table-")
+            && !METHODOLOGY_IDS.contains(&anchor.as_str())
+        {
             return;
         }
         request_animation_frame(move || {
             if self.target.get_untracked() == target {
-                focus_target(&target);
+                focus_target(&anchor);
             }
         });
     }
@@ -181,6 +185,38 @@ fn focus_target(target: &str) {
     {
         let _ = element.focus();
         element.scroll_into_view();
+    }
+}
+
+#[component]
+fn MethodologyReference(number: usize) -> impl IntoView {
+    let navigation = expect_context::<ViewSignals>();
+    let target = move || {
+        format!(
+            "{}/{}",
+            &navigation.snapshot().section().fragment()[1..],
+            METHODOLOGY_IDS[number - 1]
+        )
+    };
+    let label = format!("Methodology note {number}");
+    view! {
+        <sup class="methodology-reference"><a href=move || navigation.snapshot().link(&target()) on:click=move |event| navigation.navigate(&target(), event) aria-label=label.clone() title=label>{format!("[{number}]")}</a></sup>
+    }
+}
+
+#[component]
+fn Methodology() -> impl IntoView {
+    let notes = [
+        "We collect data through GitHub Actions on an hourly schedule. GitHub may delay or skip scheduled runs, so the time between snapshots varies and the history can contain gaps. Missing snapshots are not filled in.",
+        "The official statistics provide daily active (DAU) and monthly active (MAU) counts for each server, but no game-wide totals. We calculate “All Servers” DAU and MAU by adding the server counts. Players active on multiple servers may be counted more than once, so these sums can exceed the number of distinct active players.",
+    ];
+    view! {
+        <section class="methodology" aria-labelledby="methodology-heading">
+            <h2 id="methodology-heading">"Methodology"</h2>
+            <ol>{METHODOLOGY_IDS.into_iter().zip(notes).map(|(id, text)| view! {
+                <li id=id tabindex="-1">{text}</li>
+            }).collect_view()}</ol>
+        </section>
     }
 }
 
@@ -206,7 +242,8 @@ fn Summary(history: Arc<History>) -> impl IntoView {
             let target = format!("chart-{key}");
             let link_target = target.clone();
             view! { <article class="headline" data-summary=key>
-                <h3><a class="text-action" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label>{label}</a></h3><p class="headline-value">{value}</p>
+                <h3><a class="text-action" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label>{label}</a></h3>
+                <div class="headline-count"><p class="headline-value">{value}</p>{matches!(metric, Metric::Daily | Metric::Monthly).then(|| view! { <MethodologyReference number=2/> })}</div>
             </article> }
         }).collect_view()}</div>
         </section>
@@ -218,9 +255,10 @@ fn ChartHeading(target: String, title: String) -> impl IntoView {
     let navigation = expect_context::<ViewSignals>();
     let link_target = target.clone();
     let link_label = format!("Link to {title}");
+    let activity_note = matches!(target.as_str(), "chart-daily" | "chart-monthly");
     view! {
         <div class="chart-header">
-            <h3 class="chart-heading">{title}</h3>
+            <div class="chart-title"><h3 class="chart-heading">{title}</h3>{activity_note.then(|| view! { <MethodologyReference number=2/> })}</div>
             <a class="chart-permalink" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label.clone() title=link_label>"#"</a>
         </div>
     }
@@ -1086,7 +1124,7 @@ pub fn App() -> impl IntoView {
                     <span class="history-start">{first.map_or_else(|| "No statistics collected yet".into_any(), |first| view! {
                         "Data since "<time id="first-collection" datetime=utc(first)>{move || time_zone.get().format(first, "%d %b %Y")}</time>
                     }.into_any())}</span>
-                    <span class="history-frequency"><span class="history-separator">" · "</span><span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly"</span>
+                    <span class="history-frequency"><span class="history-separator">" · "</span><span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly"<MethodologyReference number=1/></span>
                     <span class="history-source"><span class="history-source-connector">" from "</span><span class="history-source-label">"Source: "</span><a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a></span>
                 </p>
                 <div class="time-zone-switch" role="group" aria-label="Time zone">
@@ -1143,6 +1181,7 @@ pub fn App() -> impl IntoView {
                     }.into_any()
                 }}
             </section>
+            <Methodology/>
             <footer>
                 <a href="https://plotly.com/javascript/">"Charts by Plotly"</a>
             </footer>

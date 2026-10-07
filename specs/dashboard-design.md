@@ -211,6 +211,10 @@ Restoring a URL MUST NOT add another history entry or discard Forward history.
 Opening menus, editing unapplied dates, validation errors, hover, and clock updates MUST NOT change the URL or browser history.
 Changing filters MUST NOT scroll to the fragment's plot again; following a plot link MUST scroll to and focus its plot, including repeated activation of the current link.
 
+Methodology references MUST use native links that preserve the active tab and applied selections, scroll to the corresponding statement, and focus it for keyboard navigation.
+Their destinations MUST use `#<tab>/methodology-collection` or `#<tab>/methodology-activity-totals`, followed by the ordinary selection parameters when needed.
+Refresh, copied links, and Back/Forward MUST restore these destinations and their tab context; bare methodology destinations MUST open with Overview.
+
 **Example:** `#chart-online-presence?range=30&scope=server%3Aa&compare=previous` opens Online presence for server `a`, with the last 30 days compared with the previous period.
 Copying the chart link preserves that configuration; selecting another time range and pressing Back restores the previous range.
 
@@ -360,11 +364,21 @@ Chart descriptions MUST contain no reference links.
 Explanations MUST remain visible and accessible without hover or opening a disclosure.
 Online-presence explanations MUST identify the online population relative to daily or monthly active players.
 Subscriber-activity explanations MUST identify the global subscriber count and state that ratios can exceed 100 percent.
-Detailed calculation rules, counting limitations, and missing-data rules MUST remain in [requirements.md](requirements.md) rather than repeated in chart explanations or time-series tooltips.
+Detailed calculation rules, counting limitations, and missing-data rules MUST remain in [requirements.md](requirements.md), with shared user-facing explanations in Methodology rather than repeated in chart explanations or time-series tooltips.
 Series labels MUST identify the selected scope; heatmap and Trends details MUST retain their aggregate and coverage information defined above.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.
+
+### Methodology
+
+A section titled “Methodology” MUST appear below the active tab's content and above the footer, in every tab and empty-data state.
+It MUST present an ordered list of concise, factual statements in normal body text, separated from the charts with clear spacing and a subtle divider.
+Statement 1 MUST explain irregular collection intervals and gaps caused by possible delays or skipped GitHub Actions runs on the hourly schedule, without filling missing snapshots.
+Statement 2 MUST explain that official DAU/MAU counts are per server and “All Servers” values sum those counts without cross-server deduplication, so they can exceed the number of distinct active players.
+The collection-frequency phrase MUST have a superscript `[1]` link; the DAU and MAU chart headings and latest-snapshot values MUST have superscript `[2]` links.
+References MUST remain separate from chart permalinks and summary-to-chart links, retain visible focus, and have accessible names identifying their numbered notes.
+Statements MUST have stable anchors and be focusable when followed, without becoming additional tab stops in ordinary keyboard navigation.
 
 The footer MUST contain only a plain link labeled “Charts by Plotly,” separated from the dashboard content by one subtle divider.
 The credit MUST remain available from every content section and align with the right edge of the content at all supported widths.

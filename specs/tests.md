@@ -189,6 +189,7 @@ Automated coverage MUST include the following cases.
 - Menu opening, unapplied date drafts, and validation errors leaving the URL and history unchanged.
 - Native plot-header links with correct destinations and accessible names, keyboard activation, repeated activation of the current fragment, and retained filters during in-page navigation.
 - Empty and unknown fragments selecting Overview, and the content skip link preserving the current section and URL.
+- Shared Methodology notes and superscript references from collection frequency, DAU/MAU chart headings, and latest-snapshot values; links MUST preserve tab and filters, scroll to and focus the right statement, and work on refresh, repeated activation, and Back/Forward at desktop and phone widths.
 
 #### Player activity
 

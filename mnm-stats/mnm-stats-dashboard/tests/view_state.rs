@@ -41,6 +41,41 @@ fn simple_links_keep_defaults_and_chart_ownership() {
 }
 
 #[test]
+fn methodology_links_preserve_tabs_and_selections() {
+    for section in Section::ALL {
+        let initial = ViewState::from_fragment(&format!(
+            "{}?tz=utc&range=30&scope=server%3Aa&compare=previous&zone=&online-metric=online-monthly",
+            section.fragment()
+        ));
+        for note in METHODOLOGY_IDS {
+            let target = format!("{}/{note}", &section.fragment()[1..]);
+            let restored = ViewState::from_fragment(&initial.link(&target));
+            assert_eq!(restored.section(), section);
+            assert_eq!(
+                restored,
+                ViewState {
+                    target,
+                    ..initial.clone()
+                }
+            );
+            assert_eq!(ViewState::from_fragment(&restored.fragment()), restored);
+        }
+    }
+    for note in METHODOLOGY_IDS {
+        let state = ViewState::from_fragment(&format!("#{note}"));
+        assert_eq!(state.target, note);
+        assert_eq!(state.section(), Section::Overview);
+    }
+    for invalid in [
+        "#engagement/methodology-missing",
+        "#missing/methodology-collection",
+        "#trends/extra/methodology-collection",
+    ] {
+        assert_eq!(ViewState::from_fragment(invalid), ViewState::default());
+    }
+}
+
+#[test]
 fn complete_view_round_trips_without_losing_ids_or_inactive_settings() {
     let id = "unavailable & + # ? : / = , % 雪";
     let state = ViewState {
