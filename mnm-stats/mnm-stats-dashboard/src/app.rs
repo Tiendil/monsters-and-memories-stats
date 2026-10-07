@@ -19,6 +19,15 @@ const REPOSITORY_URL: &str = "https://github.com/Tiendil/monsters-and-memories-s
 
 #[component]
 fn ChartExplanation(metric: Metric) -> impl IntoView {
+    let activity_note = matches!(
+        metric,
+        Metric::DailyMonthly
+            | Metric::OnlineDaily
+            | Metric::OnlineMonthly
+            | Metric::DailySubscriptions
+            | Metric::MonthlySubscriptions
+            | Metric::OnlineSubscriptions
+    );
     let (formula, text) = match metric {
         Metric::Online => (None, "Number of players online at the same time."),
         Metric::Daily => (
@@ -53,7 +62,7 @@ fn ChartExplanation(metric: Metric) -> impl IntoView {
     };
     view! {
         <p class="chart-note chart-explanation">
-            {formula.map(|formula| view! { <span class="chart-formula">{formula}</span> })}
+            {formula.map(|formula| view! { <span class="chart-formula">{formula}{activity_note.then(|| view! { <MethodologyReference number=2/> })}</span> })}
             {text}
         </p>
     }
@@ -144,7 +153,7 @@ impl ViewSignals {
         restore!(online_metrics, online_metrics);
         restore!(subscriber_metrics, subscriber_metrics);
         if changed_target {
-            self.scroll_to_plot(target);
+            self.scroll_to_target(target);
         }
     }
 
@@ -159,16 +168,21 @@ impl ViewSignals {
         }
         event.prevent_default();
         self.target.set(target.to_owned());
-        self.scroll_to_plot(target.to_owned());
+        self.scroll_to_target(target.to_owned());
     }
 
-    fn scroll_to_plot(self, target: String) {
-        if !target.starts_with("chart-") && !target.starts_with("table-") {
+    fn scroll_to_target(self, target: String) {
+        let anchor = target.rsplit('/').next().unwrap_or(&target).to_owned();
+        if !anchor.starts_with("chart-")
+            && !anchor.starts_with("table-")
+            && !anchor.starts_with("section-")
+            && !is_shared_target(&anchor)
+        {
             return;
         }
         request_animation_frame(move || {
             if self.target.get_untracked() == target {
-                focus_target(&target);
+                focus_target(&anchor);
             }
         });
     }
@@ -185,14 +199,50 @@ fn focus_target(target: &str) {
 }
 
 #[component]
+fn MethodologyReference(number: usize) -> impl IntoView {
+    let navigation = expect_context::<ViewSignals>();
+    let target = move || {
+        format!(
+            "{}/{}",
+            &navigation.snapshot().section().fragment()[1..],
+            METHODOLOGY_IDS[number - 1]
+        )
+    };
+    let label = format!("Methodology note {number}");
+    view! {
+        <sup class="methodology-reference"><a href=move || navigation.snapshot().link(&target()) on:click=move |event| navigation.navigate(&target(), event) aria-label=label.clone() title=label>{format!("[{number}]")}</a></sup>
+    }
+}
+
+#[component]
+fn Methodology() -> impl IntoView {
+    let notes = [
+        "We collect data through GitHub Actions on an hourly schedule. GitHub may delay or skip scheduled runs, so the time between snapshots varies and the history can contain gaps. Missing snapshots are not filled in.",
+        "The official statistics provide daily active (DAU) and monthly active (MAU) counts for each server, but no game-wide totals. We calculate “All Servers” DAU and MAU by adding the server counts. Players active on multiple servers may be counted more than once, so these sums can exceed the number of distinct active players.",
+        "“Subscribers” shows active subscriptions across the game, not necessarily distinct players. Subscription totals are not available per server.",
+        "Starting-area population counts players currently in those areas. It does not count new players or newly created characters. “Starting-area activity” combines all starting areas within each server, so an increase does not necessarily mean more people joined the game.",
+        "“Typical online” is the median of daily medians, giving each included day equal weight.",
+        "Busiest hours applies the same calculation within each three-hour window.",
+    ];
+    view! {
+        <section id="methodology" tabindex="-1" class="methodology" aria-labelledby="methodology-heading">
+            <div class="section-heading"><h2 id="methodology-heading">"Methodology"</h2><HeadingLink target="methodology".into() title="Methodology".into()/></div>
+            <ol>{METHODOLOGY_IDS.into_iter().zip(notes).map(|(id, text)| view! {
+                <li id=id tabindex="-1">{text}</li>
+            }).collect_view()}</ol>
+        </section>
+    }
+}
+
+#[component]
 fn Summary(history: Arc<History>) -> impl IntoView {
     let navigation = expect_context::<ViewSignals>();
     let time_zone = expect_context::<Memo<TimeZone>>();
     let latest = history.snapshots().last();
     view! {
-        <section class="now-summary" aria-labelledby="now-heading">
+        <section id="latest-snapshot" tabindex="-1" class="now-summary" aria-labelledby="now-heading">
         <div class="summary-header">
-            <h2 class="summary-heading" id="now-heading">"Latest snapshot"</h2>
+            <div class="section-heading"><h2 class="summary-heading" id="now-heading">"Latest snapshot"</h2><HeadingLink target="latest-snapshot".into() title="Latest snapshot".into()/></div>
             {latest.map(|snapshot| {
                 let observed_at = snapshot.observed_at;
                 view! { <time class="summary-time" id="snapshot-time" datetime=utc(observed_at)>{move || time_zone.get().format(observed_at, "%d %b %Y, %H:%M")}</time> }
@@ -205,8 +255,14 @@ fn Summary(history: Arc<History>) -> impl IntoView {
             let value = latest.and_then(|s| metric.value(s, &Scope::All)).map_or_else(|| "Not available".into(), |v| match v { MetricValue::Count(n) => grouped_count(n), _ => unreachable!() });
             let target = format!("chart-{key}");
             let link_target = target.clone();
+            let note = match metric {
+                Metric::Daily | Metric::Monthly => Some(2),
+                Metric::Subscriptions => Some(3),
+                _ => None,
+            };
             view! { <article class="headline" data-summary=key>
-                <h3><a class="text-action" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label>{label}</a></h3><p class="headline-value">{value}</p>
+                <h3><a class="text-action" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label>{label}</a></h3>
+                <div class="headline-count"><p class="headline-value">{value}</p>{note.map(|number| view! { <MethodologyReference number/> })}</div>
             </article> }
         }).collect_view()}</div>
         </section>
@@ -214,14 +270,50 @@ fn Summary(history: Arc<History>) -> impl IntoView {
 }
 
 #[component]
-fn ChartHeading(target: String, title: String) -> impl IntoView {
+fn HeadingLink(target: String, title: String) -> impl IntoView {
     let navigation = expect_context::<ViewSignals>();
-    let link_target = target.clone();
     let link_label = format!("Link to {title}");
+    let target = StoredValue::new(target);
+    let destination = move || {
+        target.with_value(|target| {
+            if is_shared_target(target) {
+                format!(
+                    "{}/{}",
+                    &navigation.snapshot().section().fragment()[1..],
+                    target
+                )
+            } else {
+                target.clone()
+            }
+        })
+    };
+    view! {
+        <a class="chart-permalink" href=move || navigation.snapshot().link(&destination()) on:click=move |event| navigation.navigate(&destination(), event) aria-label=link_label.clone() title=link_label>"#"</a>
+    }
+}
+
+#[component]
+fn SectionHeading(target: String, title: String, #[prop(optional)] hidden: bool) -> impl IntoView {
+    view! {
+        <div class="section-title section-heading" class:visually-hidden=hidden>
+            <h2 id=target.clone() tabindex="-1">{title.clone()}</h2>
+            {(!hidden).then(|| view! { <HeadingLink target title/> })}
+        </div>
+    }
+}
+
+#[component]
+fn ChartHeading(target: String, title: String) -> impl IntoView {
+    let note = match target.as_str() {
+        "chart-daily" | "chart-monthly" => Some(2),
+        "chart-subscriptions" | "chart-subscriber-activity" => Some(3),
+        "chart-starting-zones" | "table-starting-areas" => Some(4),
+        _ => None,
+    };
     view! {
         <div class="chart-header">
-            <h3 class="chart-heading">{title}</h3>
-            <a class="chart-permalink" href=move || navigation.snapshot().link(&link_target) on:click=move |event| navigation.navigate(&target, event) aria-label=link_label.clone() title=link_label>"#"</a>
+            <div class="chart-title"><h3 class="chart-heading">{title.clone()}</h3>{note.map(|number| view! { <MethodologyReference number/> })}</div>
+            <HeadingLink target title/>
         </div>
     }
 }
@@ -743,11 +835,11 @@ fn TrendsSection(history: Arc<History>, now: RwSignal<DateTime<Utc>>) -> impl In
         })
     });
     view! {
-        <h2 class="section-title">"Trends"</h2>
+        <SectionHeading target="section-trends".into() title="Trends".into()/>
         <div class="chart-grid trends-grid">
             <article class="chart-card" id="table-server-growth" tabindex="-1">
                 <ChartHeading target="table-server-growth".into() title="Server growth".into()/>
-                <p class="chart-note chart-explanation">"Change in typical online population compared with the preceding period, ordered by weekly growth."</p>
+                <p class="chart-note chart-explanation">"Change in typical online population"<MethodologyReference number=5/>" compared with the preceding period, ordered by weekly growth."</p>
                 {move || {
                     let data = ranked.get();
                     let rows = data[0].servers.iter().map(|server| {
@@ -763,7 +855,7 @@ fn TrendsSection(history: Arc<History>, now: RwSignal<DateTime<Utc>>) -> impl In
             </article>
             <article class="chart-card" id="table-busiest-hours" tabindex="-1">
                 <ChartHeading target="table-busiest-hours".into() title="Busiest hours".into()/>
-                <p class="chart-note chart-explanation">"The three busiest recurring three-hour windows for each server and period, with typical online population and change from the preceding period."</p>
+                <p class="chart-note chart-explanation">"The three busiest recurring three-hour windows for each server and period, with typical online population"<MethodologyReference number=6/>" and change from the preceding period."</p>
                 <div class="chart-control"><label class="trend-grouping-control">"Group hours"
                     <select id="busy-hours-grouping" prop:value=move || if grouping.get() == BusyGrouping::AllDays { "all" } else { "weekday" } on:change=move |event| grouping.set(if event_target_value(&event) == "weekday" { BusyGrouping::Weekday } else { BusyGrouping::AllDays })>
                         <option value="all">"All days"</option><option value="weekday">"By weekday"</option>
@@ -790,7 +882,7 @@ fn TrendsSection(history: Arc<History>, now: RwSignal<DateTime<Utc>>) -> impl In
             </article>
             <article class="chart-card" id="table-starting-areas" tabindex="-1">
                 <ChartHeading target="table-starting-areas".into() title="Starting-area activity".into()/>
-                <p class="chart-note chart-explanation">"Change in typical online population across each server’s starting areas."</p>
+                <p class="chart-note chart-explanation">"Change in typical online population"<MethodologyReference number=5/>" across each server’s starting areas."</p>
                 {move || {
                     let data = ranked.get();
                     let rows = data[0].areas.iter().map(|server| {
@@ -1021,7 +1113,7 @@ pub fn App() -> impl IntoView {
             navigation.last_url_state.set_value(state);
         }
     });
-    navigation.scroll_to_plot(navigation.target.get_untracked());
+    navigation.scroll_to_target(navigation.target.get_untracked());
     let count = history.snapshots().len();
     let first = history.snapshots().first().map(|s| s.observed_at);
     let names = servers(&history);
@@ -1086,7 +1178,7 @@ pub fn App() -> impl IntoView {
                     <span class="history-start">{first.map_or_else(|| "No statistics collected yet".into_any(), |first| view! {
                         "Data since "<time id="first-collection" datetime=utc(first)>{move || time_zone.get().format(first, "%d %b %Y")}</time>
                     }.into_any())}</span>
-                    <span class="history-frequency"><span class="history-separator">" · "</span><span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly"</span>
+                    <span class="history-frequency"><span class="history-separator">" · "</span><span id="history-count">{format!("{} {}", grouped_count(count as u128), if count == 1 { "record" } else { "records" })}</span>" · collected roughly hourly"<MethodologyReference number=1/></span>
                     <span class="history-source"><span class="history-source-connector">" from "</span><span class="history-source-label">"Source: "</span><a href="https://account.monstersandmemories.com/metrics" target="_blank" rel="noopener">"M&M’s public statistics"</a></span>
                 </p>
                 <div class="time-zone-switch" role="group" aria-label="Time zone">
@@ -1128,7 +1220,7 @@ pub fn App() -> impl IntoView {
                     };
                     let chart_history = history.clone();
                     view! {
-                        <h2 class="section-title" class:visually-hidden=selected == Section::Relationships>{match selected { Section::Overview => "Trends over time", Section::Population => "Player activity", Section::Relationships => "Engagement", Section::Trends => unreachable!() }}</h2>
+                        <SectionHeading target=format!("section-{}", &selected.fragment()[1..]) title=match selected { Section::Overview => "Trends over time", Section::Population => "Player activity", Section::Relationships => "Engagement", Section::Trends => unreachable!() }.into() hidden=selected == Section::Relationships/>
                         <div class="chart-grid" class:overview-chart=selected == Section::Overview class:population-chart=selected == Section::Population>{metrics.into_iter().map(|metric| {
                             let selected_zones = (metric == Metric::StartingZones).then_some(zone_scopes);
                             let metric_choices = match metric {
@@ -1143,6 +1235,7 @@ pub fn App() -> impl IntoView {
                     }.into_any()
                 }}
             </section>
+            <Methodology/>
             <footer>
                 <a href="https://plotly.com/javascript/">"Charts by Plotly"</a>
             </footer>

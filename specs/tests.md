@@ -188,7 +188,9 @@ Automated coverage MUST include the following cases.
 - Back/Forward restoring filters without extra history entries or scrolling again to an unchanged plot target.
 - Menu opening, unapplied date drafts, and validation errors leaving the URL and history unchanged.
 - Native plot-header links with correct destinations and accessible names, keyboard activation, repeated activation of the current fragment, and retained filters during in-page navigation.
+- Top-level section permalinks with preserved tab and filters, scrolling and focus, direct loads, refresh and Back/Forward; hidden headings MUST have no focusable permalink.
 - Empty and unknown fragments selecting Overview, and the content skip link preserving the current section and URL.
+- Shared Methodology notes and superscript references from collection frequency, applicable chart headings and latest-snapshot values, Engagement formulas, and Trends descriptions; links MUST preserve tab and filters, scroll to and focus the right statement, and work on refresh, repeated activation, and Back/Forward at desktop and phone widths.
 
 #### Player activity
 
@@ -217,7 +219,7 @@ Automated coverage MUST include the following cases.
 - Clicking server and zone option text as well as checkboxes, including repeated toggles in release builds and demo previews at desktop and narrow widths.
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes.
-- Visible explanations on every chart, absence of reference links in descriptions, and readable explanations at narrow widths.
+- Visible explanations on every chart, absence of external reference links in descriptions, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.
 - Display names without appended technical IDs, with ID fallback for missing or blank names.
 - Date-label density updating after resizing between phone and desktop widths, with horizontal, non-overlapping labels and unchanged plotted observations.

@@ -211,6 +211,17 @@ Restoring a URL MUST NOT add another history entry or discard Forward history.
 Opening menus, editing unapplied dates, validation errors, hover, and clock updates MUST NOT change the URL or browser history.
 Changing filters MUST NOT scroll to the fragment's plot again; following a plot link MUST scroll to and focus its plot, including repeated activation of the current link.
 
+Methodology references MUST use native links that preserve the active tab and applied selections, scroll to the corresponding statement, and focus it for keyboard navigation.
+Their destinations MUST use `#<tab>/<statement-anchor>`, followed by the ordinary selection parameters when needed.
+Existing statement anchors MUST remain stable as notes are added.
+Refresh, copied links, and Back/Forward MUST restore these destinations and their tab context; bare methodology destinations MUST open with Overview.
+
+Visible top-level section headings MUST offer the same adjacent `#` permalink as chart headings.
+“Latest snapshot” and “Methodology” MUST use `#<tab>/latest-snapshot` and `#<tab>/methodology` to preserve the active tab; bare `#latest-snapshot` and `#methodology` links MUST use Overview.
+Tab-content headings MUST use `#section-<tab>` destinations that select the owning tab, without changing the ordinary tab-navigation behavior or the initial page position.
+Section permalinks MUST preserve applied selections, scroll to and focus their section or heading, and work on refresh, repeated activation, and Back/Forward.
+Headings hidden by the existing layout MUST NOT leave focusable permalink controls behind.
+
 **Example:** `#chart-online-presence?range=30&scope=server%3Aa&compare=previous` opens Online presence for server `a`, with the last 30 days compared with the previous period.
 Copying the chart link preserves that configuration; selecting another time range and pressing Back restores the previous range.
 
@@ -356,15 +367,32 @@ Formulas MUST appear as compact blocks below the chart title and above their exp
 Each formula block MUST have a faint warm background, a subtle thin border, small rounded corners, and compact padding.
 Blocks MUST fit their text within the available width, with formulas wrapping naturally on narrow screens.
 The chart title MUST remain visually stronger than the formula, and explanatory prose MUST use muted text.
-Chart descriptions MUST contain no reference links.
+Chart descriptions MUST contain no external reference links; internal Methodology references MAY explain relevant calculations or limitations.
 Explanations MUST remain visible and accessible without hover or opening a disclosure.
 Online-presence explanations MUST identify the online population relative to daily or monthly active players.
 Subscriber-activity explanations MUST identify the global subscriber count and state that ratios can exceed 100 percent.
-Detailed calculation rules, counting limitations, and missing-data rules MUST remain in [requirements.md](requirements.md) rather than repeated in chart explanations or time-series tooltips.
+Detailed calculation rules, counting limitations, and missing-data rules MUST remain in [requirements.md](requirements.md), with shared user-facing explanations in Methodology rather than repeated in chart explanations or time-series tooltips.
 Series labels MUST identify the selected scope; heatmap and Trends details MUST retain their aggregate and coverage information defined above.
 The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.
+
+### Methodology
+
+A section titled “Methodology” MUST appear below the active tab's content and above the footer, in every tab and empty-data state.
+It MUST present an ordered list of concise, factual statements in normal body text, separated from the charts with clear spacing and a subtle divider.
+Statement 1 MUST explain irregular collection intervals and gaps caused by possible delays or skipped GitHub Actions runs on the hourly schedule, without filling missing snapshots.
+Statement 2 MUST explain that official DAU/MAU counts are per server and “All Servers” values sum those counts without cross-server deduplication, so they can exceed the number of distinct active players.
+Statement 3 MUST explain that Subscribers counts game-wide active subscriptions, not necessarily distinct players, and that per-server totals are unavailable.
+Statement 4 MUST distinguish starting-area population from new players or newly created characters and explain that Starting-area activity combines the areas within each server.
+Statement 5 MUST explain that typical online is the median of daily medians, with equal weight for each included day.
+Statement 6 MUST separately explain that Busiest hours applies the same calculation within each three-hour window.
+The collection-frequency phrase MUST have a superscript `[1]` link; the DAU and MAU chart headings, latest-snapshot values, and Engagement formulas using these counts MUST have superscript `[2]` links.
+The Subscribers snapshot value and the Subscribers and Activity relative to subscribers chart headings MUST link to statement 3.
+The Starting-zone population and Starting-area activity headings MUST link to statement 4.
+References after “typical online population” in the Server growth and Starting-area activity descriptions MUST link to statement 5; the corresponding phrase in Busiest hours MUST link to statement 6.
+References MUST remain separate from chart permalinks and summary-to-chart links, retain visible focus, and have accessible names identifying their numbered notes.
+Statements MUST have stable anchors and be focusable when followed, without becoming additional tab stops in ordinary keyboard navigation.
 
 The footer MUST contain only a plain link labeled “Charts by Plotly,” separated from the dashboard content by one subtle divider.
 The credit MUST remain available from every content section and align with the right edge of the content at all supported widths.

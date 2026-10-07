@@ -1200,7 +1200,7 @@ impl Browser {
         self.expect_count("[data-metric='subscriber-activity'] .plot-surface", 0);
         self.click("[data-metric='subscriber-activity'] button.secondary");
         self.expect_count("#subscriber-metrics-options input:checked", 3);
-        self.expect_count(".chart-explanation a", 0);
+        self.expect_count(".chart-explanation a:not(.methodology-reference a)", 0);
         self.select("#time-range", "30");
         self.click("#nav-overview");
     }
@@ -1310,6 +1310,189 @@ impl Browser {
         self.expect_destination("", "overview");
         self.verify_requests(url, true);
         self.request(Method::POST, "/url", json!({"url":url}));
+    }
+
+    fn verify_methodology(&self, url: &str) {
+        for width in [390, 1440] {
+            self.request(
+                Method::POST,
+                "/window/rect",
+                json!({"width":width,"height":900}),
+            );
+            for (tab, nav) in [
+                ("overview", "overview"),
+                ("player-activity", "population"),
+                ("engagement", "relationships"),
+                ("trends", "trends"),
+            ] {
+                self.request(
+                    Method::POST,
+                    "/url",
+                    json!({"url":format!("{url}#{tab}?tz=utc&range=30&compare=previous")}),
+                );
+                self.expect_count("main > .methodology li", 6);
+                self.expect_count("[data-summary='daily'] .methodology-reference a", 1);
+                self.expect_count("[data-summary='monthly'] .methodology-reference a", 1);
+                self.expect_count("[data-summary='subscriptions'] .methodology-reference a", 1);
+                if tab == "overview" {
+                    self.expect_count("#chart-daily .chart-header .methodology-reference a", 1);
+                    self.expect_count("#chart-monthly .chart-header .methodology-reference a", 1);
+                }
+                let references: &[(&str, &str)] = match tab {
+                    "overview" => &[
+                        (
+                            "[data-summary='subscriptions'] .methodology-reference a",
+                            "methodology-subscriptions",
+                        ),
+                        (
+                            "#chart-subscriptions .chart-header .methodology-reference a",
+                            "methodology-subscriptions",
+                        ),
+                    ],
+                    "player-activity" => &[(
+                        "#chart-starting-zones .chart-header .methodology-reference a",
+                        "methodology-starting-areas",
+                    )],
+                    "engagement" => &[
+                        (
+                            "#chart-subscriber-activity .chart-header .methodology-reference a",
+                            "methodology-subscriptions",
+                        ),
+                        (
+                            "#chart-daily-monthly .chart-formula .methodology-reference a",
+                            "methodology-activity-totals",
+                        ),
+                        (
+                            "#chart-online-presence .chart-formula .methodology-reference a",
+                            "methodology-activity-totals",
+                        ),
+                        (
+                            "#chart-subscriber-activity .chart-formula .methodology-reference a",
+                            "methodology-activity-totals",
+                        ),
+                    ],
+                    _ => &[
+                        (
+                            "#table-starting-areas .chart-header .methodology-reference a",
+                            "methodology-starting-areas",
+                        ),
+                        (
+                            "#table-server-growth .chart-explanation .methodology-reference a",
+                            "methodology-typical-online",
+                        ),
+                        (
+                            "#table-starting-areas .chart-explanation .methodology-reference a",
+                            "methodology-typical-online",
+                        ),
+                        (
+                            "#table-busiest-hours .chart-explanation .methodology-reference a",
+                            "methodology-busiest-hours",
+                        ),
+                    ],
+                };
+                for (selector, note) in references {
+                    self.activate(selector);
+                    wait_until(
+                        || {
+                            self.request(
+                                Method::POST,
+                                "/execute/sync",
+                                json!({"script":"return document.activeElement.id;", "args":[]}),
+                            ) == *note
+                        },
+                        "new methodology reference focuses the correct statement",
+                    );
+                    assert_eq!(
+                        self.request(
+                            Method::POST,
+                            "/execute/sync",
+                            json!({"script":"return location.hash;", "args":[]})
+                        ),
+                        format!("#{tab}/{note}?tz=utc&range=30&compare=previous")
+                    );
+                }
+                if tab != "engagement" && (tab != "overview" || width == 1440) {
+                    self.activate(".section-title .chart-permalink");
+                    wait_until(
+                        || {
+                            self.request(
+                                Method::POST,
+                                "/execute/sync",
+                                json!({"script":"return document.activeElement.id;", "args":[]}),
+                            ) == format!("section-{tab}")
+                        },
+                        "section heading link focuses its heading",
+                    );
+                }
+                for (selector, note) in [
+                    ("#latest-snapshot .section-heading a", "latest-snapshot"),
+                    ("#methodology .section-heading a", "methodology"),
+                    (
+                        ".history-frequency .methodology-reference a",
+                        "methodology-collection",
+                    ),
+                    (
+                        "[data-summary='monthly'] .methodology-reference a",
+                        "methodology-activity-totals",
+                    ),
+                ] {
+                    for _ in 0..2 {
+                        self.activate(selector);
+                        wait_until(
+                            || {
+                                self.request(Method::POST, "/execute/sync", json!({"script":"return document.activeElement.id;", "args":[]})) == note
+                            },
+                            "methodology reference focuses its statement",
+                        );
+                        // Sections may extend below the viewport; their heading must be visible.
+                        // Individual note links must still bring the whole statement into view.
+                        let result = self.request(Method::POST, "/execute/sync", json!({
+                            "script":"const target=document.activeElement; const rect=(target.querySelector('h2') || target).getBoundingClientRect(); return {tab:document.querySelector('.section-nav [aria-current=page]').id, hash:location.hash, visible:rect.top >= 0 && rect.bottom <= innerHeight, top:rect.top, bottom:rect.bottom, viewport:innerHeight, overflow:document.documentElement.scrollWidth > innerWidth};", "args":[]
+                        }));
+                        assert_eq!(result["tab"], format!("nav-{nav}"));
+                        assert_eq!(
+                            result["hash"],
+                            format!("#{tab}/{note}?tz=utc&range=30&compare=previous")
+                        );
+                        assert_eq!(result["visible"], true, "{note} at width {width}: {result}");
+                        assert_eq!(result["overflow"], false);
+                    }
+                }
+                self.request(Method::POST, "/refresh", json!({}));
+                wait_until(
+                    || {
+                        self.request(
+                            Method::POST,
+                            "/execute/sync",
+                            json!({"script":"return document.activeElement.id;", "args":[]}),
+                        ) == "methodology-activity-totals"
+                    },
+                    "methodology deep link restores after refresh",
+                );
+                self.request(Method::POST, "/back", json!({}));
+                wait_until(
+                    || {
+                        self.request(
+                            Method::POST,
+                            "/execute/sync",
+                            json!({"script":"return document.activeElement.id;", "args":[]}),
+                        ) == "methodology-collection"
+                    },
+                    "Back restores previous note",
+                );
+                self.request(Method::POST, "/forward", json!({}));
+                wait_until(
+                    || {
+                        self.request(
+                            Method::POST,
+                            "/execute/sync",
+                            json!({"script":"return document.activeElement.id;", "args":[]}),
+                        ) == "methodology-activity-totals"
+                    },
+                    "Forward restores the note",
+                );
+            }
+        }
     }
 
     fn verify_trends(&self, url: &str) {
@@ -2098,6 +2281,7 @@ impl Browser {
         .unwrap();
         self.verify_time_axis();
         self.verify_fragment_navigation(url);
+        self.verify_methodology(url);
         self.verify_url_settings(url);
         self.verify_trends(url);
         println!(

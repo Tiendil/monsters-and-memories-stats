@@ -11,6 +11,19 @@ pub const SUBSCRIBER_METRICS: [Metric; 3] = [
     Metric::OnlineSubscriptions,
 ];
 
+pub const METHODOLOGY_IDS: [&str; 6] = [
+    "methodology-collection",
+    "methodology-activity-totals",
+    "methodology-subscriptions",
+    "methodology-starting-areas",
+    "methodology-typical-online",
+    "methodology-busiest-hours",
+];
+
+pub fn is_shared_target(target: &str) -> bool {
+    matches!(target, "latest-snapshot" | "methodology") || METHODOLOGY_IDS.contains(&target)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Section {
     Overview,
@@ -52,6 +65,20 @@ impl Section {
     }
 
     pub fn from_fragment(fragment: &str) -> Option<Self> {
+        // Shared sections and notes retain their originating tab.
+        if let Some((tab, note)) = fragment.split_once('/') {
+            return Self::ALL
+                .into_iter()
+                .find(|section| section.fragment() == tab && is_shared_target(note));
+        }
+        if is_shared_target(fragment.trim_start_matches('#')) {
+            return Some(Self::Overview);
+        }
+        if let Some(tab) = fragment.strip_prefix("#section-") {
+            return Self::ALL
+                .into_iter()
+                .find(|section| &section.fragment()[1..] == tab);
+        }
         match fragment {
             ""
             | "#overview"
