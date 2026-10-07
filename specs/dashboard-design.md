@@ -215,6 +215,12 @@ Methodology references MUST use native links that preserve the active tab and ap
 Their destinations MUST use `#<tab>/methodology-collection` or `#<tab>/methodology-activity-totals`, followed by the ordinary selection parameters when needed.
 Refresh, copied links, and Back/Forward MUST restore these destinations and their tab context; bare methodology destinations MUST open with Overview.
 
+Visible top-level section headings MUST offer the same adjacent `#` permalink as chart headings.
+“Latest snapshot” and “Methodology” MUST use `#<tab>/latest-snapshot` and `#<tab>/methodology` to preserve the active tab; bare `#latest-snapshot` and `#methodology` links MUST use Overview.
+Tab-content headings MUST use `#section-<tab>` destinations that select the owning tab, without changing the ordinary tab-navigation behavior or the initial page position.
+Section permalinks MUST preserve applied selections, scroll to and focus their section or heading, and work on refresh, repeated activation, and Back/Forward.
+Headings hidden by the existing layout MUST NOT leave focusable permalink controls behind.
+
 **Example:** `#chart-online-presence?range=30&scope=server%3Aa&compare=previous` opens Online presence for server `a`, with the last 30 days compared with the previous period.
 Copying the chart link preserves that configuration; selecting another time range and pressing Back restores the previous range.
 

@@ -47,7 +47,10 @@ fn methodology_links_preserve_tabs_and_selections() {
             "{}?tz=utc&range=30&scope=server%3Aa&compare=previous&zone=&online-metric=online-monthly",
             section.fragment()
         ));
-        for note in METHODOLOGY_IDS {
+        for note in METHODOLOGY_IDS
+            .into_iter()
+            .chain(["latest-snapshot", "methodology"])
+        {
             let target = format!("{}/{note}", &section.fragment()[1..]);
             let restored = ViewState::from_fragment(&initial.link(&target));
             assert_eq!(restored.section(), section);
@@ -61,7 +64,10 @@ fn methodology_links_preserve_tabs_and_selections() {
             assert_eq!(ViewState::from_fragment(&restored.fragment()), restored);
         }
     }
-    for note in METHODOLOGY_IDS {
+    for note in METHODOLOGY_IDS
+        .into_iter()
+        .chain(["latest-snapshot", "methodology"])
+    {
         let state = ViewState::from_fragment(&format!("#{note}"));
         assert_eq!(state.target, note);
         assert_eq!(state.section(), Section::Overview);
@@ -73,6 +79,23 @@ fn methodology_links_preserve_tabs_and_selections() {
     ] {
         assert_eq!(ViewState::from_fragment(invalid), ViewState::default());
     }
+}
+
+#[test]
+fn section_heading_links_select_the_owning_tab() {
+    for section in Section::ALL {
+        let target = format!("section-{}", &section.fragment()[1..]);
+        let state = ViewState::from_fragment(&format!("#{target}?range=30&compare=previous"));
+        assert_eq!(state.target, target);
+        assert_eq!(state.section(), section);
+        assert_eq!(state.range, TimeRange::Days30);
+        assert_eq!(state.comparison, ComparisonMode::Previous);
+        assert_eq!(ViewState::from_fragment(&state.fragment()), state);
+    }
+    assert_eq!(
+        ViewState::from_fragment("#section-missing"),
+        ViewState::default()
+    );
 }
 
 #[test]

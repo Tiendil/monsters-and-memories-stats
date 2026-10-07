@@ -1337,7 +1337,22 @@ impl Browser {
                     self.expect_count("#chart-daily .chart-header .methodology-reference a", 1);
                     self.expect_count("#chart-monthly .chart-header .methodology-reference a", 1);
                 }
+                if tab != "engagement" && (tab != "overview" || width == 1440) {
+                    self.activate(".section-title .chart-permalink");
+                    wait_until(
+                        || {
+                            self.request(
+                                Method::POST,
+                                "/execute/sync",
+                                json!({"script":"return document.activeElement.id;", "args":[]}),
+                            ) == format!("section-{tab}")
+                        },
+                        "section heading link focuses its heading",
+                    );
+                }
                 for (selector, note) in [
+                    ("#latest-snapshot .section-heading a", "latest-snapshot"),
+                    ("#methodology .section-heading a", "methodology"),
                     (
                         ".history-frequency .methodology-reference a",
                         "methodology-collection",
