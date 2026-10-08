@@ -62,7 +62,30 @@ impl TrendWindow {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Aggregation {
+    #[default]
+    Snapshot,
+    Average24,
+}
+impl Aggregation {
+    pub const ALL: [Self; 2] = [Self::Snapshot, Self::Average24];
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Snapshot => "snapshot",
+            Self::Average24 => "24h",
+        }
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Snapshot => "Snapshot",
+            Self::Average24 => "24-hour average",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ChartView {
+    pub aggregation: Aggregation,
     pub mode: RateMode,
     pub window: TrendWindow,
 }
@@ -104,8 +127,19 @@ impl LineChart {
             Self::SubscriberActivity => "subscriber-activity",
         }
     }
+    pub fn supports_average(self) -> bool {
+        matches!(
+            self,
+            Self::Online
+                | Self::StartingZones
+                | Self::OnlineShare
+                | Self::OnlinePresence
+                | Self::SubscriberActivity
+        )
+    }
     pub fn default_view(self) -> ChartView {
         ChartView {
+            aggregation: Aggregation::Snapshot,
             mode: RateMode::Value,
             window: if matches!(self, Self::Online | Self::StartingZones) {
                 TrendWindow::Hours6
@@ -195,6 +229,55 @@ fn contributors(snapshot: &Snapshot, metric: &Metric, scope: &Scope) -> Vec<Stri
     ids
 }
 
+/// Integrate short linear intervals over the trailing day, excluding uncovered time.
+/// Retain a boundary observation for clipping; never bridge missing values.
+fn averages(
+    history: &History,
+    metric: &Metric,
+    scope: &Scope,
+    source: &[Option<MetricValue>],
+) -> Vec<Option<MetricValue>> {
+    let mut window = std::collections::VecDeque::new();
+    let mut previous_contributors = Vec::new();
+    history
+        .snapshots()
+        .iter()
+        .zip(source)
+        .map(|(snapshot, value)| {
+            let ids = contributors(snapshot, metric, scope);
+            if ids != previous_contributors {
+                window.clear();
+            }
+            previous_contributors = ids;
+            let cutoff = snapshot.observed_at - Duration::hours(24);
+            window.push_back((snapshot.observed_at, value.map(MetricValue::number)));
+            while window.get(1).is_some_and(|(at, _)| *at <= cutoff) {
+                window.pop_front();
+            }
+            value.as_ref()?;
+            let mut area = 0.0;
+            let mut covered = Duration::zero();
+            for (&(left, a), &(right, b)) in window.iter().zip(window.iter().skip(1)) {
+                let (Some(a), Some(b)) = (a, b) else { continue };
+                if right - left > Duration::hours(3) {
+                    continue;
+                }
+                let start = left.max(cutoff);
+                let duration = right - start;
+                let at_start = a + (b - a) * elapsed(left, start) / elapsed(left, right);
+                area += (at_start + b) / 2.0 * elapsed(start, right);
+                covered += duration;
+            }
+            (covered >= Duration::hours(18)).then(|| MetricValue::Average {
+                value: area / (covered.num_milliseconds() as f64 / 1000.0),
+                percentage: metric.is_ratio(),
+                covered,
+                start: cutoff,
+            })
+        })
+        .collect()
+}
+
 /// Evaluate at observation timestamps only. Missing metrics, changed contributors, and
 /// long gaps separate runs; no fit crosses such a boundary or uses future samples.
 pub fn values(
@@ -205,6 +288,11 @@ pub fn values(
 ) -> Vec<Option<MetricValue>> {
     let snapshots = history.snapshots();
     let source: Vec<_> = snapshots.iter().map(|s| metric.value(s, scope)).collect();
+    let source = if view.aggregation == Aggregation::Average24 && metric.supports_average() {
+        averages(history, metric, scope, &source)
+    } else {
+        source
+    };
     if view.mode == RateMode::Value {
         return source;
     }
@@ -284,7 +372,7 @@ pub fn values(
 /// Transform original-time values, then retain the existing comparison coordinates.
 pub fn apply(plot: &mut Plot, history: &History, view: ChartView) {
     plot.view = view;
-    if view.mode == RateMode::Value {
+    if view.mode == RateMode::Value && view.aggregation == Aggregation::Snapshot {
         return;
     }
     let mut cache = BTreeMap::new();

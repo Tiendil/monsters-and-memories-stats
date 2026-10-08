@@ -268,6 +268,14 @@ fn hover_text(point: &crate::analysis::Point, label: &str, zone: TimeZone) -> St
             match value {
                 crate::analysis::MetricValue::Rate { start, .. } =>
                     format!("{} – {}", zone.timestamp(start), zone.timestamp(point.at)),
+                crate::analysis::MetricValue::Average { start, covered, .. } => format!(
+                    "{} – {} · 24-hour average · Coverage: {} of 24 hours",
+                    zone.timestamp(start),
+                    zone.timestamp(point.at),
+                    format!("{:.1}", covered.num_milliseconds() as f64 / 3_600_000.0)
+                        .trim_end_matches('0')
+                        .trim_end_matches('.')
+                ),
                 _ => zone.timestamp(point.at),
             },
         )
@@ -293,6 +301,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
         .map(|v| v.number())
         .fold(0.0_f64, f64::max);
     for series in &plot.series {
+        let label = plot.series_label(series);
         let mut x = Vec::new();
         let mut y = Vec::new();
         let mut text = Vec::new();
@@ -324,7 +333,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             }
             x.push(Some(point.x));
             y.push(point.value.map(|v| v.number()));
-            text.push(hover_text(point, &series.label, plot.zone));
+            text.push(hover_text(point, &label, plot.zone));
             // Dense lines omit markers except where an observation has no connected neighbor.
             let connected_before = previous.is_some_and(|p| point.connection_from(p).is_some());
             let connected_after = series
@@ -344,7 +353,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
         let color = css_color(series.style);
         figure.add_trace(
             Scatter::new(x, y)
-                .name(escape(&series.label))
+                .name(escape(&label))
                 .mode(if markers {
                     Mode::LinesMarkers
                 } else {
@@ -374,7 +383,7 @@ pub fn render(plot: &Plot, metric: &Metric) -> Figure {
             // shared with these visual connections never produce duplicate labels.
             sparse_traces.push(
                 Scatter::new(sparse_x, sparse_y)
-                    .name(escape(&series.label))
+                    .name(escape(&label))
                     .mode(Mode::Lines)
                     .connect_gaps(false)
                     .hover_info(HoverInfo::Skip)

@@ -1,6 +1,6 @@
 //! Shareable applied dashboard settings; transient menu and hover state stays in the UI.
 use crate::analysis::{ComparisonMode, DateMatching, Metric, Period, Scope, TimeRange, ZoneScope};
-use crate::rates::{ChartView, LineChart, RateMode, TrendWindow};
+use crate::rates::{Aggregation, ChartView, LineChart, RateMode, TrendWindow};
 use crate::time::{TimeMode, TimeZone};
 use crate::trends::BusyGrouping;
 use chrono::Duration;
@@ -13,7 +13,7 @@ pub const SUBSCRIBER_METRICS: [Metric; 3] = [
     Metric::OnlineSubscriptions,
 ];
 
-pub const METHODOLOGY_IDS: [&str; 8] = [
+pub const METHODOLOGY_IDS: [&str; 9] = [
     "methodology-collection",
     "methodology-activity-totals",
     "methodology-subscriptions",
@@ -22,6 +22,7 @@ pub const METHODOLOGY_IDS: [&str; 8] = [
     "methodology-busiest-hours",
     "methodology-rates",
     "methodology-trend-rate",
+    "methodology-averages",
 ];
 
 pub fn is_shared_target(target: &str) -> bool {
@@ -269,6 +270,13 @@ impl ViewState {
             });
         for chart in LineChart::ALL {
             let view = state.chart_views.get_mut(&chart).unwrap();
+            view.aggregation = if chart.supports_average()
+                && one(&format!("aggregation-{}", chart.key())) == Some("24h")
+            {
+                Aggregation::Average24
+            } else {
+                Aggregation::Snapshot
+            };
             view.mode = RateMode::ALL
                 .into_iter()
                 .find(|mode| Some(mode.key()) == one(&format!("view-{}", chart.key())))
@@ -374,6 +382,12 @@ impl ViewState {
                 .get(&chart)
                 .copied()
                 .unwrap_or(chart.default_view());
+            if chart.supports_average() && view.aggregation != Aggregation::Snapshot {
+                query.append_pair(
+                    &format!("aggregation-{}", chart.key()),
+                    view.aggregation.key(),
+                );
+            }
             if view.mode != RateMode::Value {
                 query.append_pair(&format!("view-{}", chart.key()), view.mode.key());
             }

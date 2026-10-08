@@ -98,6 +98,7 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Heatmap bounds from available cell means, including nonzero minima, measured zeros, missing cells, empty selections, constant values, and fractional or narrowly separated averages, preserving shared bounds within each scale group.
 - Individual-server bounds including unchecked and historical servers only within selected periods, excluding totals, and remaining unchanged when panels are hidden or restored.
 - Ratio values, including zero denominators and values above 100 percent.
+- Trailing 24-hour averages at original instants, clipped window boundaries, linear time weighting, three-hour interval limits, 18-hour minimum coverage, per-snapshot ratio averaging, unavailable shorter histories, missing values and changed contributors, lookback without future samples, unchanged unrelated series, time-zone independence, and averaging before rate calculations.
 - Consecutive and trailing-regression rates on irregular samples, exact interval and coverage boundaries, negative and zero values, large baselines, missing metrics, contributor changes, and all approved trend windows.
 - Rate calculations before comparison alignment, lookback outside the display range, time-zone independence, percentage-point units, and unchanged earlier estimates after later observations change.
 - Online ratios using each snapshot's online and denominator counts, including multiple observations within one UTC day, missing hours and servers, measured zeros, zero denominators, and selection boundaries.
@@ -206,8 +207,8 @@ Automated coverage MUST include the following cases.
 #### Engagement
 
 - Three full-width Engagement charts in the prescribed order, persistent independent metric selectors, default selections, empty-selection recovery, and metric/server/period legend identities.
-- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and online-ratio point details without calculation or coverage text.
-- Online presence and subscriber-activity series preserving individual collection points, with percentages calculated from the same snapshot and no daily averaging.
+- Engagement checkbox label and keyboard activation, Escape and outside dismissal, unchanged shared controls, and Snapshot online-ratio point details without calculation or coverage text.
+- Online presence and subscriber-activity series preserving individual collection times, Snapshot percentages calculated from the same snapshot, and optional 24-hour averages affecting only online-related series.
 
 #### Trends
 
@@ -222,6 +223,7 @@ Automated coverage MUST include the following cases.
 - Keeping a dropdown open through native label activation without crashes, while preserving dismissal when keyboard focus moves outside.
 - Shared server selections that persist across sections and period modes.
 - Independent Value, Rate of change, and Trend rate controls on every line chart, window defaults and choices, metric/zone preservation, URL restoration and Back/Forward, signed axes and units, interval details, insufficient-coverage states, and narrow-screen reflow.
+- Snapshot / 24-hour average controls on supported charts, default omission and URL restoration, unchanged DAU/MAU series, methodology links, coverage tooltips and unavailable states, all rate windows, and desktop/mobile layout.
 - Heatmaps and Trends tables retaining their existing representations without rate controls.
 - Visible explanations on every chart, absence of external reference links in descriptions, and readable explanations at narrow widths.
 - Stable series encodings when adding or removing other selections, with at least seven series and overlapping points.

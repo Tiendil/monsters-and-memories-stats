@@ -28,7 +28,11 @@ fn history(points: &[(i64, u64)]) -> History {
     .unwrap()
 }
 fn view(mode: RateMode, window: TrendWindow) -> ChartView {
-    ChartView { mode, window }
+    ChartView {
+        mode,
+        window,
+        ..Default::default()
+    }
 }
 fn assert_number(value: Option<MetricValue>, expected: f64) {
     assert!(
@@ -410,4 +414,403 @@ fn plotting_keeps_lookback_comparisons_timezones_and_series_identity() {
     snapshots.last_mut().unwrap().servers[0].online = 1_000_000;
     apply(&mut normal, &History::new(snapshots).unwrap(), settings);
     assert_eq!(normal.series[0].points[0].value, old);
+}
+
+fn average(mode: RateMode) -> ChartView {
+    ChartView {
+        aggregation: Aggregation::Average24,
+        ..view(mode, TrendWindow::Hours6)
+    }
+}
+
+fn hourly(hours: i64, count: u64) -> History {
+    history(&(0..=hours).map(|h| (h * 60, count)).collect::<Vec<_>>())
+}
+
+fn coverage(value: Option<MetricValue>) -> Duration {
+    let Some(MetricValue::Average { covered, .. }) = value else {
+        panic!("missing average")
+    };
+    covered
+}
+
+#[test]
+fn weighted_average_uses_durations_and_clips_the_window_without_future_samples() {
+    // A triangle lasting three hours has area 300 player-hours, regardless
+    // of the uneven spacing of its observations.
+    let mut points = vec![(0, 0), (60, 200), (180, 0)];
+    points.extend((4..=24).map(|h| (h * 60, 0)));
+    points.extend([(1530, 0), (1620, 100_000)]);
+    let h = history(&points);
+    let v = values(&h, &Metric::Online, &Scope::All, average(RateMode::Value));
+    assert_eq!(v[0], None);
+    let at_day = v.len() - 3;
+    assert_number(v[at_day], 300.0 / 24.0);
+    assert_eq!(coverage(v[at_day]), Duration::hours(24));
+    // At 25:30, clipping the triangle at 01:30 leaves 112.5 player-hours.
+    assert_number(v[at_day + 1], 112.5 / 24.0);
+    let Some(MetricValue::Average {
+        start, percentage, ..
+    }) = v[at_day + 1]
+    else {
+        panic!()
+    };
+    assert!(!percentage);
+    assert_eq!(start, h.snapshots()[0].observed_at + Duration::minutes(90));
+    let mut future = h.snapshots().to_vec();
+    future.last_mut().unwrap().servers[0].online = 1_000_000;
+    let changed = values(
+        &History::new(future).unwrap(),
+        &Metric::Online,
+        &Scope::All,
+        average(RateMode::Value),
+    );
+    assert_eq!(v[..v.len() - 1], changed[..changed.len() - 1]);
+}
+
+#[test]
+fn coverage_requires_eighteen_hours_and_rejects_long_intervals_before_clipping() {
+    let h = hourly(18, 100);
+    let v = values(&h, &Metric::Online, &Scope::All, average(RateMode::Value));
+    assert!(v[..18].iter().all(Option::is_none));
+    assert_number(v[18], 100.0);
+    assert_eq!(coverage(v[18]), Duration::hours(18));
+    let mut snapshots = h.snapshots().to_vec();
+    snapshots[0].observed_at += Duration::seconds(1);
+    let v = values(
+        &History::new(snapshots).unwrap(),
+        &Metric::Online,
+        &Scope::All,
+        average(RateMode::Value),
+    );
+    assert_eq!(v[18], None);
+    // Exactly three hours is accepted.
+    let h = history(&(0..=6).map(|i| (i * 180, 100)).collect::<Vec<_>>());
+    assert_number(
+        values(&h, &Metric::Online, &Scope::All, average(RateMode::Value))[6],
+        100.0,
+    );
+    let mut too_long = h.snapshots().to_vec();
+    too_long[1].observed_at += Duration::seconds(1);
+    assert_eq!(
+        values(
+            &History::new(too_long).unwrap(),
+            &Metric::Online,
+            &Scope::All,
+            average(RateMode::Value)
+        )[6],
+        None
+    );
+    assert_number(
+        values(
+            &hourly(18, 0),
+            &Metric::Online,
+            &Scope::All,
+            average(RateMode::Value),
+        )[18],
+        0.0,
+    );
+    // Two five-hour gaps leave fourteen covered hours, despite many snapshots.
+    let h = history(
+        &(0..=24)
+            .filter(|h| !(5..9).contains(h) && !(15..19).contains(h))
+            .map(|h| (h * 60, 100))
+            .collect::<Vec<_>>(),
+    );
+    assert_eq!(
+        values(&h, &Metric::Online, &Scope::All, average(RateMode::Value)).last(),
+        Some(&None)
+    );
+    // The long interval 0..5 remains excluded even when the cutoff clips it to 2..5.
+    let h = history(
+        &std::iter::once((0, 100))
+            .chain((5..=26).map(|h| (h * 60, 100)))
+            .collect::<Vec<_>>(),
+    );
+    let v = values(&h, &Metric::Online, &Scope::All, average(RateMode::Value));
+    assert_eq!(coverage(*v.last().unwrap()), Duration::hours(21));
+}
+
+#[test]
+fn gaps_are_excluded_from_both_area_and_duration() {
+    let h = history(
+        &(0..=24)
+            .filter(|h| !(10..13).contains(h))
+            .map(|h| (h * 60, if h < 10 { 100 } else { 300 }))
+            .collect::<Vec<_>>(),
+    );
+    let v = values(&h, &Metric::Online, &Scope::All, average(RateMode::Value));
+    let last = *v.last().unwrap();
+    assert_eq!(coverage(last), Duration::hours(20));
+    assert_number(last, (9.0 * 100.0 + 11.0 * 300.0) / 20.0);
+    // No carrying a value across a long outage, or averaging an isolated point.
+    let h = history(&[(0, 100), (1440, 100), (3000, 100)]);
+    assert!(
+        values(&h, &Metric::Online, &Scope::All, average(RateMode::Value))
+            .iter()
+            .all(Option::is_none)
+    );
+}
+
+#[test]
+fn rolling_ratios_average_snapshot_ratios_and_leave_other_metrics_unchanged() {
+    let original = hourly(18, 20);
+    let mut snapshots = original.snapshots().to_vec();
+    snapshots[0].servers[0].online = 10;
+    snapshots[0].servers[0].daily_active = 10;
+    snapshots[0].servers[0].monthly_active = 10;
+    snapshots[0].active_subscriptions = 10;
+    for snapshot in &mut snapshots[1..] {
+        snapshot.servers[0].daily_active = 100;
+    }
+    let h = History::new(snapshots).unwrap();
+    for metric in [
+        Metric::OnlineDaily,
+        Metric::OnlineMonthly,
+        Metric::OnlineSubscriptions,
+        Metric::OnlineShare,
+    ] {
+        let v = values(
+            &h,
+            &metric,
+            &Scope::Server("a".into()),
+            average(RateMode::Value),
+        );
+        assert_number(
+            v[18],
+            if metric == Metric::OnlineDaily {
+                (60.0 + 17.0 * 20.0) / 18.0
+            } else {
+                100.0
+            },
+        );
+        assert!(matches!(
+            v[18],
+            Some(MetricValue::Average {
+                percentage: true,
+                ..
+            })
+        ));
+    }
+    for metric in [
+        Metric::Daily,
+        Metric::Monthly,
+        Metric::Subscriptions,
+        Metric::DailyMonthly,
+        Metric::DailySubscriptions,
+        Metric::MonthlySubscriptions,
+    ] {
+        for mode in RateMode::ALL {
+            assert_eq!(
+                values(&h, &metric, &Scope::All, average(mode)),
+                values(&h, &metric, &Scope::All, view(mode, TrendWindow::Hours6))
+            );
+        }
+    }
+}
+
+#[test]
+fn rates_are_calculated_after_rolling_averages() {
+    let h = history(
+        &(0..=30)
+            .map(|h| (h * 60, h as u64 * 10))
+            .collect::<Vec<_>>(),
+    );
+    let changes = values(&h, &Metric::Online, &Scope::All, average(RateMode::Change));
+    assert!(changes[..=18].iter().all(Option::is_none));
+    assert_number(changes[19], 5.0); // Mean of the growing covered interval.
+    assert_number(changes[25], 10.0); // Full 24-hour window moves one hour.
+    let trends = values(&h, &Metric::Online, &Scope::All, average(RateMode::Trend));
+    assert_eq!(trends[20], None);
+    assert_number(trends[21], 5.0);
+    assert_number(trends[30], 10.0);
+}
+
+#[test]
+fn missing_values_exclude_adjacent_intervals_without_discarding_earlier_coverage() {
+    let mut snapshots = hourly(24, 100).snapshots().to_vec();
+    snapshots[20].servers[0].starting_zones.clear();
+    snapshots[20].servers[0].daily_active = 0;
+    let h = History::new(snapshots).unwrap();
+    for metric in [Metric::Zone("z".into(), "Z".into()), Metric::OnlineDaily] {
+        let v = values(&h, &metric, &Scope::All, average(RateMode::Value));
+        assert_eq!(v[20], None);
+        assert_number(v[21], 100.0);
+        assert_eq!(coverage(v[21]), Duration::hours(19));
+        assert_eq!(coverage(v[24]), Duration::hours(22));
+    }
+    // All Zones remains valid: a published empty list means zero.
+    let v = values(
+        &h,
+        &Metric::StartingZones,
+        &Scope::All,
+        average(RateMode::Value),
+    );
+    assert_eq!(coverage(v[24]), Duration::hours(24));
+    assert_number(v[24], 2300.0 / 24.0);
+}
+
+#[test]
+fn contributor_changes_restart_totals_and_shares_but_not_unchanged_servers() {
+    let mut snapshots = hourly(40, 100).snapshots().to_vec();
+    for snapshot in &mut snapshots[20..] {
+        let mut server = snapshot.servers[0].clone();
+        server.id = "b".into();
+        snapshot.servers.push(server);
+    }
+    let h = History::new(snapshots).unwrap();
+    for (metric, scope, expected) in [
+        (Metric::Online, Scope::All, 200.0),
+        (Metric::OnlineShare, Scope::Server("a".into()), 50.0),
+    ] {
+        let v = values(&h, &metric, &scope, average(RateMode::Value));
+        assert!(v[20..38].iter().all(Option::is_none));
+        assert_number(v[38], expected);
+    }
+    let v = values(
+        &h,
+        &Metric::Online,
+        &Scope::Server("a".into()),
+        average(RateMode::Value),
+    );
+    assert_number(v[20], 100.0);
+    assert_eq!(coverage(v[20]), Duration::hours(20));
+}
+
+#[test]
+fn averaging_preserves_observation_positions_and_lookback_in_comparisons_and_timezones() {
+    let h = history(
+        &(0..72)
+            .map(|hour| (hour * 60, hour as u64 * 10))
+            .collect::<Vec<_>>(),
+    );
+    let now = h.snapshots().last().unwrap().observed_at;
+    let range = TimeRange::custom("2024-03-31", "2024-03-31").unwrap();
+    let computed = values(&h, &Metric::Online, &Scope::All, average(RateMode::Value));
+    for zone in [TimeZone::UTC, TimeZone::from_name("Europe/Berlin").unwrap()] {
+        for compare in [
+            Comparison::None,
+            comparison_for(
+                &h,
+                range,
+                now,
+                ComparisonMode::Previous,
+                DateMatching::ExactDate,
+                &[],
+                zone,
+            )
+            .unwrap(),
+        ] {
+            let mut plotted = plot(
+                &h,
+                &Metric::Online,
+                &[Scope::All],
+                range,
+                now,
+                &compare,
+                zone,
+            )
+            .unwrap();
+            let before = plotted.clone();
+            apply(&mut plotted, &h, average(RateMode::Value));
+            assert_eq!(plotted.x_bounds, before.x_bounds);
+            for (s, old) in plotted.series.iter().zip(before.series) {
+                assert_eq!(s.identity, old.identity);
+                assert_eq!(s.points.len(), old.points.len());
+                for (point, old) in s.points.iter().zip(old.points) {
+                    assert_eq!((point.at, point.x), (old.at, old.x));
+                    let i = h
+                        .snapshots()
+                        .binary_search_by_key(&point.at, |s| s.observed_at)
+                        .unwrap();
+                    assert_eq!(point.value, computed[i]);
+                }
+            }
+        }
+    }
+    assert_number(computed[24], 120.0); // Integral over hours 0..24, including lookback before the selected day.
+}
+
+#[test]
+fn average_labels_only_distinguish_mixed_averaging_behavior() {
+    let h = hourly(24, 100);
+    let now = h.snapshots().last().unwrap().observed_at;
+    let metrics = [
+        Metric::OnlineDaily,
+        Metric::OnlineMonthly,
+        Metric::OnlineSubscriptions,
+        Metric::DailySubscriptions,
+        Metric::MonthlySubscriptions,
+    ];
+    let mut plotted = engagement_plot(
+        &h,
+        &metrics,
+        &[Scope::All],
+        TimeRange::All,
+        now,
+        &Comparison::None,
+        TimeZone::UTC,
+    )
+    .unwrap();
+    let original = plotted.clone();
+    apply(&mut plotted, &h, average(RateMode::Value));
+    for (series, old) in plotted.series.iter().zip(&original.series) {
+        let expected = if series.metric.supports_average() {
+            format!("{} (24-hour average) · All Servers", series.metric.title())
+        } else {
+            old.label.clone()
+        };
+        assert_eq!(plotted.series_label(series), expected);
+        assert_eq!(original.series_label(old), old.label);
+        assert_eq!(series.identity, old.identity);
+        assert_eq!(series.style, old.style);
+    }
+    let figure: serde_json::Value = serde_json::from_str(
+        &mnm_stats_dashboard::charts::render(&plotted, &Metric::OnlineDaily).to_json(),
+    )
+    .unwrap();
+    assert_eq!(
+        figure["data"][0]["name"],
+        "Online / daily active (24-hour average) · All Servers"
+    );
+    assert!(
+        figure["data"][0]["text"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|text| text
+                .as_str()
+                .unwrap_or_default()
+                .contains("Online / daily active (24-hour average) · All Servers"))
+    );
+
+    // Removing unaveraged metrics restores the original labels, including when
+    // several online ratios or comparison series remain selected.
+    plotted.series.retain(|s| s.metric.supports_average());
+    for series in &plotted.series {
+        assert_eq!(plotted.series_label(series), series.label);
+    }
+    plotted
+        .series
+        .retain(|s| s.metric == Metric::OnlineSubscriptions);
+    assert_eq!(
+        plotted.series_label(&plotted.series[0]),
+        plotted.series[0].label
+    );
+    for metric in [Metric::Online, Metric::StartingZones, Metric::OnlineShare] {
+        let mut single = plot(
+            &h,
+            &metric,
+            &[Scope::All],
+            TimeRange::All,
+            now,
+            &Comparison::None,
+            TimeZone::UTC,
+        )
+        .unwrap();
+        apply(&mut single, &h, average(RateMode::Value));
+        for series in &single.series {
+            assert_eq!(single.series_label(series), series.label);
+        }
+    }
 }

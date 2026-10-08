@@ -75,6 +75,18 @@ pub enum Metric {
 }
 
 impl Metric {
+    pub fn supports_average(&self) -> bool {
+        matches!(
+            self,
+            Self::Online
+                | Self::StartingZones
+                | Self::Zone(..)
+                | Self::OnlineShare
+                | Self::OnlineDaily
+                | Self::OnlineMonthly
+                | Self::OnlineSubscriptions
+        )
+    }
     pub fn key(&self) -> String {
         match self {
             Self::Daily => "daily",
@@ -234,6 +246,12 @@ pub enum MetricValue {
         numerator: u128,
         denominator: u128,
     },
+    Average {
+        value: f64,
+        percentage: bool,
+        covered: Duration,
+        start: DateTime<Utc>,
+    },
     Rate {
         value: f64,
         unit: crate::rates::RateUnit,
@@ -245,7 +263,7 @@ impl MetricValue {
     pub fn number(self) -> f64 {
         match self {
             Self::Count(n) => n as f64,
-            Self::Rate { value, .. } => value,
+            Self::Rate { value, .. } | Self::Average { value, .. } => value,
             Self::Ratio {
                 numerator,
                 denominator,
@@ -256,6 +274,15 @@ impl MetricValue {
     pub fn display(self) -> String {
         match self {
             Self::Count(n) => n.to_string(),
+            Self::Average {
+                value, percentage, ..
+            } => {
+                if percentage {
+                    format!("{value:.2}%")
+                } else {
+                    format!("{value:.2}")
+                }
+            }
             Self::Rate { value, unit, .. } => format!(
                 "{:+.2} {}",
                 if value.abs() < 0.005 { 0.0 } else { value },
@@ -881,6 +908,21 @@ pub struct Plot {
     pub alignment: Alignment,
     pub x_bounds: (f64, f64),
     pub note: String,
+}
+
+impl Plot {
+    pub fn series_label(&self, series: &Series) -> String {
+        if self.view.aggregation == crate::rates::Aggregation::Snapshot
+            || !series.metric.supports_average()
+            || self.series.iter().all(|s| s.metric.supports_average())
+        {
+            return series.label.clone();
+        }
+        let title = series.metric.title();
+        let prefix = format!("{title} · ");
+        let scope = series.label.strip_prefix(&prefix).unwrap_or(&series.label);
+        format!("{title} (24-hour average) · {scope}")
+    }
 }
 
 pub fn plot(

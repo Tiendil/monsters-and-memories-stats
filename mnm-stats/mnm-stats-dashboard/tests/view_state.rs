@@ -246,7 +246,14 @@ fn chart_rate_views_round_trip_independently_with_inactive_windows() {
         );
         for mode in RateMode::ALL {
             for window in TrendWindow::ALL {
-                state.chart_views.insert(chart, ChartView { mode, window });
+                state.chart_views.insert(
+                    chart,
+                    ChartView {
+                        mode,
+                        window,
+                        ..Default::default()
+                    },
+                );
                 assert_eq!(ViewState::from_fragment(&state.fragment()), state);
                 let link = state.link("trends");
                 assert_eq!(
@@ -266,9 +273,42 @@ fn chart_rate_views_round_trip_independently_with_inactive_windows() {
     assert_eq!(
         invalid.chart_views[&LineChart::Monthly],
         ChartView {
+            aggregation: Default::default(),
             mode: RateMode::Trend,
             window: TrendWindow::Days7
         }
     );
     assert!(!invalid.fragment().contains("unknown"));
+}
+
+#[test]
+fn averaging_round_trips_per_chart_and_ignores_unsupported_or_invalid_choices() {
+    use mnm_stats_dashboard::rates::*;
+    let mut state = ViewState::default();
+    assert!(!state.fragment().contains("aggregation"));
+    for chart in LineChart::ALL {
+        assert_eq!(state.chart_views[&chart].aggregation, Aggregation::Snapshot);
+        if chart.supports_average() {
+            state.chart_views.get_mut(&chart).unwrap().aggregation = Aggregation::Average24;
+            assert_eq!(ViewState::from_fragment(&state.fragment()), state);
+            assert_eq!(
+                ViewState::from_fragment(&state.link("trends")).chart_views,
+                state.chart_views
+            );
+        }
+    }
+    let parsed = ViewState::from_fragment(
+        "#chart-online?aggregation-online=24h&aggregation-daily=24h&aggregation-monthly=24h&aggregation-online-share=wrong&aggregation-unknown=24h",
+    );
+    assert_eq!(
+        parsed.chart_views[&LineChart::Online].aggregation,
+        Aggregation::Average24
+    );
+    for chart in [LineChart::Daily, LineChart::Monthly, LineChart::OnlineShare] {
+        assert_eq!(
+            parsed.chart_views[&chart].aggregation,
+            Aggregation::Snapshot
+        );
+    }
+    assert_eq!(parsed.fragment(), "#chart-online?aggregation-online=24h");
 }

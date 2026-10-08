@@ -2,7 +2,7 @@ use crate::{
     analysis::*,
     charts,
     charts::browser::{InteractiveHeatmap, InteractivePlot},
-    rates::{self, ChartView, LineChart, RateMode, TrendWindow},
+    rates::{self, Aggregation, ChartView, LineChart, RateMode, TrendWindow},
     time::{TimeMode, TimeZone, browser_time_zone},
     trends::{self, BusyGrouping, PopulationSummary, TrendPeriod},
     view_state::*,
@@ -230,6 +230,7 @@ fn Methodology() -> impl IntoView {
         "Busiest hours applies the same calculation within each three-hour window.",
         "“Rate of change” is the change between consecutive snapshots divided by the elapsed time. Intervals of 24 hours or more are omitted. Calculations may use observations before the displayed date range. Percentage-chart rates use percentage points, not relative percentage growth. Rates describe past changes, not forecasts.",
         "“Trend rate” is the slope of a straight line fitted to observations within the selected window. Gaps indicate insufficient data coverage. Calculations may use observations before the displayed date range. Percentage-chart rates use percentage points, not relative percentage growth. Rates describe past changes, not forecasts.",
+        "“24-hour average” smooths hourly fluctuations to make longer-term changes easier to see. Values are weighted by the time between observations, assuming a gradual change across intervals of up to three hours. At least 18 of the preceding 24 hours must be covered. For ratios, we average the percentages calculated for each snapshot.",
     ];
     view! {
         <section id="methodology" tabindex="-1" class="methodology" aria-labelledby="methodology-heading">
@@ -503,6 +504,16 @@ fn DateControls(
 fn RateControls(chart: LineChart, selected: Memo<ChartView>) -> impl IntoView {
     let views = expect_context::<ViewSignals>().chart_views;
     view! {
+        {chart.supports_average().then(|| view! {
+            <div class="chart-control aggregation-control">
+                <div class="aggregation-switch" role="group" aria-label="Time aggregation">
+                    {Aggregation::ALL.into_iter().map(|aggregation| view! {
+                        <button type="button" data-aggregation=aggregation.key() aria-pressed=move || (selected.get().aggregation == aggregation).to_string()
+                            on:click=move |_| views.update(|views| views.get_mut(&chart).unwrap().aggregation = aggregation)>{aggregation.label()}</button>
+                    }).collect_view()}
+                </div>
+            </div>
+        })}
         <div class="chart-control rate-control">
             <div class="rate-switch" role="group" aria-label="Chart view">
                 {RateMode::ALL.into_iter().map(|mode| view! {
@@ -629,6 +640,11 @@ fn ChartCard(
                     </Show>
                 }
             })}
+            <Show when=move || chart_view.get().aggregation == Aggregation::Average24 && !selection_empty.get()>
+                <p class="chart-note aggregation-explanation">{if chart == LineChart::SubscriberActivity {
+                    "24-hour averages for Online / subscribers; DAU and MAU series remain unchanged."
+                } else { "Average over the preceding 24 hours, updated at each snapshot." }}<MethodologyReference number=9/></p>
+            </Show>
             <Show when=move || chart_view.get().mode != RateMode::Value && !selection_empty.get()>
                 <p class="chart-note rate-explanation">{move || match chart_view.get().mode {
                     RateMode::Change => "Net change between consecutive snapshots, divided by elapsed time. Intervals of 24 hours or more are omitted.".to_owned(),
@@ -641,15 +657,21 @@ fn ChartCard(
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(plot) => {
                     let has_values = plot.series.iter().any(|s| s.points.iter().any(|p| p.value.is_some()));
+                    let average_unavailable = plot.view.aggregation == Aggregation::Average24
+                        && plot.view.mode == RateMode::Value
+                        && plot.series.iter().any(|s| s.metric.supports_average() && s.points.iter().all(|p| p.value.is_none()));
                     view! {
+                        <Show when=move || has_values && average_unavailable>
+                            <p class="chart-note">"Not enough data for a 24-hour average in some series. At least 18 hours of coverage is required."</p>
+                        </Show>
                         <ul class="legend" aria-label="Chart series">{plot.series.iter().map(|series| view! {
-                            <li><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style)/></svg><span>{series.label.clone()}</span></li>
+                            <li><svg class="swatch" viewBox="0 0 48 8" aria-hidden="true"><line x1="0" y1="4" x2="48" y2="4" stroke=charts::css_color(series.style)/></svg><span>{plot.series_label(series)}</span></li>
                         }).collect_view()}</ul>
                         <p class="chart-note">{plot.note.clone()}</p>
                         {if has_values {
                             view! { <InteractivePlot plot=plot.clone() metric=chart_metric.clone()/> }.into_any()
                         } else {
-                            view! { <p class="empty-chart">{if chart_view.get().mode == RateMode::Value { "No available observations for this selection." } else { "Not enough observations to calculate rates for this selection. Choose a different range or view." }}</p> }.into_any()
+                            view! { <p class="empty-chart">{if average_unavailable { "Not enough data for a 24-hour average. At least 18 hours of coverage is required." } else if chart_view.get().mode == RateMode::Value { "No available observations for this selection." } else { "Not enough observations to calculate rates for this selection. Choose a different range or view." }}</p> }.into_any()
                         }}
                     }.into_any()
                 }

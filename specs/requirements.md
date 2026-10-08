@@ -324,14 +324,16 @@ Connections between consecutive available observations MUST use their actual col
 - At least 24 hours: no line.
 
 Unavailable metric values and absent calendar dates introduced by comparison alignment MUST interrupt connections regardless of the collection interval.
-Connections MUST be straight visual guides between observations, without adding values to hover details, calculations, or downloads.
+Connections MUST be straight visual guides between observations, without adding observations to hover details or downloads.
+The explicit Chart averaging calculation MAY integrate short intervals as defined below.
 
 **Example:** Observations exactly 3 hours apart are connected with a subdued gray solid line; observations exactly 24 hours apart are not connected.
 
 Charts MUST identify their series, units, and aggregation scope.
 They MUST remain usable at narrow viewport widths.
 Users MUST be able to inspect exact plotted values through point details and download all recorded observations as JSONL.
-In Value view, inspecting a plotted observation MUST show its exact value followed by its series name, then its collection date and time. Rate views MUST use the interval details defined in Chart rates below.
+In Snapshot Value view, inspecting a plotted observation MUST show its exact value followed by its series name, then its collection date and time.
+Averaged Value views MUST use the details defined in Chart averaging; rate views MUST use the interval details defined in Chart rates below.
 Desktop hover labels MUST use two lines; narrow-screen details MUST wrap below the chart so complete names and values remain readable.
 The displayed time MUST convert the original observation instant to the selected time zone, omitting seconds and fractional seconds.
 It MUST use a readable date without an ISO `T` separator or `Z` suffix.
@@ -339,12 +341,40 @@ Tooltip timestamps MUST end with the selected zone’s name, using `UTC` or the 
 The download MUST preserve each original timestamp at its full stored precision.
 This MUST work for every observation time-series chart and comparison mode, including dense series and overlapping comparison points.
 Aggregate heatmap details MUST follow Population insights below.
-In Value view, ratio details MUST show a percentage rounded to two decimal places, without a numerator/denominator breakdown or sample-coverage text.
+In Snapshot Value view, ratio details MUST show a percentage rounded to two decimal places, without a numerator/denominator breakdown or sample-coverage text.
 Desktop series names MUST remain on one line without an authored tooltip-width or character-count limit.
 Point details MUST refer only to collected observations and MUST NOT invent points inside gaps.
 Desktop hover labels MUST clear when the pointer leaves the plot; narrow-screen details MUST persist for scrolling until another point is inspected or the chart selection changes.
 Changing the chart selection MUST clear its previous point details.
 Unavailable data, initialization, and errors MUST use the states defined in [dashboard-design.md](dashboard-design.md#data-and-loading-states).
+
+### Chart averaging
+
+Online-related charts MUST offer Snapshot and 24-hour average, defaulting to Snapshot independently for each chart.
+The choice MUST persist across navigation, shared URLs, refresh, and Back/Forward.
+It MUST be available on Online, Starting-zone population, Server population share, Online presence, and Activity relative to subscribers.
+Only online-related series MUST be averaged; DAU/subscribers and MAU/subscribers MUST retain their existing values and rate calculations.
+Latest snapshot, heatmaps, Trends tables, downloads, and other charts MUST remain unchanged.
+
+At each original observation time, the average MUST integrate linearly interpolated metric values over the preceding 24 elapsed hours and divide by the covered duration.
+Ratios MUST be calculated per snapshot before averaging rather than dividing averaged counts.
+Only adjacent observations at most three hours apart with valid values at both endpoints MUST contribute an interval; longer intervals and intervals touching missing values or zero denominators MUST contribute neither area nor duration.
+Intervals crossing the window's start MUST be clipped to that boundary using their original endpoints; the three-hour limit MUST apply before clipping.
+Averages MUST require at least 18 covered hours; insufficient coverage or a missing current metric MUST yield an unavailable value.
+There MUST be no extrapolation before the first observation or across uncovered intervals.
+A change in contributing server identities MUST restart the affected averaging history.
+Changes to individual zone membership MUST NOT restart the validated All Zones total's average.
+Averages MUST preserve observation timestamps, collection-gap styling, comparison alignment, and series identities.
+They MUST use original elapsed time independently of the display time zone, including across daylight-saving changes.
+They MAY use earlier observations outside the displayed period but MUST NOT use observations later than the point being calculated.
+
+**Example:** Twenty covered hours within the trailing day use their integrated area divided by twenty hours.
+The missing four hours contribute neither zeros nor interpolated values.
+
+Rate modes MUST calculate changes and trends from the averaged series when averaging is selected, retaining their existing units, windows, and coverage rules.
+Averaged-value point details MUST identify the average, series, trailing 24-hour interval, and covered hours out of 24, with fractional values retained.
+An entirely unavailable averaged Value series MUST explain that at least 18 hours of coverage is required.
+A shared Methodology note MUST explain why averaging is useful, linear time weighting, the three-hour interval limit, the 18-hour coverage requirement, and averaging per-snapshot percentages for ratios.
 
 ### Chart rates
 
@@ -502,11 +532,11 @@ They MUST NOT be clamped to 100 percent.
 A zero denominator or unavailable value MUST yield “not available,” never infinity or a fabricated zero.
 
 Online ratios MUST use the online count and denominator from the same collected snapshot, independently for each selected server scope and period.
-Every selected observation MUST remain a separate point at its original timestamp, without daily aggregation.
+Every selected observation MUST remain a separate point at its original timestamp; Snapshot mode MUST preserve its original ratio, and 24-hour average MUST apply the Chart averaging rules.
 Missing hours and absent servers MUST NOT contribute zeros, interpolated values, or carried-forward observations.
 All-server ratios MUST divide the snapshot's summed online count by its summed daily or monthly active count, or by its global subscriber count.
-Period comparisons MUST preserve every original observation and its ratio while aligning timestamps using the ordinary comparison rules.
-Online-ratio point details MUST use the ordinary responsive format with the rounded percentage, series name, and observation timestamp.
+Period comparisons MUST preserve every original observation time while aligning timestamps using the ordinary comparison rules; the selected averaging mode determines its plotted value.
+Online-ratio point details in Snapshot mode MUST use the ordinary responsive format with the rounded percentage, series name, and observation timestamp.
 These points MUST retain the ordinary connection-interval rules.
 These ratios MUST be described as online presence, without claiming measured playtime, session length, retention, or subscriber conversion.
 

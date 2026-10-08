@@ -1397,6 +1397,122 @@ impl Browser {
         self.expect_count(".rate-switch", 0);
     }
 
+    fn verify_averaging(&self, url: &str, scope: &str, covered: bool) {
+        for key in [
+            "online",
+            "starting-zones",
+            "online-share",
+            "online-presence",
+            "subscriber-activity",
+        ] {
+            self.request(
+                Method::POST,
+                "/url",
+                json!({"url":format!("{url}#chart-{key}?range=all&scope=server%3A{scope}")}),
+            );
+            let card = format!("#chart-{key}");
+            self.expect_count(
+                &format!("{card} [data-aggregation='snapshot'][aria-pressed='true']"),
+                1,
+            );
+            let before = self.request(Method::POST, "/execute/sync", json!({
+                "script":"return document.querySelector(arguments[0]+' .plot-surface').data.filter(t=>t.name).map(t=>({x:t.x,y:t.y}));", "args":[card]
+            }));
+            self.click(&format!("{card} [data-aggregation='24h']"));
+            self.expect_count(
+                &format!("{card} [data-aggregation='24h'][aria-pressed='true']"),
+                1,
+            );
+            self.expect_count(
+                &format!("{card} .aggregation-explanation .methodology-reference a"),
+                1,
+            );
+            if covered {
+                wait_until(
+                    || {
+                        self.request(Method::POST, "/execute/sync", json!({
+                        "script":"return document.querySelector(arguments[0]+' .plot-surface')?.data.some(t=>t.text?.some(s=>s.includes('Coverage:') && s.includes('of 24 hours')));", "args":[card]
+                    })) == true
+                    },
+                    "time-weighted series with coverage rendered",
+                );
+                let after = self.request(Method::POST, "/execute/sync", json!({
+                    "script":"return document.querySelector(arguments[0]+' .plot-surface').data.filter(t=>t.name).map(t=>({x:t.x,y:t.y}));", "args":[card]
+                }));
+                assert_eq!(
+                    before.as_array().unwrap().len(),
+                    after.as_array().unwrap().len()
+                );
+                for (a, b) in before
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .zip(after.as_array().unwrap())
+                {
+                    // Null separators are visual guides, not observation coordinates.
+                    let coordinates = |v: &Value| {
+                        v["x"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .filter(|x| !x.is_null())
+                            .cloned()
+                            .collect::<Vec<_>>()
+                    };
+                    assert_eq!(coordinates(a), coordinates(b));
+                }
+                if key == "subscriber-activity" {
+                    assert_eq!(before[0], after[0]);
+                    assert_eq!(before[1], after[1]);
+                }
+            } else {
+                wait_until(
+                    || {
+                        self.text(&card)
+                            .contains("At least 18 hours of coverage is required.")
+                    },
+                    "insufficient average coverage explained",
+                );
+                if key != "subscriber-activity" {
+                    self.expect_count(&format!("{card} .plot-surface"), 0);
+                }
+            }
+            self.request(Method::POST, "/refresh", json!({}));
+            self.expect_count(
+                &format!("{card} [data-aggregation='24h'][aria-pressed='true']"),
+                1,
+            );
+            self.click(&format!("{card} [data-view='trend']"));
+            self.expect_count(&format!("{card} .rate-window option"), 3);
+            self.click(&format!("{card} [data-view='value']"));
+            self.click(&format!("{card} [data-aggregation='snapshot']"));
+            self.request(Method::POST, "/back", json!({}));
+            self.expect_count(
+                &format!("{card} [data-aggregation='24h'][aria-pressed='true']"),
+                1,
+            );
+            self.request(Method::POST, "/forward", json!({}));
+            self.expect_count(
+                &format!("{card} [data-aggregation='snapshot'][aria-pressed='true']"),
+                1,
+            );
+        }
+        for key in [
+            "daily",
+            "monthly",
+            "subscriptions",
+            "daily-monthly",
+            "activity-heatmap",
+        ] {
+            self.request(
+                Method::POST,
+                "/url",
+                json!({"url":format!("{url}#chart-{key}?range=all")}),
+            );
+            self.expect_count(&format!("#chart-{key} .aggregation-switch"), 0);
+        }
+    }
+
     fn verify_methodology(&self, url: &str) {
         for width in [390, 1440] {
             self.request(
@@ -1415,7 +1531,7 @@ impl Browser {
                     "/url",
                     json!({"url":format!("{url}#{tab}?tz=utc&range=30&compare=previous")}),
                 );
-                self.expect_count("main > .methodology li", 8);
+                self.expect_count("main > .methodology li", 9);
                 self.expect_count("[data-summary='daily'] .methodology-reference a", 1);
                 self.expect_count("[data-summary='monthly'] .methodology-reference a", 1);
                 self.expect_count("[data-summary='subscriptions'] .methodology-reference a", 1);
@@ -2368,6 +2484,7 @@ impl Browser {
         self.verify_fragment_navigation(url);
         self.verify_methodology(url);
         self.verify_rate_views(url);
+        self.verify_averaging(url, "a", false);
         self.verify_url_settings(url);
         self.verify_trends(url);
         println!(
@@ -3204,6 +3321,14 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     let expected = json!({"snapshots":parsed.snapshots()});
     browser.verify(&origin, &expected, scratch);
     assert!(browser.text("#demo-notice").contains("synthetic"));
+    browser.verify_averaging(&origin, "demo-0", true);
+    // Averaging checks use All time; the preview layout/hover checks use the default week.
+    browser.request(
+        Method::POST,
+        "/url",
+        json!({"url":format!("{origin}#overview?range=7")}),
+    );
+    browser.ready("online");
     browser.verify_checkbox_labels("harbor", "demo-0");
     browser.ready("online");
     let solid = "[data-metric='online'] .scatterlayer .trace:nth-child(1) .js-line";

@@ -253,7 +253,7 @@ The section MUST NOT repeat an all-server aggregation explanation above the coun
 Counts MUST be exact, readable integers with digit grouping, rather than abbreviated values or unexplained growth percentages.
 They MUST be visually stronger than supporting text.
 Cards MUST keep a small token-based gap between each link and its count; desktop labels MUST use their text height so the cards remain compact.
-Each card's link text MUST equal its corresponding plot title and MUST scroll to and focus that plot.
+Each card's link text MUST equal its corresponding plot title and MUST scroll to and focus that plot, retaining the chart's selected averaging mode.
 Activating a link from another content section MUST open Overview before scrolling, while preserving the view controls.
 A separate comparison-information section MUST NOT replace the cards.
 
@@ -393,6 +393,7 @@ Statement 5 MUST explain that typical online is the median of daily medians, wit
 Statement 6 MUST separately explain that Busiest hours applies the same calculation within each three-hour window.
 Statement 7 MUST explain elapsed-time differences for Rate of change and omission of intervals of 24 hours or more.
 Statement 8 MUST explain the fitted straight-line slope for Trend rate and gaps for insufficient data coverage.
+Statement 9 MUST explain the trailing 24-hour time-weighted average and its interpretation as defined in Chart averaging in [requirements.md](requirements.md#chart-averaging).
 Both rate statements MUST explain possible use of observations before the displayed range and percentage-point units for percentage charts, and clarify that rates describe past changes rather than forecasts.
 The collection-frequency phrase MUST have a superscript `[1]` link; the DAU and MAU chart headings, latest-snapshot values, and Engagement formulas using these counts MUST have superscript `[2]` links.
 The Subscribers snapshot value and the Subscribers and Activity relative to subscribers chart headings MUST link to statement 3.
@@ -400,6 +401,7 @@ The Starting-zone population and Starting-area activity headings MUST link to st
 References after “typical online population” in the Server growth and Starting-area activity descriptions MUST link to statement 5; the corresponding phrase in Busiest hours MUST link to statement 6.
 Each visible Rate of change explanation MUST end with a superscript `[7]` link to `methodology-rates`; each visible Trend rate explanation MUST end with a superscript `[8]` link to `methodology-trend-rate`.
 Value mode MUST NOT show either rate reference.
+When 24-hour average is selected, a concise explanation below the controls MUST link to statement 9 at `methodology-averages`; the subscriber-activity explanation MUST identify that only the Online / subscribers series is averaged.
 References MUST remain separate from chart permalinks and summary-to-chart links, retain visible focus, and have accessible names identifying their numbered notes.
 Statements MUST have stable anchors and be focusable when followed, without becoming additional tab stops in ordinary keyboard navigation.
 
@@ -445,10 +447,16 @@ Each time-series chart MUST present its content in this order:
 1. Short metric title.
 2. Formula, when applicable.
 3. Short explanation.
-4. A grouped control area for the chart view, its active trend window, and metric or zone selectors when present.
+4. A grouped control area for metric or zone selectors, optional averaging, the chart view, and its active trend window.
 5. Series legend.
 6. Visualization.
 
+Applicable online-related charts MUST also have a Snapshot / 24-hour average segmented control, with Snapshot selected by default and the accessible name “Time aggregation.”
+It MUST appear after any zones or metrics selector and before the chart-view controls, use the same compact styling, and wrap as a group on narrow screens.
+Chart titles MUST remain unchanged when switching averaging modes.
+Only charts mixing averaged and unaveraged selected metrics MUST add “(24-hour average)” to the complete averaged metric names in legends and tooltips; unaveraged metric names MUST remain unchanged.
+Charts whose selected metrics all have the same averaging behavior MUST retain their original series labels.
+Snapshot mode MUST restore the original labels, while chart anchors, series identities, colors, and Latest snapshot labels remain stable.
 Each line chart MUST have a segmented control with Value, Rate of change, and Trend rate, an accessible name without a visible heading, the existing selected-control colors, and visible keyboard focus.
 Trend rate MUST reveal a dropdown containing Last 6 hours, Last 24 hours, and Last 7 days, with a semibold lowercase “window” label without a colon beside the dropdown.
 The view choices, label, and dropdown MUST align their text baselines, with equal horizontal gaps on either side of the label when on one row.
@@ -489,7 +497,7 @@ Activity ratios MUST remain able to exceed 100 percent; server population shares
 
 ### Series presentation
 
-Time series MUST use unsmoothed lines so interpolation does not imply measured peaks or dips.
+Time series MUST use straight line segments so interpolation does not imply measured peaks or dips; the explicit 24-hour average control changes the plotted values without adding interpolated observations.
 Missing observations and gaps MUST retain the behavior defined in [requirements.md](requirements.md#dashboard-behavior).
 Markers SHOULD be reserved for isolated or sparse observations so dense hourly series remain readable.
 
@@ -514,8 +522,10 @@ The design MUST be reviewed with at least seven simultaneous series, including o
 ### Value inspection
 
 Chart point inspection MUST retain the exact-value and original-instant timestamp behavior defined in [requirements.md](requirements.md#dashboard-behavior).
-On desktop, the first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time with minute precision, ending in “UTC” or the browser’s IANA zone name such as “Europe/Berlin.”
-Value-view time-series tooltips MUST contain only the value and series name followed by the timestamp, without calculation breakdowns or sample-coverage text.
+On desktop, the first tooltip line MUST show the value followed by the series name; the second MUST show a human-readable date and time with minute precision and “UTC” or the browser’s IANA zone name such as “Europe/Berlin.”
+Averaged and rate views MUST use their observation intervals in place of a single timestamp.
+Snapshot Value tooltips MUST contain only the value and series name followed by the timestamp, without calculation breakdowns or sample-coverage text.
+Averaged Value tooltips MUST identify the 24-hour average, trailing window, and covered hours out of 24, as defined in [requirements.md](requirements.md#chart-averaging).
 Rate-view tooltips MUST show the signed rate and units with the series name, followed by the original interval used for the estimate.
 Desktop tooltip widths MUST follow their content without an authored width or character-count limit, and series names MUST remain on one line, including in heatmap tooltips.
 Chart height MUST accommodate simultaneous two-line time-series labels on desktop.
