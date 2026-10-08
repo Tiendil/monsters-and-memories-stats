@@ -361,7 +361,9 @@ The first observation, a missing metric, or an interval of at least 24 hours MUS
 Trend rate MUST use ordinary least-squares slope against original elapsed timestamps within the trailing window, without future samples, interpolation, or extrapolated observations.
 A trend MUST require at least four observations and at least half the window's expected hourly observations, spanning at least half the window.
 Its included samples MUST have no internal gap exceeding 3 hours for the 6-hour window or 6 hours for the 24-hour window; gaps of at least 24 hours MUST break every rate series, including the 7-day trend.
-Unavailable metrics and changes in the contributing server or starting-zone identities MUST break the calculation history for affected metrics.
+Unavailable metrics and changes in the contributing server identities MUST break the calculation history for affected metrics.
+All Zones rates MUST use the validated starting-area total without breaking when individual starting zones appear or disappear, including an empty zone list representing a zero total.
+Individual-zone rates MUST still break when the selected zone's value is unavailable.
 Unrelated server changes MUST NOT interrupt an individual server's count or the global subscription count.
 Server-share rates MUST treat changes in the all-server denominator's membership as a break.
 Rates MAY resume after a break once the remaining observations satisfy their coverage rules.

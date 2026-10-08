@@ -194,12 +194,84 @@ fn missing_entities_and_changing_contributors_never_create_growth() {
     let h = History::new(snapshots).unwrap();
     let v = values(
         &h,
-        &Metric::StartingZones,
+        &Metric::Zone("z".into(), "Z".into()),
         &Scope::All,
         view(RateMode::Change, TrendWindow::Hours6),
     );
     assert_eq!(v[1], None);
     assert_eq!(v[2], None);
+}
+
+#[test]
+fn starting_zone_totals_keep_rates_when_zone_membership_changes() {
+    let original = history(
+        &(0..=8)
+            .map(|h| (h * 60, 100 + h as u64 * 10))
+            .collect::<Vec<_>>(),
+    );
+    let mut snapshots = original.snapshots().to_vec();
+    for (i, snapshot) in snapshots.iter_mut().enumerate() {
+        let server = &mut snapshot.servers[0];
+        let total = server.starting_zones[0].online;
+        // A zone disappears and reappears while the combined total keeps growing.
+        server.starting_zones.clear();
+        let extra = if i == 4 { 0 } else { 10 };
+        if extra != 0 {
+            server.starting_zones.push(StartingZone {
+                id: "z".into(),
+                name: "Z".into(),
+                online: extra,
+            });
+        }
+        server.starting_zones.push(StartingZone {
+            id: "other".into(),
+            name: "Other".into(),
+            online: total - extra,
+        });
+    }
+    let h = History::new(snapshots).unwrap();
+    for scope in [Scope::All, Scope::Server("a".into())] {
+        for mode in [RateMode::Change, RateMode::Trend] {
+            let v = values(
+                &h,
+                &Metric::StartingZones,
+                &scope,
+                view(mode, TrendWindow::Hours6),
+            );
+            for value in &v[3..] {
+                assert_number(*value, 10.0);
+            }
+            let individual = values(
+                &h,
+                &Metric::Zone("z".into(), "Z".into()),
+                &scope,
+                view(mode, TrendWindow::Hours6),
+            );
+            assert_eq!(individual[4], None);
+            assert_eq!(individual[5], None);
+            assert_number(individual[8], 0.0);
+        }
+    }
+}
+
+#[test]
+fn empty_zone_lists_are_zero_totals_but_missing_servers_break_rates() {
+    let original = history(&[(0, 100), (60, 100), (120, 100), (180, 100)]);
+    let mut snapshots = original.snapshots().to_vec();
+    snapshots[1].servers[0].starting_zones.clear();
+    let h = History::new(snapshots.clone()).unwrap();
+    let settings = view(RateMode::Change, TrendWindow::Hours6);
+    let v = values(&h, &Metric::StartingZones, &Scope::All, settings);
+    assert_number(v[1], -100.0);
+    assert_number(v[2], 100.0);
+    snapshots[1].servers[0].id = "b".into();
+    let h = History::new(snapshots).unwrap();
+    for scope in [Scope::All, Scope::Server("a".into())] {
+        let v = values(&h, &Metric::StartingZones, &scope, settings);
+        assert_eq!(v[1], None);
+        assert_eq!(v[2], None);
+        assert_number(v[3], 0.0);
+    }
 }
 
 #[test]

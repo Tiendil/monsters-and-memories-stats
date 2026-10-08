@@ -175,7 +175,7 @@ fn difference(current: MetricValue, previous: MetricValue) -> f64 {
     }
 }
 
-fn contributors(snapshot: &Snapshot, metric: &Metric, scope: &Scope) -> Vec<(String, Vec<String>)> {
+fn contributors(snapshot: &Snapshot, metric: &Metric, scope: &Scope) -> Vec<String> {
     if *metric == Metric::Subscriptions {
         return Vec::new();
     }
@@ -187,15 +187,9 @@ fn contributors(snapshot: &Snapshot, metric: &Metric, scope: &Scope) -> Vec<(Str
                 || *scope == Scope::All
                 || matches!(scope, Scope::Server(id) if id == &s.id)
         })
-        .map(|s| {
-            let mut zones = if *metric == Metric::StartingZones {
-                s.starting_zones.iter().map(|z| z.id.clone()).collect()
-            } else {
-                Vec::new()
-            };
-            zones.sort();
-            (s.id.clone(), zones)
-        })
+        // All Zones is a validated server total, even when its zone list changes.
+        // Missing individual zones still break rates through their unavailable values.
+        .map(|s| s.id.clone())
         .collect();
     ids.sort();
     ids
