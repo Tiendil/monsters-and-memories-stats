@@ -135,6 +135,41 @@ fn changing_zone_lists_preserve_history_and_invalid_rows_never_append() {
 }
 
 #[test]
+fn empty_status_collection_retains_ptr_and_failed_status_preserves_history() {
+    let scratch = common::Scratch::new();
+    let history = scratch.0.join("history.jsonl");
+    let fixture = scratch.0.join("frames.json");
+    let marker = "<p id=\"starting-zone-empty-ptr\">Starting-zone status is not available.</p>";
+    let run = |total: &str, at: &str| {
+        fs::write(
+            &fixture,
+            serde_json::to_string(&common::with_zone_status("ptr", total, marker)).unwrap(),
+        )
+        .unwrap();
+        Command::new(env!("CARGO_BIN_EXE_mnm-stats-collector"))
+            .args(["collect", "--history"])
+            .arg(&history)
+            .arg("--replay")
+            .arg(&fixture)
+            .args(["--observed-at", at])
+            .output()
+            .unwrap()
+    };
+    assert!(run("0", "2026-10-02T15:20:00Z").status.success());
+    let before = fs::read_to_string(&history).unwrap();
+    let stored = mnm_stats_model::History::from_jsonl(&before).unwrap();
+    let ptr = stored.snapshots()[0]
+        .servers
+        .iter()
+        .find(|s| s.id == "ptr")
+        .unwrap();
+    assert_eq!(ptr.online, 271);
+    assert!(ptr.starting_zones.is_empty());
+    assert!(!run("1", "2026-10-02T16:20:00Z").status.success());
+    assert_eq!(fs::read_to_string(&history).unwrap(), before);
+}
+
+#[test]
 fn notification_probe_fails_with_local_fixture_without_changing_repository_history() {
     let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     let history = project.join("data/history.jsonl");

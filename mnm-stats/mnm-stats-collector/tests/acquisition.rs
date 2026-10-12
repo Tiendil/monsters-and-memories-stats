@@ -96,6 +96,56 @@ fn completed_zone_membership_is_discovered_per_server() {
 }
 
 #[test]
+fn completed_empty_status_preserves_test_and_production_server_metrics() {
+    for id in ["ptr", "nunavoth"] {
+        let marker = format!(
+            "<p id=\"starting-zone-empty-{id}\">Starting-zone status is not available.</p>"
+        );
+        let frames = with_zone_status(id, "0", &marker);
+        let snapshot = replay(&frames, time()).unwrap();
+        let server = snapshot.servers.iter().find(|s| s.id == id).unwrap();
+        assert!(server.starting_zones.is_empty());
+        assert_eq!(
+            (server.daily_active, server.monthly_active, server.online),
+            (745, 797, 271)
+        );
+        assert_eq!(snapshot.servers.len(), 6);
+        assert_eq!(snapshot.servers.iter().map(|s| s.online).sum::<u64>(), 4720);
+    }
+}
+
+#[test]
+fn invalid_empty_status_is_not_silently_discarded() {
+    let marker = "<p id=\"starting-zone-empty-ptr\">Starting-zone status is not available.</p>";
+    for (total, element) in [
+        ("1", marker.to_owned()),
+        ("0", format!("{marker}{marker}")),
+        (
+            "0",
+            format!(
+                "{marker}<div id=\"starting-zone-ptr-zone\"><span>Zone</span><span>0</span></div>"
+            ),
+        ),
+        ("0", marker.replace("ptr", "wrong")),
+        ("0", marker.replace("not available", "loading")),
+        (
+            "0",
+            marker.replace("<p ", "<div ").replace("</p>", "</div>"),
+        ),
+        (
+            "0",
+            marker.replace("Starting-zone", "<span>Starting-zone</span>"),
+        ),
+    ] {
+        let error = replay(&with_zone_status("ptr", total, &element), time())
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("server \"ptr\""), "{error}");
+        assert!(error.contains("#starting-zone-list-ptr"), "{error}");
+    }
+}
+
+#[test]
 fn invalid_dynamic_zones_explain_the_problem() {
     for (zones, total, diagnostic) in [
         (

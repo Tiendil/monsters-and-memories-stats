@@ -105,7 +105,7 @@ The dashboard MUST support comparisons between plots of similar nature, meaning 
 It MUST provide both comparison types:
 
 - Time-frame comparison — the same metric and entity scope over a primary range and previous, year-over-year, or custom periods, including month-to-month and year-to-year comparisons.
-- Entity comparison — the same metric and time interval across entities, including server-to-server and all-servers-to-server comparisons.
+- Entity comparison — the same metric and time interval across entities, including server-to-server and production-servers-to-server comparisons.
 
 Both comparison types MUST support more than two series in one comparison.
 Users MUST be able to add and remove comparison series.
@@ -156,9 +156,9 @@ The dashboard MUST NOT infer MAU by summing observations.
 
 Starting-zone counts MAY be summed by zone ID across servers, and across zones within a server.
 An individual zone absent from a server's observation MUST remain unavailable, not zero.
-An all-server count for an individual zone MUST be unavailable when any observed server omits that zone; a partial sum MUST NOT be presented as a complete total.
+A production-server count for an individual zone MUST be unavailable when any observed production server omits that zone; a partial sum MUST NOT be presented as a complete total.
 Starting-zone totals MUST sum each server's reported zone rows, including a zero total for a validated empty list.
-All-server daily/monthly activity MUST sum the source counts across servers without deduplication.
+Production-server daily/monthly activity MUST sum the source counts across production servers without deduplication.
 Such sums MUST NOT be described as game-wide unique active users, since one account may use multiple servers.
 The dashboard's shared Methodology section MUST explain this aggregation and link it from the DAU/MAU chart headings, their latest-snapshot values, and the Engagement formulas using these counts.
 Global subscriptions MUST remain global in a per-server view; per-server subscription numbers MUST NOT be invented.
@@ -167,6 +167,26 @@ Global subscriptions MUST remain global in a per-server view; per-server subscri
 
 Starting-zone population MUST NOT be described as new players or character creation counts.
 Historical values MUST retain server and zone identities even if those entities later disappear from the source.
+
+### Server environments
+
+Collection and history downloads MUST retain every valid discovered server, including test environments.
+Dashboard classification MUST use explicit source identities: `ptr` is a test server; other identities are production servers unless explicitly classified otherwise.
+Names, missing metrics, and zero values MUST NOT determine this classification.
+The default aggregate MUST be labeled “Production servers” and exclude test servers from counts, ratios, and their contributing-server sets.
+Latest snapshot population and activity counts MUST use the same production scope, independently of chart selections.
+Global subscriptions MUST remain unchanged because the source provides no environment-specific breakdown.
+Test servers MUST remain individually selectable with their source display names, counts, and ratios.
+Selecting a test server MUST NOT change production totals or production population-share denominators.
+Test servers MUST have no production population share.
+Production totals MUST be unavailable when an observation contains no production servers, while an explicitly reported production zero MUST remain zero.
+Rates and averages for production metrics MUST NOT restart solely because a test server appears or disappears.
+Default Trends rankings MUST include production servers only; explicitly selected test servers MUST remain available in Trends.
+Methodology MUST explain the test-server exclusion, retained individual access and history, and unchanged global subscriptions.
+
+**Example:** Production servers report 100 and 50 online while PTR reports 1,000.
+The production total is 150 and the first production server's share is two-thirds, even when PTR is selected alongside them.
+PTR retains its own 1,000 online value, but has no share of the production population.
 
 ## History and collection
 
@@ -219,6 +239,9 @@ The collector MUST discover starting-zone identities and names from each server'
 Zone additions, removals, and reordering MUST be accepted without code or configuration changes when the source contract is otherwise satisfied.
 Each snapshot MUST retain exactly the zones reported for each server, without filling omitted zones from earlier observations or assigning them zero counts.
 An empty list MUST be accepted only when the required published starting-zone total is zero.
+The source's empty-state paragraph with ID `starting-zone-empty-<server ID>` and text “Starting-zone status is not available.” MUST also represent an empty list when it is the sole list element, contains no child elements, and the completed rendering explicitly publishes a zero total.
+An unknown or malformed status marker, a marker mixed with zone rows, or a nonzero total MUST fail collection.
+The marker alone MUST NOT establish zero counts for omitted individual zones.
 An absent list, malformed row, or inconsistent total MUST still fail collection.
 
 **Example:** One server reports four valid zones whose counts sum to its published total while another reports five.
@@ -274,7 +297,7 @@ Other MUST NOT assign a category label automatically.
 Links and screenshots MUST remain optional additions within the description, without separate fields or checklists.
 “Feedback” and “Star on GitHub” MUST open in a new tab or window without giving the destination access to the dashboard's opener.
 
-The dashboard MUST have an all-servers view and derive its server selector from collected history, including entities present only in historical data.
+The dashboard MUST have a production-servers view and derive its server selector from collected history, including entities present only in historical data.
 Visible server and zone labels MUST use the source display name when it is nonblank, otherwise the source ID.
 Labels MUST NOT append technical IDs to available display names; internal identities and downloaded data MUST remain unchanged.
 It MUST plot the following over time:
@@ -395,7 +418,7 @@ Unavailable metrics and changes in the contributing server identities MUST break
 All Zones rates MUST use the validated starting-area total without breaking when individual starting zones appear or disappear, including an empty zone list representing a zero total.
 Individual-zone rates MUST still break when the selected zone's value is unavailable.
 Unrelated server changes MUST NOT interrupt an individual server's count or the global subscription count.
-Server-share rates MUST treat changes in the all-server denominator's membership as a break.
+Server-share rates MUST treat changes in the production-server denominator's membership as a break.
 Rates MAY resume after a break once the remaining observations satisfy their coverage rules.
 
 Calculations MUST use original instants before period alignment and MAY use preceding history outside the displayed range to avoid changing a rate when the visible range changes.
@@ -434,10 +457,10 @@ Stored observations and downloaded timestamps MUST remain unchanged in UTC.
 ### Population insights
 
 The Player activity section MUST include server population share over time and an activity heatmap derived from collected online counts.
-Server population share MUST divide a server's online count by the sum of all server online counts in the same snapshot and display a percentage on a 0–100 percent axis.
+Server population share MUST divide a production server's online count by the sum of production server online counts in the same snapshot and display a percentage on a 0–100 percent axis.
 Selecting individual servers MUST NOT change that denominator.
-For this chart, “All Servers” MUST expand to all discovered individual servers, without a redundant 100-percent total or duplicate lines when individual servers are also selected.
-An absent server or zero all-server total MUST yield an unavailable share; a published zero with a positive total MUST remain zero.
+For this chart, “Production servers” MUST expand to all discovered individual production servers, without a redundant 100-percent total or duplicate lines when individual servers are also selected.
+An absent server or zero production-server total MUST yield an unavailable share; a published zero with a positive total MUST remain zero.
 Share lines MUST retain ordinary observation gaps, percentage hover values, and server/period identities.
 
 The activity heatmap MUST group available online observations by their original instant’s weekday and hour in the selected time zone, with Monday through Sunday and hours 00 through 23.
@@ -457,14 +480,15 @@ The UI MUST describe the heatmap values as averages of online populations.
 These are sampled averages whose coverage can be uneven.
 
 The shared Servers and time controls MUST govern both views, including more than two entities or periods.
-The heatmap MUST show a separate labeled panel per server scope and period, with “All Servers” representing the summed online count in each observation.
-Heatmaps MUST use two independent linear color scales, each spanning the smallest to the largest available cell mean in its group:
+The heatmap MUST show a separate labeled panel per server scope and period, with “Production servers” representing the summed production online count in each observation.
+Heatmaps MUST use independent linear color scales, each spanning the smallest to the largest available cell mean in its group:
 
-- All-servers totals, shared across the selected periods.
-- Individual servers, shared across every discovered server and the selected periods, including unchecked servers.
+- Production-servers totals, shared across the selected periods.
+- Individual production servers, shared across every discovered production server and the selected periods, including unchecked servers.
+- Test servers, shared across every discovered test server and the selected periods, including unchecked servers.
 
-The total MUST NOT influence the individual-server scale, and individual-server means MUST NOT influence the total scale.
-Server selection MUST control panel visibility without changing either scale for the same selected periods.
+Each group's values MUST NOT influence another group's scale.
+Server selection MUST control panel visibility without changing any scale for the same selected periods.
 Missing cells MUST NOT affect these bounds; a measured zero MUST be included.
 If every available cell in a scale group has the same mean, that scale MUST use a nonnegative, nonzero span containing and labeling that value so constant selections remain readable.
 Each displayed scale range MUST be labeled and recomputed when the selected time zone, time range, or comparison periods change.
@@ -485,7 +509,7 @@ It MUST use the shared server and time-zone selections and show Week, Month, and
 These columns MUST compare the last 7, 30, and 365 complete calendar dates in the selected zone with the preceding equal number of dates, respectively.
 The current calendar date MUST be excluded; both resolved date ranges MUST be available from each column header.
 Chart range, comparison, zone, and engagement selections MUST remain preserved but MUST NOT affect these rankings.
-“All Servers” MUST expand into individual servers without duplicate rows or an aggregate competing with its components.
+“Production servers” MUST expand into individual production servers without duplicate rows or an aggregate competing with its components.
 Missing servers MUST remain unavailable rather than zero, including servers absent for an entire period.
 
 Typical online MUST be the median of qualifying daily median online counts, giving each qualifying date equal weight.
@@ -534,7 +558,7 @@ A zero denominator or unavailable value MUST yield “not available,” never in
 Online ratios MUST use the online count and denominator from the same collected snapshot, independently for each selected server scope and period.
 Every selected observation MUST remain a separate point at its original timestamp; Snapshot mode MUST preserve its original ratio, and 24-hour average MUST apply the Chart averaging rules.
 Missing hours and absent servers MUST NOT contribute zeros, interpolated values, or carried-forward observations.
-All-server ratios MUST divide the snapshot's summed online count by its summed daily or monthly active count, or by its global subscriber count.
+Production-server ratios MUST divide the snapshot's summed online count by its summed daily or monthly active count, or by its global subscriber count.
 Period comparisons MUST preserve every original observation time while aligning timestamps using the ordinary comparison rules; the selected averaging mode determines its plotted value.
 Online-ratio point details in Snapshot mode MUST use the ordinary responsive format with the rounded percentage, series name, and observation timestamp.
 These points MUST retain the ordinary connection-interval rules.
@@ -603,20 +627,20 @@ March's day 31 has no corresponding value in the February or April series.
 #### Entity comparison
 
 Entity comparisons MUST use the same selected time interval for every series.
-Entity choices MUST come from collected history, including historical servers, and MUST support selecting the all-servers view alongside individual servers.
+Entity choices MUST come from collected history, including historical servers, and MUST support selecting the production-servers view alongside individual servers.
 One shared multi-select labeled “Servers” MUST control the visible entities across charts and period comparisons.
 Each selected entity MUST have its own series; when periods are compared, each selected entity and period MUST have its own series.
 Server shares and heatmaps MUST use the expansion and panel rules under Population insights.
 Users MUST be able to turn individual entities on or off independently, including clearing the selection.
 An empty selection MUST show no data series and MUST offer an explicit selection prompt.
-The all-servers series MUST retain its ordinary aggregation semantics, including contributions from the individually selected servers where applicable.
-Server population share MUST use individual shares in place of an all-servers series.
+The production-servers series MUST retain its ordinary aggregation semantics, including contributions from the individually selected servers where applicable.
+Server population share MUST use individual shares in place of a production-servers series.
 Metrics available only globally MUST NOT be offered as if they had server-specific values.
 Global subscriptions MUST appear once in ordinary viewing or once per comparison period when at least one entity is selected.
 Periods when a selected entity has no observations MUST remain gaps.
 
-**Example:** An online-population comparison of all servers, Server A, and Server B displays three series.
-The all-servers series includes A and B when they are present in the corresponding observation.
+**Example:** An online-population comparison of production servers, production Server A, and production Server B displays three series.
+The production-servers series includes A and B when they are present in the corresponding observation.
 
 ### Embedded history
 
@@ -706,7 +730,7 @@ Review of dependencies and a subtraction pass over each component; no unnecessar
 ### Plot comparisons (R17)
 
 - Browser verification of month-to-month and year-to-year comparisons with at least three periods in every compatible plot family.
-- Browser verification of server-to-server and all-servers-to-server comparisons with at least three series, including adding and removing selections.
+- Browser verification of server-to-server and production-servers-to-server comparisons with at least three series, including adding and removing selections.
 - Calculation and browser checks for Previous period, Year over year, Custom period, enabling/disabling comparisons, and changes to the primary range.
 - Calculation and boundary checks for exact-date and weekday matching, elapsed and calendar alignment, unequal lengths, leap days, and stable automatic series identities.
 - Correct aggregation labels and visible gaps for incomplete periods or missing entity observations.

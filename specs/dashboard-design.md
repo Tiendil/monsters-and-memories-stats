@@ -91,17 +91,17 @@ Unavailable local time MUST follow the UTC fallback defined in [requirements.md]
 A shared control area MUST follow “Latest snapshot” and precede the active content.
 It MUST expose a multi-select labeled “Servers,” the time range, and period comparison for chart sections.
 In Trends, the chart date controls MUST be hidden while retaining their applied settings for return navigation.
-The Servers control MUST provide independently toggleable checkboxes for “All Servers” and every server discovered in the complete history.
+The Servers control MUST provide independently toggleable checkboxes for “Production servers” and every server discovered in the complete history.
 Server and zone names throughout the dashboard MUST use their display name when available, falling back to the ID for a missing or blank name without appending an ID to a display name.
-Only “All Servers” MUST be selected initially; selecting it MUST NOT select the individual-server checkboxes.
-The closed control MUST identify a single selected entity or summarize multiple selections, including whether “All Servers” is included; chart legends MUST show the selected identities.
+Only “Production servers” MUST be selected initially; selecting it MUST NOT select the individual-server checkboxes.
+The closed control MUST identify a single selected entity or summarize multiple selections, including whether “Production servers” is included; chart legends MUST show the selected identities.
 The dropdown MUST support mouse, touch, and keyboard use without modifier keys, and MUST remain open while toggling choices.
 Escape MUST close the dropdown and restore focus to its trigger; clicking or moving focus outside MUST close it.
 Option labels MUST wrap long names, and long option lists MUST scroll within the dropdown.
 The closed control MAY truncate a long name visually when its full label remains accessible in the open dropdown and to assistive technology.
-An empty selection MUST show an explicit prompt to choose servers and a way to restore “All Servers,” without silently selecting an entity or plotting data.
+An empty selection MUST show an explicit prompt to choose servers and a way to restore “Production servers,” without silently selecting an entity or plotting data.
 The selected time range MUST remain apparent when its control is closed.
-The all-servers scope MUST be labeled “All Servers” in controls, chart labels, and value details.
+The production-servers scope MUST be labeled “Production servers” in controls, chart labels, and value details.
 All time ranges MUST remain available, with their boundaries and default defined by [requirements.md](requirements.md#dashboard-behavior).
 The control area MUST NOT repeat the selected interval and observation count in a separate summary row; the selected range MUST remain apparent from the controls and chart ticks.
 
@@ -197,6 +197,7 @@ Parameters MUST encode applied view settings with these names:
 - `window-<chart>`: `6h`, `24h`, or `7d`, retained even when Trend rate is inactive.
 
 Server and zone IDs MUST be used instead of display names so renaming an entity does not invalidate its links.
+The existing `scope=all` value MUST select the “Production servers” aggregate, preserving shared-link compatibility.
 Missing entity IDs MUST remain selected and appear as removable options labeled with their ID and “unavailable.”
 Generated links MUST omit default settings, retain selection order, and use a consistent parameter order.
 An explicit empty value for a selection parameter MUST represent no selections; an omitted parameter MUST use that control's defaults.
@@ -238,17 +239,17 @@ It MUST show four counts from the latest collected snapshot in the complete load
 - Monthly active (MAU).
 - Subscribers.
 
-Online, daily, and monthly counts MUST sum all servers in that snapshot; the subscriber count MUST use its global active-subscription value.
+Online, daily, and monthly counts MUST sum production servers in that snapshot; the subscriber count MUST use its global active-subscription value.
 Server, time-range, and comparison controls MUST NOT change these counts or hide the section.
 The heading MUST have an adjacent smaller, muted timestamp from that same snapshot, displayed to the minute in the selected time zone without a zone suffix.
 The timestamp MUST appear below the heading on narrow screens and update when the time-zone selection changes.
 Empty history MUST omit the timestamp rather than invent a date.
 Empty history MUST show “Not available” for all four values, and published zeros MUST remain zero.
 The UI MUST NOT retrieve older values or sum successive daily/monthly observations to fill these counts.
-The section MUST NOT repeat an all-server aggregation explanation above the counts.
+The section MUST NOT repeat a production-server aggregation explanation above the counts.
 
 **Example:** A visitor selects a retired server and a historical month for the plots.
-“Latest snapshot” continues to show all-server totals from the latest collected snapshot, even when the selected charts have no observations.
+“Latest snapshot” continues to show production-server totals from the latest collected snapshot, even when the selected charts have no observations.
 
 Counts MUST be exact, readable integers with digit grouping, rather than abbreviated values or unexplained growth percentages.
 They MUST be visually stronger than supporting text.
@@ -292,12 +293,12 @@ Legends and hover details MUST identify the zone or “All Zones,” server scop
 Zone/server/period combinations MUST have distinct, stable series identities, preserving their colors when other selections change.
 
 Server population share MUST use the time-series chart anatomy and a 0–100 percent axis.
-A short note MUST explain that “All Servers” shows individual shares of the complete observed total.
+A short note MUST explain that “Production servers” shows individual shares of the total.
 Activity heatmap MUST use separate labeled panels for each selected server scope and period, arranged vertically at full width.
 Each panel MUST show weekday rows ordered Monday through Sunday and hour columns ordered 00 through 23, with the hour axis explicitly identifying UTC or local time.
 Each panel MUST have a visible horizontal axis below its cells, labeled “Time of day (UTC)” or “Time of day (local),” according to the selected zone, with 24-hour `HH:MM` tick labels.
 Time labels MUST remain horizontal and readable without overlap at narrow widths.
-A labeled sequential color scale MUST show mean online counts, with independent bounds for all-servers totals and individual servers as defined in [requirements.md](requirements.md#population-insights).
+A labeled sequential color scale MUST show mean online counts, with independent bounds for production totals, individual production servers, and test servers as defined in [requirements.md](requirements.md#population-insights).
 The scale MUST use the published Inferno sequential palette, progressing from near-black through purple and orange to bright yellow as activity increases.
 The scale MUST label its lower and upper bounds, with intermediate labels where space permits.
 Labels MUST use ordinary numbers with thousands separators rather than scientific notation, retaining decimals when needed to distinguish small averages.
@@ -305,9 +306,9 @@ Scale labels MUST remain readable without overlap or clipping at narrow widths.
 Unobserved cells MUST retain the neutral chart surface and remain distinguishable from measured zero.
 The heatmap MUST NOT use categorical line swatches to represent its intensity scale.
 A short note MUST explain weekday/hour averages and increasing brightness for higher values.
-It MUST identify blank cells as missing observations and explain that individual servers share a scale including unchecked servers, while “All Servers” uses a separate scale.
+It MUST identify blank cells as missing observations and explain that individual production servers share a scale including unchecked production servers, while production totals and test servers use separate scales.
 It MUST briefly explain that separate scales keep larger totals from hiding differences between individual servers.
-It MUST explain that both scales cover the selected periods.
+It MUST explain that all scales cover the selected periods.
 Cell hover MUST expose the aggregate details defined in [requirements.md](requirements.md#population-insights).
 An unavailable panel MUST identify its scope and period and show an empty-state message.
 
@@ -377,7 +378,7 @@ Online-presence explanations MUST identify the online population relative to dai
 Subscriber-activity explanations MUST identify the global subscriber count and state that ratios can exceed 100 percent.
 Detailed calculation rules, counting limitations, and missing-data rules MUST remain in [requirements.md](requirements.md), with shared user-facing explanations in Methodology rather than repeated in chart explanations or time-series tooltips.
 Series labels MUST identify the selected scope; heatmap and Trends details MUST retain their aggregate and coverage information defined above.
-The dashboard MUST NOT repeat all-server aggregation explanations above summaries or chart groups.
+The dashboard MUST NOT repeat production-server aggregation explanations above summaries or chart groups.
 Active selections and qualifications needed to interpret a displayed number MUST remain visible.
 Repeated paragraphs about the same source limitation MUST NOT push every chart below its own wall of prose.
 
@@ -386,7 +387,7 @@ Repeated paragraphs about the same source limitation MUST NOT push every chart b
 A section titled “Methodology” MUST appear below the active tab's content and above the footer, in every tab and empty-data state.
 It MUST present an ordered list of concise, factual statements in normal body text, separated from the charts with clear spacing and a subtle divider.
 Statement 1 MUST explain irregular collection intervals and gaps caused by possible delays or skipped GitHub Actions runs on the hourly schedule, without filling missing snapshots.
-Statement 2 MUST explain that official DAU/MAU counts are per server and “All Servers” values sum those counts without cross-server deduplication, so they can exceed the number of distinct active players.
+Statement 2 MUST explain that official DAU/MAU counts are per server and “Production servers” values sum those counts without cross-server deduplication, so they can exceed the number of distinct active players.
 Statement 3 MUST explain that Subscribers counts game-wide active subscriptions, not necessarily distinct players, and that per-server totals are unavailable.
 Statement 4 MUST distinguish starting-area population from new players or newly created characters and explain that Starting-area activity combines the areas within each server.
 Statement 5 MUST explain that typical online is the median of daily medians, with equal weight for each included day.
@@ -394,6 +395,9 @@ Statement 6 MUST separately explain that Busiest hours applies the same calculat
 Statement 7 MUST explain elapsed-time differences for Rate of change and omission of intervals of 24 hours or more.
 Statement 8 MUST explain the fitted straight-line slope for Trend rate and gaps for insufficient data coverage.
 Statement 9 MUST explain the trailing 24-hour time-weighted average and its interpretation as defined in Chart averaging in [requirements.md](requirements.md#chart-averaging).
+Statement 10 MUST briefly explain exclusion of test servers from player totals, population shares, and default Trends, while retaining individual access and downloaded history.
+It MUST identify the Public Test Server (PTR) without repeating the global-subscription explanation from statement 3.
+The Online latest-snapshot value MUST link to statement 10 at `methodology-test-servers`.
 Both rate statements MUST explain possible use of observations before the displayed range and percentage-point units for percentage charts, and clarify that rates describe past changes rather than forecasts.
 The collection-frequency phrase MUST have a superscript `[1]` link; the DAU and MAU chart headings, latest-snapshot values, and Engagement formulas using these counts MUST have superscript `[2]` links.
 The Subscribers snapshot value and the Subscribers and Activity relative to subscribers chart headings MUST link to statement 3.
@@ -425,7 +429,7 @@ An incomplete comparison MUST explain the next action, such as adding a period, 
 
 The selected servers MUST apply to every chart in both ordinary viewing and period comparisons, preserving selections across section and mode changes.
 Period comparisons MUST identify each selected entity and period in the chart legend or heatmap panel label.
-Server population share MUST expand All Servers into individual shares as defined in [requirements.md](requirements.md#population-insights).
+Server population share MUST expand Production servers into individual shares as defined in [requirements.md](requirements.md#population-insights).
 Global subscriptions MUST appear once per period, independently of the number of selected servers, and MUST disappear when no entities are selected.
 The primary range MUST control the primary chart series in every comparison mode.
 These stored selections MUST remain available when returning to ordinary mode.
@@ -534,7 +538,7 @@ The panel MUST retain all inspected series, exact values, original timestamps, a
 Heatmap details MUST use the same narrow-screen presentation.
 Details MUST remain available for scrolling after the pointer leaves the point, update on the next inspected point, and clear when the chart selection changes.
 
-**Example:** “429 All Servers” on the first line and “02 Oct 2026, 10:00 UTC” on the second.
+**Example:** “429 Production servers” on the first line and “02 Oct 2026, 10:00 UTC” on the second.
 
 The complete-history JSONL download MUST remain available independently of chart hover, including to touch and keyboard users.
 

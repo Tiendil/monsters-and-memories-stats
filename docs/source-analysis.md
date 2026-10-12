@@ -158,6 +158,21 @@ An omitted row does not establish a zero population.
 Collection discovers each server's reported zone list and validates row identities, names, counts, and totals under the [collection contract](../specs/requirements.md#history-and-collection).
 Synthetic variants of the existing local fixture cover the four-zone shape, newly introduced zones, reordering, explicit zeros, empty lists with zero totals, and invalid rows without refreshing source data during tests.
 
+## Public Test Server empty state
+
+The [scheduled collection at 21:28 UTC on 2026-10-12](https://github.com/Tiendil/monsters-and-memories-stats/actions/runs/38310822419) failed after readiness validation because `starting-zone-list-ptr` contained a paragraph with ID `starting-zone-empty-ptr` and text “Starting-zone status is not available.”
+The parser interpreted every list element as a zone row and rejected this status paragraph.
+History publication and the following dashboard deployment were skipped.
+
+A separate connected-browser inspection at 21:35 UTC on the same date showed the same paragraph as the sole element in PTR's starting-zone list, with an explicit starting-zone total of zero.
+The server name was “Public Test Server”; its completed daily and monthly active values were 0 and 45.
+This later inspection confirms the marker's shape but does not establish the failed response's unpublished counts.
+No individual starting-zone counts were reported, and the status message alone does not establish zeros for omitted zones.
+
+The [collection contract](../specs/requirements.md#history-and-collection) accepts this explicit empty state only with a published zero total after readiness.
+The [server-environment rules](../specs/requirements.md#server-environments) retain PTR data while separating it from production analytics.
+Synthetic local variants reproduce the marker without downloading or refreshing source fixtures during tests.
+
 ## Remaining verification
 
 The counting semantics of DAILY ACTIVE and MONTHLY ACTIVE remain unverified.

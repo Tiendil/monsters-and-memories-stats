@@ -68,6 +68,7 @@ Tests for `mnm-stats-collector` MUST cover:
 - Dynamic discovery of added, removed, and reordered server cards.
 - Dynamic discovery of added, omitted, and reordered starting zones independently for each server, including fewer zones on one server than on others.
 - Preservation of explicit zone zeros without inventing rows for omitted zones, and acceptance of an empty list only with a published zero total.
+- Acceptance of the reviewed empty-state paragraph only as the sole list element with a completed published zero total, including test-server collection; malformed markers, mixed rows, and nonzero totals MUST fail without changing history.
 - Rejection of missing zone lists, duplicate or empty zone identities, malformed rows, and inconsistent totals with useful diagnostics and unchanged history.
 - Preservation of source display names.
 - Rejection of missing or duplicate identities and incompatible required fields.
@@ -89,10 +90,12 @@ Collection includes that server without a parser change; removing a required cou
 Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 
 - Server and starting-zone aggregation without claiming deduplicated global activity.
-- Unavailable individual-zone values and chart gaps when a server omits a zone, including all-server views that would otherwise show a partial sum.
+- Explicit test-server exclusion from production counts, ratios, contributor sets, and default Trends, while retaining individual test-server values and unchanged history and global subscriptions; production-only histories and observations containing only test servers MUST also be covered.
+- Unchanged production rates and averages across test-server membership changes, unavailable test-server production shares, and test-server heatmap scales independent of production scales.
+- Unavailable individual-zone values and chart gaps when a server omits a zone, including production-server views that would otherwise show a partial sum.
 - Combined starting-zone series for each selected zone/total, server scope, and period, with consistent axes, stable distinct identities, and no observations for empty selections.
 - Zero starting-zone totals for validated empty lists, historical zone discovery, and preservation of differing per-server zone membership in the original observations.
-- Server population shares with the complete snapshot denominator, individual selections, All Servers expansion without duplicate lines, missing servers, and zero denominators.
+- Server population shares with the complete production snapshot denominator, individual selections, Production servers expansion without duplicate lines, missing servers, and zero denominators.
 - Weekday/hour means in UTC and local time with exact sums and sample counts, uneven sampling, missing cells, published zeros, boundary timestamps, and absent servers.
 - Separate heatmaps for selected entities and periods, using original-instant buckets in the selected zone and separate total and individual-server color bounds, including more than two selections and empty ranges.
 - Heatmap bounds from available cell means, including nonzero minima, measured zeros, missing cells, empty selections, constant values, and fractional or narrowly separated averages, preserving shared bounds within each scale group.
@@ -102,7 +105,7 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Consecutive and trailing-regression rates on irregular samples, exact interval and coverage boundaries, negative and zero values, large baselines, missing metrics, contributor changes, and all approved trend windows.
 - Rate calculations before comparison alignment, lookback outside the display range, time-zone independence, percentage-point units, and unchanged earlier estimates after later observations change.
 - Online ratios using each snapshot's online and denominator counts, including multiple observations within one UTC day, missing hours and servers, measured zeros, zero denominators, and selection boundaries.
-- All-server ratios using snapshot totals, global subscription denominators in per-server views, and preservation of every original observation and ratio during period comparisons.
+- Production-server ratios using snapshot totals, global subscription denominators in per-server views, and preservation of every original observation and ratio during period comparisons.
 - Combined engagement metric selections with stable distinct identities across more than two scopes and periods, including empty selections.
 - All range presets and custom inclusive date boundaries in UTC and local time, including invalid or reversed inputs.
 - Responsive time-axis label counts, the seven-day single-label regression, natural calendar boundaries across DST and unequal months, and distinct labels within comparison ranges.
@@ -116,7 +119,7 @@ Tests for calculations owned by `mnm-stats-dashboard` MUST cover:
 - Combined server-and-period selections, distinct identities for each pair, global subscriptions without duplicate series, and empty server selections.
 - Trends period boundaries for 7, 30, and 365 complete local dates and their previous periods, including leap dates, fractional offsets, and daylight-saving changes.
 - Trends medians with equal weighting of qualifying dates, minimum day/period coverage, sparse data, measured zeros, zero change denominators, and missing servers or observations.
-- Server growth and combined starting-area ordering, All Servers expansion without duplicates, individual/empty server selections, and unavailable ranking values.
+- Server growth and combined starting-area ordering, Production servers expansion without duplicates, individual/empty server selections, and unavailable ranking values.
 - Starting-area totals summed per observation before medians, with one row per server, wide counts, validated empty-area totals as zero, and absent servers unavailable.
 - Busiest-hour ranking in All days and By weekday modes, repeated-date requirements, stable tie order, local clock windows, and resistance to isolated evening spikes.
 
@@ -148,10 +151,10 @@ Browser coverage MUST include:
 - Mixed series-colored and subdued gray solid connections with matching widths, without duplicate hover details at shared endpoints or invented values along connections.
 - Chart-engine loading from the pinned CDN URL at both root and subpath URLs, and successful chart initialization after selection changes.
 - Clearing hover details when leaving a plot or changing selections, without showing values inside gaps or for unavailable observations.
-- The default last-7-days range, range selection, and independent server checkbox toggles, including historical servers, “All Servers,” and clearing/restoring the selection.
+- The default last-7-days range, range selection, and independent server checkbox toggles, including historical servers, “Production servers,” and clearing/restoring the selection.
 - Unavailable metrics and empty or invalid data states.
 - Month-to-month and year-to-year comparisons with at least three periods.
-- Server-to-server and all-servers-to-server comparisons with at least three series.
+- Server-to-server and production-servers-to-server comparisons with at least three series.
 - Enabling and disabling comparison from both menus, changing the primary range, choosing Previous period or Year over year, and switching between exact dates and weekdays.
 - Applying custom primary dates, adding and removing multiple custom comparisons, and validation without changing the applied range.
 - Closing menus through Escape and outside interaction, focus restoration, section persistence, and usable date menus at narrow widths.
@@ -178,8 +181,9 @@ Automated coverage MUST include the following cases.
 - The summary-row time-zone switch, its selected state and persistent “zone name (local)” button label, local summary and tooltip times, heatmap rebucketing, date-control labels, and restoration through refresh and Back/Forward.
 - A visible “Data since” coverage summary with the complete history's first date in the selected zone and record count, independently of filters and comparisons, including empty history and a single record, without duplicating the latest timestamp shown beside “Latest snapshot.”
 - Four full-width Overview charts ordered Online, Daily active (DAU), Monthly active (MAU), and Subscribers, including working summary links to their corresponding charts.
-- A visible “Latest snapshot” section above the view controls in every content section, with the latest complete-history all-server totals and global subscriber count, an adjacent timestamp in the selected zone that moves below the heading on narrow screens, and no timestamp for empty history.
+- A visible “Latest snapshot” section above the view controls in every content section, with the latest complete-history production-server totals and global subscriber count, an adjacent timestamp in the selected zone that moves below the heading on narrow screens, and no timestamp for empty history.
 - Unchanged “Latest snapshot” values across server, range, and comparison selections, including a retired server and empty selections; published zeros and empty history MUST remain distinguishable.
+- Production-only defaults and Latest snapshot counts with PTR present, individual PTR selection alongside production totals, unchanged global subscriptions and complete downloads, and the exclusion Methodology statement with a working reference.
 - Card link text matching the plot titles, with mouse and keyboard activation opening Overview and scrolling to and focusing the corresponding plot without changing filters.
 - Persistent cards during comparisons, without a duplicate comparison-information section.
 

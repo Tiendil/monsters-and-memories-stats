@@ -8,16 +8,30 @@ pub fn display_name(id: &str, name: &str) -> String {
     if name.trim().is_empty() { id } else { name }.to_owned()
 }
 
+/// Source identities explicitly classified as test environments. Missing data
+/// and display names do not determine whether a server belongs to production.
+pub fn is_test_server(id: &str) -> bool {
+    id == "ptr"
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Scope {
+    /// Production aggregate; retain its identity for existing links and colors.
     All,
     Server(String),
 }
 
 impl Scope {
+    pub fn includes(&self, server_id: &str) -> bool {
+        match self {
+            Self::All => !is_test_server(server_id),
+            Self::Server(id) => id == server_id,
+        }
+    }
+
     pub fn label(&self, names: &BTreeMap<String, String>) -> String {
         match self {
-            Self::All => "All Servers".into(),
+            Self::All => "Production servers".into(),
             Self::Server(id) => display_name(id, names.get(id).map_or("", String::as_str)),
         }
     }
@@ -149,19 +163,19 @@ impl Metric {
     pub fn description(&self) -> &'static str {
         match self {
             Self::Daily | Self::Monthly => {
-                "Activity counts. All Servers adds each server's count, so a player active on several servers may be counted more than once."
+                "Activity counts. Production servers adds each server's count, so a player active on several servers may be counted more than once."
             }
             Self::Subscriptions => {
                 "Active subscriptions across the game. Multiple subscriptions may belong to the same player; counts for individual servers are not available."
             }
             Self::Online => {
-                "Players online. All Servers adds the counts from all servers in that record."
+                "Players online. Production servers adds the counts from those servers in that record."
             }
             Self::OnlineShare => {
-                "Each server's share of all online players in the same record. No share is shown when the server is missing or the total is zero."
+                "Each server's share of all online players in the same record, excluding test servers. No share is shown when the server is missing or the total is zero."
             }
             Self::StartingZones | Self::Zone(..) => {
-                "Players in starting areas, rather than a count of new players or characters. All Zones combines all starting areas. All Servers adds their counts across servers."
+                "Players in starting areas, rather than a count of new players or characters. All Zones combines all starting areas. Production servers adds their counts across servers."
             }
             Self::DailyMonthly => {
                 "Daily activity as a percentage of monthly activity. No ratio is shown when monthly activity is zero. Values can exceed 100%."
@@ -176,6 +190,9 @@ impl Metric {
     }
 
     pub fn value(&self, snapshot: &Snapshot, scope: &Scope) -> Option<MetricValue> {
+        if *self == Self::OnlineShare && matches!(scope, Scope::Server(id) if is_test_server(id)) {
+            return None;
+        }
         if *self == Self::Subscriptions {
             return Some(MetricValue::Count(snapshot.active_subscriptions.into()));
         }
@@ -212,7 +229,7 @@ impl Metric {
         let mut count = 0_u128;
         let mut found = false;
         for server in &snapshot.servers {
-            if matches!(scope, Scope::Server(id) if id != &server.id) {
+            if !scope.includes(&server.id) {
                 continue;
             }
             found = true;
@@ -957,7 +974,18 @@ pub fn plot(
     }
     let share_scopes;
     let scopes = if *metric == Metric::OnlineShare && scopes.contains(&Scope::All) {
-        share_scopes = names.keys().cloned().map(Scope::Server).collect::<Vec<_>>();
+        share_scopes = names
+            .keys()
+            .filter(|id| scopes.iter().any(|scope| scope.includes(id)))
+            .cloned()
+            .map(Scope::Server)
+            .chain(
+                scopes
+                    .iter()
+                    .filter(|scope| matches!(scope, Scope::Server(id) if !names.contains_key(id)))
+                    .cloned(),
+            )
+            .collect::<Vec<_>>();
         &share_scopes[..]
     } else if *metric == Metric::Subscriptions {
         &[Scope::All][..]
@@ -1194,7 +1222,8 @@ impl ActivityCell {
 pub struct ActivityHeatmap {
     pub zone: TimeZone,
     pub label: String,
-    /// Shared across periods, separately for totals and all individual servers.
+    /// Shared across periods, separately for production totals, production
+    /// individuals, and test servers.
     pub color_bounds: Option<(f64, f64)>,
     /// Monday first, then hour 00 through 23 in the selected time zone.
     pub cells: [[ActivityCell; 24]; 7],
@@ -1266,17 +1295,22 @@ pub fn activity_heatmaps(
     );
     let server_bounds = heatmap_bounds(
         maps.iter()
-            .filter(|(scope, _)| **scope != Scope::All)
+            .filter(|(scope, _)| matches!(scope, Scope::Server(id) if !is_test_server(id)))
+            .map(|(_, map)| map),
+    );
+    let test_bounds = heatmap_bounds(
+        maps.iter()
+            .filter(|(scope, _)| matches!(scope, Scope::Server(id) if is_test_server(id)))
             .map(|(_, map)| map),
     );
     Ok(maps
         .into_iter()
         .filter(|(scope, _)| scopes.contains(scope))
         .map(|(scope, mut map)| {
-            map.color_bounds = if *scope == Scope::All {
-                total_bounds
-            } else {
-                server_bounds
+            map.color_bounds = match scope {
+                Scope::All => total_bounds,
+                Scope::Server(id) if is_test_server(id) => test_bounds,
+                Scope::Server(_) => server_bounds,
             };
             map
         })

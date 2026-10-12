@@ -42,6 +42,25 @@ pub fn with_nunavoth_zones(zones: &[(&str, &str, &str)], total: &str) -> Vec<Val
     frames
 }
 
+pub fn with_zone_status(server_id: &str, total: &str, element: &str) -> Vec<Value> {
+    // Rename an existing fixture server in every frame to preserve readiness.
+    let mut frames: Vec<Value> = serde_json::from_str(
+        &serde_json::to_string(&frames())
+            .unwrap()
+            .replace("nunavoth", server_id),
+    )
+    .unwrap();
+    let row = frames.last_mut().unwrap()[4]["0"]["1"]["0"]["1"]["0"]["d"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|row| row[0] == server_id)
+        .unwrap();
+    row[12] = Value::from(total);
+    row[14] = Value::from(element);
+    frames
+}
+
 pub struct Scratch(pub PathBuf);
 impl Scratch {
     pub fn new() -> Self {

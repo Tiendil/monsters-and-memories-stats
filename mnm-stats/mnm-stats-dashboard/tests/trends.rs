@@ -51,6 +51,51 @@ fn rank(
 }
 
 #[test]
+fn test_servers_require_explicit_selection_in_every_trends_table() {
+    let end = time("2026-10-15T00:00:00Z");
+    let samples = history(14, end, |_, _| {
+        vec![server("a", 100), server("ptr", 100_000)]
+    });
+    let production = rank(&samples, TrendPeriod::Week, BusyGrouping::AllDays, end);
+    assert_eq!(
+        production
+            .servers
+            .iter()
+            .map(|s| s.id.as_str())
+            .collect::<Vec<_>>(),
+        ["a"]
+    );
+    assert_eq!(
+        production
+            .areas
+            .iter()
+            .map(|s| s.id.as_str())
+            .collect::<Vec<_>>(),
+        ["a"]
+    );
+    assert_eq!(production.hours.len(), 3);
+    assert!(production.hours.iter().all(|s| s.server_id == "a"));
+    let selected = rankings(
+        &samples,
+        &[
+            Scope::All,
+            Scope::Server("a".into()),
+            Scope::Server("ptr".into()),
+        ],
+        TrendPeriod::Week,
+        BusyGrouping::AllDays,
+        end,
+        TimeZone::UTC,
+    );
+    assert_eq!(selected.servers.len(), 2);
+    assert_eq!(selected.areas.len(), 2);
+    assert_eq!(selected.hours.len(), 6);
+    assert!(selected.servers.iter().any(|s| s.id == "ptr"));
+    assert!(selected.areas.iter().any(|s| s.id == "ptr"));
+    assert!(selected.hours.iter().any(|s| s.server_id == "ptr"));
+}
+
+#[test]
 fn complete_periods_rank_absolute_growth_and_starting_area_population() {
     let end = time("2026-10-15T00:00:00Z");
     let mut samples = history(14, end, |day, _| {

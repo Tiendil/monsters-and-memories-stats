@@ -217,9 +217,11 @@ fn contributors(snapshot: &Snapshot, metric: &Metric, scope: &Scope) -> Vec<Stri
         .servers
         .iter()
         .filter(|s| {
-            *metric == Metric::OnlineShare
-                || *scope == Scope::All
-                || matches!(scope, Scope::Server(id) if id == &s.id)
+            if *metric == Metric::OnlineShare {
+                Scope::All.includes(&s.id)
+            } else {
+                scope.includes(&s.id)
+            }
         })
         // All Zones is a validated server total, even when its zone list changes.
         // Missing individual zones still break rates through their unavailable values.

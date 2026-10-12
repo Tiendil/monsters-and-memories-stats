@@ -13,7 +13,7 @@ pub const SUBSCRIBER_METRICS: [Metric; 3] = [
     Metric::OnlineSubscriptions,
 ];
 
-pub const METHODOLOGY_IDS: [&str; 9] = [
+pub const METHODOLOGY_IDS: [&str; 10] = [
     "methodology-collection",
     "methodology-activity-totals",
     "methodology-subscriptions",
@@ -23,6 +23,7 @@ pub const METHODOLOGY_IDS: [&str; 9] = [
     "methodology-rates",
     "methodology-trend-rate",
     "methodology-averages",
+    "methodology-test-servers",
 ];
 
 pub fn is_shared_target(target: &str) -> bool {

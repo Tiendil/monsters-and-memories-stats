@@ -42,6 +42,54 @@ fn assert_number(value: Option<MetricValue>, expected: f64) {
 }
 
 #[test]
+fn test_server_membership_does_not_interrupt_production_rates_or_averages() {
+    let original = history(
+        &(0..=48)
+            .map(|hour| (hour * 60, 100 + hour as u64))
+            .collect::<Vec<_>>(),
+    );
+    let mut records = original.snapshots().to_vec();
+    for (index, record) in records.iter_mut().enumerate() {
+        if index % 2 == 0 {
+            let mut ptr = record.servers[0].clone();
+            ptr.id = "ptr".into();
+            ptr.name = "Public Test Server".into();
+            ptr.online = 100_000;
+            ptr.monthly_active = 1_000_000;
+            ptr.starting_zones.clear();
+            record.servers.push(ptr);
+        }
+    }
+    let with_ptr = History::new(records).unwrap();
+    for scope in [Scope::All, Scope::Server("a".into())] {
+        for metric in [
+            Metric::Online,
+            Metric::OnlineShare,
+            Metric::StartingZones,
+            Metric::OnlineMonthly,
+            Metric::MonthlySubscriptions,
+        ] {
+            for mode in [RateMode::Value, RateMode::Change, RateMode::Trend] {
+                for aggregation in [Aggregation::Snapshot, Aggregation::Average24] {
+                    let view = ChartView {
+                        mode,
+                        window: TrendWindow::Hours6,
+                        aggregation,
+                    };
+                    let expected = values(&original, &metric, &scope, view);
+                    assert!(expected.last().unwrap().is_some(), "{metric:?} {view:?}");
+                    assert_eq!(
+                        values(&with_ptr, &metric, &scope, view),
+                        expected,
+                        "{metric:?} {view:?}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn consecutive_changes_use_elapsed_time_and_keep_negative_zero_and_gaps() {
     let h = history(&[
         (0, 1000),
@@ -756,7 +804,10 @@ fn average_labels_only_distinguish_mixed_averaging_behavior() {
     apply(&mut plotted, &h, average(RateMode::Value));
     for (series, old) in plotted.series.iter().zip(&original.series) {
         let expected = if series.metric.supports_average() {
-            format!("{} (24-hour average) · All Servers", series.metric.title())
+            format!(
+                "{} (24-hour average) · Production servers",
+                series.metric.title()
+            )
         } else {
             old.label.clone()
         };
@@ -771,7 +822,7 @@ fn average_labels_only_distinguish_mixed_averaging_behavior() {
     .unwrap();
     assert_eq!(
         figure["data"][0]["name"],
-        "Online / daily active (24-hour average) · All Servers"
+        "Online / daily active (24-hour average) · Production servers"
     );
     assert!(
         figure["data"][0]["text"]
@@ -781,7 +832,7 @@ fn average_labels_only_distinguish_mixed_averaging_behavior() {
             .any(|text| text
                 .as_str()
                 .unwrap_or_default()
-                .contains("Online / daily active (24-hour average) · All Servers"))
+                .contains("Online / daily active (24-hour average) · Production servers"))
     );
 
     // Removing unaveraged metrics restores the original labels, including when

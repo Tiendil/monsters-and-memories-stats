@@ -154,6 +154,9 @@ The `mnm-stats-dashboard` package MUST own:
 - comparison alignment.
 - linking to the complete static JSONL archive.
 
+The dashboard MUST own the explicit server-environment classification and reuse it across aggregate calculations, contributor tracking, and server selection expansion.
+The classification MUST NOT remove servers from collection, stored snapshots, or packaged history.
+
 To keep the runtime limited to the requested GitHub capabilities, the architecture MUST NOT introduce:
 
 - an application server.

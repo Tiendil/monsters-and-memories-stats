@@ -4,3 +4,15 @@ cwd = "."
 enabled = true
 startup_timeout_sec = 90
 tool_timeout_sec = 120
+
+[mcp_servers.playwright.tools.browser_navigate]
+approval_mode = "approve"
+
+[mcp_servers.playwright.tools.browser_close]
+approval_mode = "approve"
+
+[mcp_servers.playwright.tools.browser_resize]
+approval_mode = "approve"
+
+[mcp_servers.playwright.tools.browser_click]
+approval_mode = "approve"

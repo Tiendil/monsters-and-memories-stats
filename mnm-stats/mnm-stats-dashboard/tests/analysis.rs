@@ -43,6 +43,155 @@ fn number(metric: Metric, s: &Snapshot, scope: &Scope) -> Option<f64> {
 }
 
 #[test]
+fn production_metrics_exclude_ptr_without_changing_individual_or_global_data() {
+    let baseline = snapshot("2024-02-29T12:00:00Z", 15, 10, 10);
+    let mut mixed = baseline.clone();
+    let ptr = Server {
+        id: "ptr".into(),
+        name: "Public Test Server".into(),
+        daily_active: 900,
+        monthly_active: 10_000,
+        online: 9000,
+        starting_zones: vec![],
+    };
+    mixed.servers.push(ptr.clone());
+    // Classification is an identity policy, independent of labels or absent zones.
+    mixed.servers[0].name = "Public Test Server".into();
+    for metric in [
+        Metric::Online,
+        Metric::Daily,
+        Metric::Monthly,
+        Metric::StartingZones,
+        Metric::Zone("z".into(), "Zone".into()),
+        Metric::DailyMonthly,
+        Metric::OnlineDaily,
+        Metric::OnlineMonthly,
+        Metric::DailySubscriptions,
+        Metric::MonthlySubscriptions,
+        Metric::OnlineSubscriptions,
+        Metric::Subscriptions,
+    ] {
+        assert_eq!(
+            metric.value(&mixed, &Scope::All),
+            metric.value(&baseline, &Scope::All),
+            "{metric:?}"
+        );
+    }
+    let selected = Scope::Server("ptr".into());
+    assert_eq!(number(Metric::Online, &mixed, &selected), Some(9000.0));
+    assert_eq!(number(Metric::Monthly, &mixed, &selected), Some(10_000.0));
+    assert_eq!(number(Metric::DailyMonthly, &mixed, &selected), Some(9.0));
+    assert_eq!(number(Metric::StartingZones, &mixed, &selected), Some(0.0));
+    assert_eq!(
+        number(Metric::Zone("z".into(), "Zone".into()), &mixed, &selected),
+        None
+    );
+    assert_eq!(number(Metric::OnlineShare, &mixed, &selected), None);
+    let share = Metric::OnlineShare
+        .value(&mixed, &Scope::Server("a".into()))
+        .unwrap();
+    assert_eq!(
+        share,
+        MetricValue::Ratio {
+            numerator: 7,
+            denominator: 9
+        }
+    );
+    let saved = mixed.to_jsonl_record().unwrap();
+    let history = History::from_jsonl(&saved).unwrap();
+    assert_eq!(history.snapshots()[0], mixed);
+    assert_eq!(servers(&history)["ptr"], "Public Test Server");
+    mixed.servers = vec![ptr];
+    assert_eq!(number(Metric::Online, &mixed, &Scope::All), None);
+    assert_eq!(number(Metric::DailyMonthly, &mixed, &Scope::All), None);
+    assert_eq!(
+        number(Metric::Subscriptions, &mixed, &Scope::All),
+        Some(10.0)
+    );
+    mixed.servers[0].id = "new-production-server".into();
+    mixed.servers[0].online = 0;
+    assert_eq!(number(Metric::Online, &mixed, &Scope::All), Some(0.0));
+}
+
+#[test]
+fn production_expansion_and_heatmap_scales_keep_ptr_separate() {
+    let mut record = snapshot("2024-02-29T12:00:00Z", 15, 10, 10);
+    let now = record.observed_at;
+    record.servers.push(Server {
+        id: "ptr".into(),
+        name: "Public Test Server".into(),
+        daily_active: 100,
+        monthly_active: 1000,
+        online: 9000,
+        starting_zones: vec![],
+    });
+    let history = History::new(vec![record]).unwrap();
+    let a = Scope::Server("a".into());
+    let ptr = Scope::Server("ptr".into());
+    let shares = plot(
+        &history,
+        &Metric::OnlineShare,
+        &[Scope::All, a.clone()],
+        TimeRange::All,
+        now,
+        &Comparison::None,
+        TimeZone::UTC,
+    )
+    .unwrap();
+    assert_eq!(
+        shares
+            .series
+            .iter()
+            .map(|s| s.label.as_str())
+            .collect::<Vec<_>>(),
+        ["Alpha", "Beta"]
+    );
+    let shares = plot(
+        &history,
+        &Metric::OnlineShare,
+        &[Scope::All, ptr.clone()],
+        TimeRange::All,
+        now,
+        &Comparison::None,
+        TimeZone::UTC,
+    )
+    .unwrap();
+    assert_eq!(shares.series.len(), 3);
+    assert!(
+        shares
+            .series
+            .iter()
+            .find(|s| s.scope == ptr)
+            .unwrap()
+            .points
+            .iter()
+            .all(|p| p.value.is_none())
+    );
+    let maps = activity_heatmaps(
+        &history,
+        &[Scope::All, a.clone(), ptr],
+        TimeRange::All,
+        now,
+        &Comparison::None,
+        TimeZone::UTC,
+    )
+    .unwrap();
+    assert_eq!(maps[0].color_bounds, Some((9.0, 9.0)));
+    assert_eq!(maps[1].color_bounds, Some((2.0, 7.0)));
+    assert_eq!(maps[2].color_bounds, Some((9000.0, 9000.0)));
+    let hidden_ptr = activity_heatmaps(
+        &history,
+        &[a],
+        TimeRange::All,
+        now,
+        &Comparison::None,
+        TimeZone::UTC,
+    )
+    .unwrap();
+    assert_eq!(hidden_ptr[0].color_bounds, maps[1].color_bounds);
+}
+
+#[test]
 fn aggregation_ratios_and_missing_entities_preserve_their_semantics() {
     let s = snapshot("2024-02-29T12:00:00Z", 15, 10, 10);
     let a = Scope::Server("a".into());
@@ -223,7 +372,7 @@ fn population_combines_zones_servers_and_periods_without_partial_totals() {
     }
     assert_eq!(
         chart.series[0].label,
-        "All Zones · All Servers · February 2024 (UTC)"
+        "All Zones · Production servers · February 2024 (UTC)"
     );
     assert_eq!(chart.series[7].label, "Zone · Alpha · February 2024 (UTC)");
     assert_eq!(chart.series[13].label, "West · Alpha · February 2024 (UTC)");
@@ -463,7 +612,7 @@ fn entity_and_interval_comparisons_allow_many_series_and_different_lengths() {
             .iter()
             .map(|series| series.label.as_str())
             .collect::<Vec<_>>(),
-        ["All Servers", "Alpha", "Beta", "absent"]
+        ["Production servers", "Alpha", "Beta", "absent"]
     );
     let mut names = servers(&history);
     names.insert("a".into(), "  ".into());
@@ -936,7 +1085,7 @@ fn server_selection_applies_to_every_period_without_duplicating_global_counts() 
             .map(|s| s.points[0].value.unwrap().number())
             .collect();
         assert_eq!(values, [20.0, 15.0, 5.0]);
-        assert!(series[0].label.starts_with("All Servers ·"));
+        assert!(series[0].label.starts_with("Production servers ·"));
         assert!(series[1].label.starts_with("Alpha ·"));
     }
     let mut styles = mnm_stats_dashboard::charts::SeriesStyles::default();
@@ -1695,7 +1844,7 @@ fn heatmap_scales_separate_totals_and_include_unchecked_servers_in_selected_peri
             server.online = online;
         }
         // Labels must not determine whether a panel contains totals.
-        record.servers[0].name = "All Servers".into();
+        record.servers[0].name = "Production servers".into();
         if records.is_empty() {
             let mut retired = record.servers[0].clone();
             retired.id = "retired".into();

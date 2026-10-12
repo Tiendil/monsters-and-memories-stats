@@ -46,7 +46,7 @@ fn ChartExplanation(metric: Metric) -> impl IntoView {
         ),
         Metric::OnlineShare => (
             Some("Server online / total online × 100%"),
-            "Each server’s share of the total online population. The “All Servers” option shows a separate line for every server. Uncheck it and select individual servers to show only their shares.",
+            "Each server’s share of the total online population. The “Production servers” option shows a separate line for every included server. Uncheck it and select individual servers to show only their shares.",
         ),
         Metric::DailyMonthly => (
             Some("DAU / MAU × 100%"),
@@ -223,7 +223,7 @@ fn MethodologyReference(number: usize) -> impl IntoView {
 fn Methodology() -> impl IntoView {
     let notes = [
         "We collect data through GitHub Actions on an hourly schedule. GitHub may delay or skip scheduled runs, so the time between snapshots varies and the history can contain gaps. Missing snapshots are not filled in.",
-        "The official statistics provide daily active (DAU) and monthly active (MAU) counts for each server, but no game-wide totals. We calculate “All Servers” DAU and MAU by adding the server counts. Players active on multiple servers may be counted more than once, so these sums can exceed the number of distinct active players.",
+        "The official statistics provide daily active (DAU) and monthly active (MAU) counts for each server, but no game-wide totals. We calculate “Production servers” DAU and MAU by adding the server counts. Players active on multiple servers may be counted more than once, so these sums can exceed the number of distinct active players.",
         "“Subscribers” shows active subscriptions across the game, not necessarily distinct players. Subscription totals are not available per server.",
         "Starting-area population counts players currently in those areas. It does not count new players or newly created characters. “Starting-area activity” combines all starting areas within each server, so an increase does not necessarily mean more people joined the game.",
         "“Typical online” is the median of daily medians, giving each included day equal weight.",
@@ -231,6 +231,7 @@ fn Methodology() -> impl IntoView {
         "“Rate of change” is the change between consecutive snapshots divided by the elapsed time. Intervals of 24 hours or more are omitted. Calculations may use observations before the displayed date range. Percentage-chart rates use percentage points, not relative percentage growth. Rates describe past changes, not forecasts.",
         "“Trend rate” is the slope of a straight line fitted to observations within the selected window. Gaps indicate insufficient data coverage. Calculations may use observations before the displayed date range. Percentage-chart rates use percentage points, not relative percentage growth. Rates describe past changes, not forecasts.",
         "“24-hour average” smooths hourly fluctuations to make longer-term changes easier to see. Values are weighted by the time between observations, assuming a gradual change across intervals of up to three hours. At least 18 of the preceding 24 hours must be covered. For ratios, we average the percentages calculated for each snapshot.",
+        "Test servers are excluded from player totals, population shares, and default Trends. The Public Test Server (PTR) remains available individually and in downloaded history.",
     ];
     view! {
         <section id="methodology" tabindex="-1" class="methodology" aria-labelledby="methodology-heading">
@@ -266,6 +267,7 @@ fn Summary(history: Arc<History>) -> impl IntoView {
             let note = match metric {
                 Metric::Daily | Metric::Monthly => Some(2),
                 Metric::Subscriptions => Some(3),
+                Metric::Online => Some(10),
                 _ => None,
             };
             view! { <article class="headline" data-summary=key>
@@ -704,7 +706,7 @@ fn ActivityCard(
     view! {
         <article class="chart-card" id="chart-activity-heatmap" data-metric="activity-heatmap" tabindex="-1">
             <ChartHeading target="chart-activity-heatmap".into() title="Activity heatmap".into()/>
-            <p class="chart-note chart-explanation">{move || format!("Average online population by weekday and hour ({}).", time_zone.get().short_label())}" Brighter colors indicate more players; blank cells have no records. Individual servers share a scale that includes unchecked servers. “All Servers” uses a separate scale so larger totals don’t hide differences between individual servers. Both scales cover the selected periods."</p>
+            <p class="chart-note chart-explanation">{move || format!("Average online population by weekday and hour ({}).", time_zone.get().short_label())}" Brighter colors indicate more players; blank cells have no records. Individual servers share a scale that includes unchecked servers. “Production servers” uses a separate scale so larger totals don’t hide differences between individual servers. Test servers also use a separate scale. All scales cover the selected periods."</p>
             {move || match maps.get() {
                 Err(error) => view! { <p class="error" role="alert">{error}</p> }.into_any(),
                 Ok(maps) if maps.is_empty() => view! { <p class="empty-chart">"Select servers and a period to show activity."</p> }.into_any(),
@@ -1022,7 +1024,7 @@ fn CheckboxPicker(
 fn ServerPicker(names: BTreeMap<String, String>, scopes: RwSignal<Vec<Scope>>) -> impl IntoView {
     let choice_names = names.clone();
     let choices = Memo::new(move |_| {
-        std::iter::once(("all".into(), "All Servers".into()))
+        std::iter::once(("all".into(), "Production servers".into()))
             .chain(
                 choice_names
                     .iter()
@@ -1041,7 +1043,9 @@ fn ServerPicker(names: BTreeMap<String, String>, scopes: RwSignal<Vec<Scope>>) -
         match selected.as_slice() {
             [] => "Choose servers".into(),
             [scope] => scope.label(&names),
-            _ if selected.contains(&Scope::All) => format!("All Servers + {}", selected.len() - 1),
+            _ if selected.contains(&Scope::All) => {
+                format!("Production servers + {}", selected.len() - 1)
+            }
             _ => format!("{} servers", selected.len()),
         }
     });
@@ -1300,7 +1304,7 @@ pub fn App() -> impl IntoView {
             }).collect_view()}</nav>
             <section id="content" tabindex="-1" class:comparing=move || comparing.get() aria-label=move || section.get().label()>
                 <Show when=move || scopes.get().is_empty()>
-                    <div class="empty-servers" role="status"><p>"Select at least one server to show statistics."</p><button class="secondary" on:click=move |_| scopes.set(vec![Scope::All])>"Show All Servers"</button></div>
+                    <div class="empty-servers" role="status"><p>"Select at least one server to show statistics."</p><button class="secondary" on:click=move |_| scopes.set(vec![Scope::All])>"Show Production servers"</button></div>
                 </Show>
                 <Show when=move || section.get() != Section::Trends && mode.get() == ComparisonMode::Disabled && !scopes.get().is_empty() && empty_range.get()>
                     <div class="empty-selection" role="status"><p>{if count == 0 { "No history yet. The first successful collection will appear in a future dashboard build." } else { "No observations in this interval. Choose All time to explore the available archive." }}</p>

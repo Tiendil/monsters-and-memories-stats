@@ -191,6 +191,20 @@ pub fn parse_snapshot(html: &str, observed_at: DateTime<Utc>) -> Result<Snapshot
             let mut starting_zones = Vec::new();
             let mut identities = BTreeSet::new();
             for zone in list.child_elements() {
+                if zone.value().id() == Some(format!("starting-zone-empty-{server_id}").as_str()) {
+                    if zone.value().name() != "p"
+                        || text(zone) != "Starting-zone status is not available."
+                        || zone.child_elements().count() != 0
+                        || list.child_elements().count() != 1
+                        || total != 0
+                    {
+                        return Err(format!(
+                            "#starting-zone-list-{server_id}: invalid empty-state marker; expected one status paragraph without zone rows and a published zero total, got {total}; found <{}> with id {:?} and text {:?}",
+                            zone.value().name(), zone.value().id(), text(zone).chars().take(160).collect::<String>()
+                        ).into());
+                    }
+                    continue;
+                }
                 let result = (|| -> Result<StartingZone> {
                     let prefix = format!("starting-zone-{server_id}-");
                     let zone_id = zone

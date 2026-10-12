@@ -255,9 +255,7 @@ pub fn rankings(
     };
     let selected: BTreeMap<_, _> = servers(history)
         .into_iter()
-        .filter(|(id, _)| {
-            scopes.contains(&Scope::All) || scopes.contains(&Scope::Server(id.clone()))
-        })
+        .filter(|(id, _)| scopes.iter().any(|scope| scope.includes(id)))
         .collect();
     let mut recent = collect(history, &selected, &current, zone, grouping);
     let mut earlier = collect(history, &selected, &previous, zone, grouping);

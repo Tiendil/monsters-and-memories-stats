@@ -615,7 +615,7 @@ impl Browser {
         self.expect_count(".headline", 4);
         self.expect_count(".chart-card", 4);
         self.expect_count(".legend li", 4);
-        self.expect_text(".legend li", "All Servers");
+        self.expect_text(".legend li", "Production servers");
         self.expect_count(".legend li > .swatch + span", 4);
         self.verify_now(expected);
         self.servers(&["retired"]);
@@ -1033,7 +1033,7 @@ impl Browser {
             const panels = Array.from(document.querySelectorAll('.heatmap-panel'));
             const bounds = {};
             for (const total of [true, false]) {
-                const group = panels.filter(p => p.querySelector('h4').textContent.startsWith('All Servers ·') === total);
+                const group = panels.filter(p => p.querySelector('h4').textContent.startsWith('Production servers ·') === total);
                 const data = group.map(p => p.querySelector('.plot-surface').data[0]);
                 const values = data.flatMap(d => d.z.flat()).filter(v => v !== null);
                 const range = [Math.min(...values), Math.max(...values)];
@@ -1513,6 +1513,89 @@ impl Browser {
         }
     }
 
+    fn verify_ptr(&self, url: &str, expected: &Value, scratch: &Path) {
+        // History is embedded; fragment navigation would keep the previous build open.
+        self.request(Method::POST, "/url", json!({"url":"about:blank"}));
+        for width in [1440, 375] {
+            self.request(
+                Method::POST,
+                "/window/rect",
+                json!({"width":width,"height":900}),
+            );
+            self.request(
+                Method::POST,
+                "/url",
+                json!({"url":format!("{url}#overview?range=all&tz=utc")}),
+            );
+            self.ready("online");
+            self.expect_text("#servers-selection", "Production servers");
+            for (metric, count) in [
+                ("online", "30"),
+                ("daily", "50"),
+                ("monthly", "120"),
+                ("subscriptions", "200"),
+            ] {
+                self.expect_text(&format!("[data-summary='{metric}'] .headline-value"), count);
+            }
+            let online_values = || {
+                self.request(Method::POST, "/execute/sync", json!({
+                "script":"return Array.from(new Set(document.querySelector('#chart-online .plot-surface').data.flatMap(t=>Array.from(t.y || [])).filter(v=>typeof v === 'number'))).sort((a,b)=>a-b);", "args":[]
+            }))
+            };
+            assert_eq!(online_values(), json!([30]));
+            self.servers(&["", "ptr"]);
+            self.ready("online");
+            wait_until(
+                || {
+                    self.text("#chart-online .legend")
+                        .contains("Public Test Server")
+                },
+                "PTR appears in the online legend",
+            );
+            assert_eq!(online_values(), json!([30, 9000]));
+            self.expect_text("[data-summary='online'] .headline-value", "30");
+            self.show_metric("monthly");
+            self.ready("monthly");
+            self.servers(&["ptr"]);
+            self.ready("monthly");
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+                "script":"return Array.from(new Set(document.querySelector('#chart-monthly .plot-surface').data.flatMap(t=>Array.from(t.y || [])).filter(v=>typeof v === 'number')));", "args":[]
+            })), json!([50000]));
+            self.show_metric("online-share");
+            self.expect_text(
+                "#chart-online-share .empty-chart",
+                "No available observations for this selection.",
+            );
+            self.expect_count("#chart-online-share .plot-surface", 0);
+            assert!(
+                self.text("#methodology-test-servers")
+                    .contains("Test servers are excluded")
+            );
+            self.click("[data-summary='online'] .methodology-reference a");
+            wait_until(
+                || {
+                    self.request(
+                        Method::POST,
+                        "/execute/sync",
+                        json!({
+                            "script":"return document.activeElement.id;", "args":[]
+                        }),
+                    ) == "methodology-test-servers"
+                },
+                "PTR methodology reference focus",
+            );
+            self.request(Method::POST, "/refresh", json!({}));
+            self.expect_text("#servers-selection", "Public Test Server");
+            assert_eq!(self.request(Method::POST, "/execute/sync", json!({
+                "script":"return document.documentElement.scrollWidth <= innerWidth;", "args":[]
+            })), true, "PTR controls and explanation fit the viewport");
+        }
+        self.verify_download(expected, scratch);
+        println!(
+            "PTR remains individually selectable and downloadable; production totals and methodology links work at desktop and phone widths."
+        );
+    }
+
     fn verify_methodology(&self, url: &str) {
         for width in [390, 1440] {
             self.request(
@@ -1531,7 +1614,7 @@ impl Browser {
                     "/url",
                     json!({"url":format!("{url}#{tab}?tz=utc&range=30&compare=previous")}),
                 );
-                self.expect_count("main > .methodology li", 9);
+                self.expect_count("main > .methodology li", 10);
                 self.expect_count("[data-summary='daily'] .methodology-reference a", 1);
                 self.expect_count("[data-summary='monthly'] .methodology-reference a", 1);
                 self.expect_count("[data-summary='subscriptions'] .methodology-reference a", 1);
@@ -2255,7 +2338,7 @@ impl Browser {
         self.verify_download(expected, scratch);
         self.click(".empty-servers button");
         self.expect_count(".empty-servers", 0);
-        self.expect_text("#servers-selection", "All Servers");
+        self.expect_text("#servers-selection", "Production servers");
         self.servers(&["a"]);
         self.select("#comparison-mode", "previous");
         self.expect_count("[data-metric='daily'] .legend li", 2);
@@ -3245,6 +3328,28 @@ fn embedded_history_download_subpath_and_cached_rebuilds() {
         &scratch,
     );
     println!("Invalid history fails the build and leaves the last valid site usable.");
+    let ptr_snapshots: Vec<_> = (9..=11).map(|hour| json!({
+        "observed_at":format!("2026-05-31T{hour:02}:00:00Z"), "active_subscriptions":200,
+        "servers":[
+            {"id":"a","name":"Production Alpha","daily_active":20,"monthly_active":50,"online":10,"starting_zones":[{"id":"zone","name":"Harbor","online":2}]},
+            {"id":"b","name":"Production Beta","daily_active":30,"monthly_active":70,"online":20,"starting_zones":[{"id":"zone","name":"Harbor","online":3}]},
+            {"id":"ptr","name":"Public Test Server","daily_active":10000,"monthly_active":50000,"online":9000,"starting_zones":[]}
+        ]
+    })).collect();
+    fs::write(
+        &history,
+        ptr_snapshots
+            .iter()
+            .map(|s| {
+                let mut record = s.clone();
+                record["schema_version"] = json!(1);
+                format!("{record}\n")
+            })
+            .collect::<String>(),
+    )
+    .unwrap();
+    build(&root, &history, &scratch.join("site/mnm"), "/mnm/", true);
+    browser.verify_ptr(&url, &json!({"snapshots":ptr_snapshots}), &scratch);
     verify_preview(&root, &scratch, &browser);
 }
 
@@ -3383,7 +3488,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
     browser.pointer_at(&point);
     browser.expect_hover(
         "online",
-        "All Servers",
+        "Production servers",
         &endpoint.observed_at.to_rfc3339(),
         &endpoint_total.to_string(),
     );
@@ -3428,7 +3533,7 @@ fn verify_preview(root: &Path, scratch: &Path, browser: &Browser) {
         .iter()
         .map(|s| s["daily_active"].as_u64().unwrap())
         .sum();
-    browser.expect_hover("daily", "All Servers", at, &total.to_string());
+    browser.expect_hover("daily", "Production servers", at, &total.to_string());
     browser.verify_token_styles(false);
     let index = scratch.join("preview-explicit-dist/index.html");
     let original = fs::read(&index).unwrap();
