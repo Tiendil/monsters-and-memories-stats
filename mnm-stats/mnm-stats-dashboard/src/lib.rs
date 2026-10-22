@@ -1,5 +1,8 @@
 //! The same shared observations are used by the UI and its complete-history export.
-include!(concat!(env!("OUT_DIR"), "/history.rs"));
+pub fn embedded_history() -> mnm_stats_model::History {
+    mnm_stats_model::History::from_jsonl(include_str!(concat!(env!("OUT_DIR"), "/history.jsonl")))
+        .expect("build-validated history")
+}
 
 pub mod analysis;
 pub mod charts;
